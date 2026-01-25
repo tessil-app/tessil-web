@@ -29,7 +29,7 @@ Frontend application for JTransfer - a secure, end-to-end encrypted file sharing
 Create a `.env` file in the root directory:
 
 ```env
-PUBLIC_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:3000
 ```
 
 ## Installation
@@ -79,6 +79,7 @@ JTransfer uses end-to-end encryption:
 4. **Optional password**: Adds server-side access control (separate from encryption)
 
 The server never has access to:
+
 - Unencrypted files
 - Original filenames
 - Encryption keys

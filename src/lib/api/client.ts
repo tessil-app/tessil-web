@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 export interface CreateTransferResponse {
   transferId: string;
@@ -57,9 +57,9 @@ class ApiClient {
       response = await fetch(url, {
         ...options,
         headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        }
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
       });
     } catch (err) {
       throw new Error(`Network error: Unable to reach API at ${this.baseUrl}`);
@@ -71,8 +71,12 @@ class ApiClient {
     try {
       data = JSON.parse(text);
     } catch {
-      console.error('API response was not JSON:', text.slice(0, 200));
-      throw new Error(`API error: ${response.status} - ${text.slice(0, 100) || 'Empty response'}`);
+      console.error("API response was not JSON:", text.slice(0, 200));
+      throw new Error(
+        `API error: ${response.status} - ${
+          text.slice(0, 100) || "Empty response"
+        }`
+      );
     }
 
     if (!response.ok) {
@@ -83,20 +87,25 @@ class ApiClient {
   }
 
   async validateMagicBytes(magicBytes: string): Promise<ValidationResponse> {
-    return this.request('/api/validate', {
-      method: 'POST',
-      body: JSON.stringify({ magicBytes })
+    return this.request("/api/validate", {
+      method: "POST",
+      body: JSON.stringify({ magicBytes }),
     });
   }
 
-  async createTransfer(expiresInDays: number, password?: string): Promise<CreateTransferResponse> {
-    const body: { expiresInDays: number; password?: string } = { expiresInDays };
+  async createTransfer(
+    expiresInDays: number,
+    password?: string
+  ): Promise<CreateTransferResponse> {
+    const body: { expiresInDays: number; password?: string } = {
+      expiresInDays,
+    };
     if (password) {
       body.password = password;
     }
-    return this.request('/api/upload/create-transfer', {
-      method: 'POST',
-      body: JSON.stringify(body)
+    return this.request("/api/upload/create-transfer", {
+      method: "POST",
+      body: JSON.stringify(body),
     });
   }
 
@@ -109,28 +118,28 @@ class ApiClient {
 
     // Use FormData for efficient file upload
     const formData = new FormData();
-    formData.append('transferId', data.transferId);
-    formData.append('contentType', data.contentType);
-    formData.append('encryptedName', data.encryptedName);
-    formData.append('encryptedNameIv', data.encryptedNameIv);
-    formData.append('fileIv', data.fileIv);
-    formData.append('file', fileBlob);
+    formData.append("transferId", data.transferId);
+    formData.append("contentType", data.contentType);
+    formData.append("encryptedName", data.encryptedName);
+    formData.append("encryptedNameIv", data.encryptedNameIv);
+    formData.append("fileIv", data.fileIv);
+    formData.append("file", fileBlob);
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      xhr.upload.addEventListener('progress', (e) => {
+      xhr.upload.addEventListener("progress", (e) => {
         if (e.lengthComputable && onProgress) {
           onProgress((e.loaded / e.total) * 100);
         }
       });
 
-      xhr.addEventListener('load', () => {
+      xhr.addEventListener("load", () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             resolve(JSON.parse(xhr.responseText));
           } catch {
-            reject(new Error('Invalid response'));
+            reject(new Error("Invalid response"));
           }
         } else {
           try {
@@ -142,19 +151,21 @@ class ApiClient {
         }
       });
 
-      xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed'));
+      xhr.addEventListener("error", () => {
+        reject(new Error("Upload failed"));
       });
 
-      xhr.open('POST', url);
+      xhr.open("POST", url);
       xhr.send(formData);
     });
   }
 
-  async completeTransfer(transferId: string): Promise<{ success: boolean; shareUrl: string }> {
-    return this.request('/api/upload/complete', {
-      method: 'POST',
-      body: JSON.stringify({ transferId })
+  async completeTransfer(
+    transferId: string
+  ): Promise<{ success: boolean; shareUrl: string }> {
+    return this.request("/api/upload/complete", {
+      method: "POST",
+      body: JSON.stringify({ transferId }),
     });
   }
 
@@ -162,10 +173,13 @@ class ApiClient {
     return this.request(`/api/download/transfer/${id}`);
   }
 
-  async verifyTransferPassword(id: string, password: string): Promise<TransferMetadata> {
+  async verifyTransferPassword(
+    id: string,
+    password: string
+  ): Promise<TransferMetadata> {
     return this.request(`/api/download/transfer/${id}/verify`, {
-      method: 'POST',
-      body: JSON.stringify({ password })
+      method: "POST",
+      body: JSON.stringify({ password }),
     });
   }
 
@@ -174,7 +188,7 @@ class ApiClient {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error('Download failed');
+      throw new Error("Download failed");
     }
 
     return response.arrayBuffer();
