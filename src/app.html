@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="JTransfer - Secure, end-to-end encrypted file sharing. Your files are encrypted in your browser before upload."
+    />
+    <meta name="theme-color" content="#111827" />
+    <meta name="referrer" content="no-referrer" />
+    %sveltekit.head%
+  </head>
+  <body
+    data-sveltekit-preload-data="hover"
+    class="bg-background text-foreground"
+  >
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+
+  <script src="https://storage.ko-fi.com/cdn/scripts/overlay-widget.js"></script>
+  <script>
+    kofiWidgetOverlay.draw("jimmyjtransfer", {
+      type: "floating-chat",
+      "floating-chat.donateButton.text": "Support me",
+      "floating-chat.donateButton.background-color": "#e7000b",
+      "floating-chat.donateButton.text-color": "#fff",
+    });
+  </script>
+</html>
