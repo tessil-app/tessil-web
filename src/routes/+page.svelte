@@ -108,22 +108,22 @@
 
           uploadStore.setFileStatus(i, "encrypting", 50);
 
-          // Upload file
+          // Request presigned upload URL
           uploadStore.setFileStatus(i, "uploading", 50);
 
-          await api.addFile(
-            {
-              transferId: transfer.transferId,
-              contentType: file.type || "application/octet-stream",
-              encryptedName,
-              encryptedNameIv: nameIv,
-              fileIv,
-            },
-            encryptedBlob,
-            (p) => {
-              uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5);
-            }
-          );
+          const { uploadUrl } = await api.requestUploadUrl({
+            transferId: transfer.transferId,
+            contentType: file.type || "application/octet-stream",
+            encryptedName,
+            encryptedNameIv: nameIv,
+            fileIv,
+            size: encryptedBlob.size,
+          });
+
+          // Upload directly to R2
+          await api.uploadToR2(uploadUrl, encryptedBlob, (p) => {
+            uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5);
+          });
 
           uploadStore.setFileStatus(i, "complete", 100);
         } catch (err) {

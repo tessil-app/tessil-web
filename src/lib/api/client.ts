@@ -5,16 +5,19 @@ export interface CreateTransferResponse {
   expiresAt: string;
 }
 
-export interface AddFileRequest {
+export interface RequestUploadUrlRequest {
   transferId: string;
   contentType: string;
   encryptedName: string;
   encryptedNameIv: string;
   fileIv: string;
+  size: number;
 }
 
-export interface AddFileResponse {
+export interface RequestUploadUrlResponse {
   fileId: string;
+  uploadUrl: string;
+  expiresAt: string;
 }
 
 export interface FileInfo {
@@ -32,6 +35,12 @@ export interface TransferMetadata {
   passwordRequired: boolean;
   fileCount?: number;
   files?: FileInfo[];
+}
+
+export interface DownloadUrlResponse {
+  downloadUrl: string;
+  expiresAt: string;
+  size: number;
 }
 
 export interface ValidationResponse {
@@ -109,22 +118,20 @@ class ApiClient {
     });
   }
 
-  async addFile(
-    data: AddFileRequest,
+  async requestUploadUrl(
+    data: RequestUploadUrlRequest
+  ): Promise<RequestUploadUrlResponse> {
+    return this.request("/api/upload/request-upload-url", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async uploadToR2(
+    uploadUrl: string,
     fileBlob: Blob,
     onProgress?: (progress: number) => void
-  ): Promise<AddFileResponse> {
-    const url = `${this.baseUrl}/api/upload/add-file`;
-
-    // Use FormData for efficient file upload
-    const formData = new FormData();
-    formData.append("transferId", data.transferId);
-    formData.append("contentType", data.contentType);
-    formData.append("encryptedName", data.encryptedName);
-    formData.append("encryptedNameIv", data.encryptedNameIv);
-    formData.append("fileIv", data.fileIv);
-    formData.append("file", fileBlob);
-
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
@@ -136,18 +143,9 @@ class ApiClient {
 
       xhr.addEventListener("load", () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            resolve(JSON.parse(xhr.responseText));
-          } catch {
-            reject(new Error("Invalid response"));
-          }
+          resolve();
         } else {
-          try {
-            const err = JSON.parse(xhr.responseText);
-            reject(new Error(err.error || `Upload failed: ${xhr.status}`));
-          } catch {
-            reject(new Error(`Upload failed: ${xhr.status}`));
-          }
+          reject(new Error(`Upload failed: ${xhr.status}`));
         }
       });
 
@@ -155,8 +153,9 @@ class ApiClient {
         reject(new Error("Upload failed"));
       });
 
-      xhr.open("POST", url);
-      xhr.send(formData);
+      xhr.open("PUT", uploadUrl);
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+      xhr.send(fileBlob);
     });
   }
 
@@ -183,9 +182,16 @@ class ApiClient {
     });
   }
 
+  async getDownloadUrl(fileId: string): Promise<DownloadUrlResponse> {
+    return this.request(`/api/download/file/${fileId}/url`);
+  }
+
   async downloadFile(fileId: string): Promise<ArrayBuffer> {
-    const url = `${this.baseUrl}/api/download/file/${fileId}`;
-    const response = await fetch(url);
+    // Get presigned download URL from API
+    const { downloadUrl } = await this.getDownloadUrl(fileId);
+
+    // Download directly from R2
+    const response = await fetch(downloadUrl);
 
     if (!response.ok) {
       throw new Error("Download failed");
