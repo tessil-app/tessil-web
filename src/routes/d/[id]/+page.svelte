@@ -559,10 +559,17 @@
       </Frame.Panel>
     </Frame.Root>
 
-    <div class="mt-8 text-center">
-      <a href="/" class="text-sm text-muted-foreground hover:text-foreground">
+    <div class="mt-8 text-center text-sm text-muted-foreground space-y-2">
+      <a href="/" class="hover:text-foreground transition-colors">
         Share your own files securely
       </a>
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <a href="/privacy" class="hover:text-foreground transition-colors">Privacy</a>
+        <span>·</span>
+        <a href="/terms" class="hover:text-foreground transition-colors">Terms</a>
+        <span>·</span>
+        <a href="/abuse" class="hover:text-foreground transition-colors">Report Abuse</a>
+      </div>
     </div>
   </div>
 </div>

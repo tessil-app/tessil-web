@@ -408,9 +408,45 @@
       {/if}
     </Frame.Root>
 
-    <div class="mt-8 text-center text-sm text-muted-foreground">
+    <div class="mt-8 text-center text-sm text-muted-foreground space-y-2">
       <p>Files are encrypted in your browser before upload.</p>
       <p>We never see your files or encryption keys.</p>
+      <p class="flex items-center justify-center gap-1">
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <span
+          >Fair usage limits apply to keep the service free for everyone.</span
+        >
+      </p>
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <a href="/privacy" class="hover:text-foreground transition-colors"
+          >Privacy Policy</a
+        >
+        <span>·</span>
+        <a href="/terms" class="hover:text-foreground transition-colors"
+          >Terms of Service</a
+        >
+        <span>·</span>
+        <a href="/abuse" class="hover:text-foreground transition-colors"
+          >Report Abuse</a
+        >
+        <span>·</span>
+        <a
+          href="https://github.com/VerburgtJimmy"
+          class="hover:text-foreground transition-colors">Github</a
+        >
+      </div>
     </div>
   </div>
 </div>
