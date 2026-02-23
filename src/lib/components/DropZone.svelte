@@ -2,9 +2,10 @@
   interface Props {
     onFilesSelect: (files: File[]) => void;
     disabled?: boolean;
+    maxTotalSize?: number;
   }
 
-  let { onFilesSelect, disabled = false }: Props = $props();
+  let { onFilesSelect, disabled = false, maxTotalSize }: Props = $props();
 
   let isDragging = $state(false);
   let fileInput: HTMLInputElement;
@@ -45,6 +46,14 @@
       onFilesSelect(Array.from(input.files));
       input.value = "";
     }
+  }
+
+  function formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024)
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   }
 </script>
 
@@ -88,7 +97,9 @@
       <p class="text-lg font-medium text-foreground">
         Drop files here or click to browse
       </p>
-      <p class="text-sm mt-1">Maximum 1 GB total</p>
+      <p class="text-sm mt-1">
+        Maximum {maxTotalSize ? formatSize(maxTotalSize) : "1 GB"} total
+      </p>
     </div>
   </div>
 </button>

@@ -142,3 +142,31 @@
   --sidebar-border: --alpha(var(--color-white) / 5%);
   --sidebar-ring: var(--color-neutral-400);
 }
+
+/* Ko-fi widget dark mode overrides */
+.dark .floating-chat-kofi-popup-iframe,
+.dark .floating-chat-kofi-popup-iframe-mobi {
+  background-color: #1a1a2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+}
+
+.dark .floating-chat-kofi-popup-iframe-closer,
+.dark .floating-chat-kofi-popup-iframe-closer-mobi {
+  background-color: #1a1a2e !important;
+}
+
+.dark .floating-chat-kofi-popup-iframe-closer span svg line,
+.dark .floating-chat-kofi-popup-iframe-closer-mobi span svg line {
+  stroke: #fff !important;
+}
+
+.dark .floating-chat-kofi-popup-iframe-notice,
+.dark .floating-chat-kofi-popup-iframe-notice-mobi {
+  background-color: #1a1a2e !important;
+}
+
+.dark .floating-chat-kofi-popup-iframe-notice a,
+.dark .floating-chat-kofi-popup-iframe-notice-mobi a {
+  color: #a0a0b8 !important;
+}

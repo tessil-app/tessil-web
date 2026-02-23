@@ -7,10 +7,10 @@
   import { encryptFile, encryptFilename } from "$lib/crypto/encrypt";
   import { exportKey, generateKey } from "$lib/crypto/key";
   import { uploadStore } from "$lib/stores/upload.svelte";
+  import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
 
   import * as Frame from "$lib/components/frame";
 
-  const MAX_TOTAL_SIZE = 1024 * 1024 * 1024; // 1GB total
   const MIN_PASSWORD_LENGTH = 8;
 
   let showPassword = $state(false);
@@ -23,8 +23,8 @@
     const newFilesSize = files.reduce((sum, f) => sum + f.size, 0);
     const projectedTotal = currentTotal + newFilesSize;
 
-    if (projectedTotal > MAX_TOTAL_SIZE) {
-      const remaining = MAX_TOTAL_SIZE - currentTotal;
+    if (projectedTotal > MAX_TOTAL_UPLOAD_SIZE) {
+      const remaining = MAX_TOTAL_UPLOAD_SIZE - currentTotal;
       uploadStore.setError(
         `Not enough space. You have ${formatSize(remaining)} remaining.`
       );
@@ -165,8 +165,8 @@
     uploadStore.files.reduce((sum, f) => sum + f.file.size, 0)
   );
 
-  const remainingSize = $derived(MAX_TOTAL_SIZE - totalSize);
-  const usagePercent = $derived((totalSize / MAX_TOTAL_SIZE) * 100);
+  const remainingSize = $derived(MAX_TOTAL_UPLOAD_SIZE - totalSize);
+  const usagePercent = $derived((totalSize / MAX_TOTAL_UPLOAD_SIZE) * 100);
 
   function formatSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -177,8 +177,9 @@
   }
 </script>
 
-<div class="min-h-screen bg-background text-foreground">
-  <div class="max-w-2xl mx-auto px-4 py-12">
+<div class="bg-background text-foreground">
+  <div class="min-h-screen">
+    <div class="max-w-2xl mx-auto px-4 py-12">
     <div class="text-center mb-8">
       <h1 class="text-3xl font-bold mb-2">JTransfer</h1>
       <p class="text-muted-foreground">
@@ -197,7 +198,7 @@
               <div class="flex items-center justify-between text-sm">
                 <span class="text-muted-foreground">Storage</span>
                 <span class="text-foreground">
-                  {formatSize(totalSize)} / 1 GB
+                  {formatSize(totalSize)} / {formatSize(MAX_TOTAL_UPLOAD_SIZE)}
                   <span class="text-muted-foreground"
                     >({formatSize(remainingSize)} left)</span
                   >
@@ -220,6 +221,7 @@
             <DropZone
               onFilesSelect={handleFilesSelect}
               disabled={isProcessing || remainingSize <= 0}
+              maxTotalSize={MAX_TOTAL_UPLOAD_SIZE}
             />
 
             {#if uploadStore.files.length > 0}
@@ -448,5 +450,29 @@
         >
       </div>
     </div>
+
+    </div>
   </div>
+
+  <section
+    class="max-w-2xl mx-auto px-4 pb-12 pt-10 border-t border-border/60 text-sm text-muted-foreground leading-relaxed space-y-3"
+  >
+    <h2 class="text-base font-semibold text-foreground">
+      Secure file transfer, explained
+    </h2>
+    <p>
+      JTransfer is a secure file transfer service built for fast, private
+      sharing. Files are encrypted in your browser before upload, so only people
+      with your link and key can open them.
+    </p>
+    <p>
+      Share large files with confidence using end-to-end encryption, optional
+      password protection, and expiring links. Your content stays private
+      because encryption happens client-side and keys never touch our servers.
+    </p>
+    <p>
+      From project assets to sensitive documents, JTransfer keeps delivery
+      simple: drag, drop, and share a secure link in seconds.
+    </p>
+  </section>
 </div>

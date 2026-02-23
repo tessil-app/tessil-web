@@ -1,5 +1,14 @@
 <script lang="ts">
   import * as Frame from "$lib/components/frame";
+  import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
+
+  function formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024)
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  }
 </script>
 
 <svelte:head>
@@ -16,7 +25,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="prose prose-invert max-w-none space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p class="text-sm text-muted-foreground">Last updated: February 5, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
@@ -74,7 +83,7 @@
             <h2 class="text-xl font-semibold text-foreground">5. Service Limitations</h2>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>Maximum file size: 1 GB per file</li>
-              <li>Maximum total upload: 1 GB per transfer</li>
+              <li>Maximum total upload: {formatSize(MAX_TOTAL_UPLOAD_SIZE)} across all files per transfer</li>
               <li>File retention: 1 or 3 days (automatically deleted)</li>
               <li>Fair usage limits apply to prevent abuse</li>
             </ul>

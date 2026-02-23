@@ -16,7 +16,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="prose prose-invert max-w-none space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p class="text-sm text-muted-foreground">Last updated: February 5, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Introduction</h2>
@@ -64,6 +64,12 @@
               <li>We do not use tracking cookies or analytics</li>
               <li>We do not sell or share data with third parties</li>
             </ul>
+
+            <h3 class="text-lg font-medium text-foreground">2.4 Image Converter (Local-Only)</h3>
+            <p class="text-muted-foreground">
+              The Image Converter runs entirely in your browser. We do not upload, store, or process your images
+              on our servers when you use the converter.
+            </p>
           </section>
 
           <section class="space-y-3">
