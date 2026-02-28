@@ -28,8 +28,9 @@
 <div class="min-h-screen bg-background text-foreground">
   <div class="max-w-3xl mx-auto px-4 py-12">
     <div class="text-center mb-8">
-      <a href="/" class="text-3xl font-bold mb-2 hover:text-primary transition-colors">JTransfer</a>
-      <p class="text-muted-foreground">Terms of Service</p>
+      <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
+      <h1 class="text-3xl font-bold mb-2 mt-1">Terms of Service</h1>
+      <p class="text-muted-foreground">Applies to File Share and Image Converter</p>
     </div>
 
     <Frame.Root>
@@ -48,10 +49,12 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">2. Description of Service</h2>
             <p class="text-muted-foreground">
-              JTransfer is a free, end-to-end encrypted file sharing service that allows users to temporarily
-              share files with others. Files are encrypted in your browser before upload and automatically
-              deleted after 1 or 3 days.
+              JTransfer is a free, privacy-focused web product suite that currently includes:
             </p>
+            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+              <li><strong>File Share:</strong> End-to-end encrypted file sharing with temporary links</li>
+              <li><strong>Image Converter:</strong> Browser-local image conversion with no server upload</li>
+            </ul>
             <p class="text-muted-foreground">
               The Service is provided free of charge. Optional donations via Ko-fi are welcomed but do not
               grant any additional rights, features, or guarantees. Donations are non-refundable and processed
@@ -240,10 +243,14 @@
       </Frame.Panel>
     </Frame.Root>
 
-    <div class="mt-8 text-center">
-      <a href="/" class="text-sm text-muted-foreground hover:text-foreground">
-        Back to JTransfer
-      </a>
+    <div class="mt-8 text-center text-sm text-muted-foreground">
+      <div class="flex items-center justify-center gap-3">
+        <a href="/" class="hover:text-foreground transition-colors">Home</a>
+        <span>·</span>
+        <a href="/security" class="hover:text-foreground transition-colors">Security</a>
+        <span>·</span>
+        <a href="/privacy" class="hover:text-foreground transition-colors">Privacy Policy</a>
+      </div>
     </div>
   </div>
 </div>

@@ -4,10 +4,9 @@
 
   const SITE_URL = "https://jtransfer.jimmyverburgt.com";
   const PAGE_URL = `${SITE_URL}/image-converter`;
-  const PAGE_TITLE =
-    "Image Converter (HEIC, JPG, PNG, WEBP) - Private and Fast | JTransfer";
+  const PAGE_TITLE = "Image Converter - JTransfer";
   const PAGE_DESCRIPTION =
-    "Convert HEIC, JPG, PNG, WEBP, GIF, BMP, and TIFF locally in your browser. No uploads, no tracking, no server processing.";
+    "JTransfer Image Converter converts HEIC, JPG, PNG, WEBP, GIF, BMP, and TIFF locally in your browser. No uploads, no tracking, no server processing.";
 
   type OutputItem = {
     id: string;
@@ -82,7 +81,7 @@
   const imageConverterSchema = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: "JTransfer Image Converter",
+    name: "Image Converter - JTransfer",
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Any",
     browserRequirements: "Requires JavaScript and modern browser APIs",
@@ -359,13 +358,14 @@
 
 <div>
   <div class="min-h-screen">
-    <div class="max-w-3xl mx-auto px-4 py-10">
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold mb-2">Image Converter</h1>
-        <p class="text-muted-foreground">
-          Convert images locally in your browser. Nothing gets uploaded.
-        </p>
-      </div>
+      <div class="max-w-3xl mx-auto px-4 py-10">
+        <div class="text-center mb-8">
+          <p class="text-sm font-medium text-muted-foreground mb-1">JTransfer</p>
+          <h1 class="text-3xl font-bold mb-2">Image Converter</h1>
+          <p class="text-muted-foreground">
+            Convert images locally in your browser. Nothing gets uploaded.
+          </p>
+        </div>
 
       <Frame.Root>
         <div class="space-y-6">
@@ -563,6 +563,15 @@
       <div class="mt-8 text-center text-sm text-muted-foreground space-y-1">
         <p>Conversions happen locally in your browser.</p>
         <p>No files are uploaded or stored on our servers.</p>
+        <div class="flex items-center justify-center gap-3 pt-2">
+          <a href="/security" class="hover:text-foreground transition-colors"
+            >Security</a
+          >
+          <span>·</span>
+          <a href="/privacy" class="hover:text-foreground transition-colors"
+            >Privacy Policy</a
+          >
+        </div>
       </div>
     </div>
   </div>

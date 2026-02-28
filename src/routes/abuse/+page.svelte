@@ -47,8 +47,9 @@
 <div class="min-h-screen bg-background text-foreground">
   <div class="max-w-3xl mx-auto px-4 py-12">
     <div class="text-center mb-8">
-      <a href="/" class="text-3xl font-bold mb-2 hover:text-primary transition-colors">JTransfer</a>
-      <p class="text-muted-foreground">Report Abuse</p>
+      <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
+      <h1 class="text-3xl font-bold mb-2 mt-1">Report Abuse</h1>
+      <p class="text-muted-foreground">For File Share transfers and related misuse reports</p>
     </div>
 
     <Frame.Root>
@@ -150,6 +151,8 @@
     <div class="mt-8 text-center text-sm text-muted-foreground">
       <div class="flex items-center justify-center gap-3">
         <a href="/" class="hover:text-foreground transition-colors">Home</a>
+        <span>·</span>
+        <a href="/security" class="hover:text-foreground transition-colors">Security</a>
         <span>·</span>
         <a href="/privacy" class="hover:text-foreground transition-colors">Privacy Policy</a>
         <span>·</span>

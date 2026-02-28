@@ -19,8 +19,9 @@
 <div class="min-h-screen bg-background text-foreground">
   <div class="max-w-3xl mx-auto px-4 py-12">
     <div class="text-center mb-8">
-      <a href="/" class="text-3xl font-bold mb-2 hover:text-primary transition-colors">JTransfer</a>
-      <p class="text-muted-foreground">Privacy Policy</p>
+      <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
+      <h1 class="text-3xl font-bold mb-2 mt-1">Privacy Policy</h1>
+      <p class="text-muted-foreground">Applies to File Share and Image Converter</p>
     </div>
 
     <Frame.Root>
@@ -31,8 +32,9 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Introduction</h2>
             <p class="text-muted-foreground">
-              JTransfer ("we", "our", or "us") is a privacy-focused, end-to-end encrypted file sharing service.
-              This Privacy Policy explains how we handle information when you use our service at jtransfer.jimmyverburgt.com.
+              JTransfer ("we", "our", or "us") is a privacy-focused web product suite that currently includes
+              File Share and Image Converter. This Privacy Policy explains how we handle information when you use
+              our services at jtransfer.jimmyverburgt.com.
             </p>
             <p class="text-muted-foreground">
               We are committed to protecting your privacy. Our service is designed with a zero-knowledge architecture,
@@ -43,7 +45,7 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">2. Data We Collect</h2>
 
-            <h3 class="text-lg font-medium text-foreground">2.1 File Data (Encrypted)</h3>
+            <h3 class="text-lg font-medium text-foreground">2.1 File Share Data (Encrypted)</h3>
             <p class="text-muted-foreground">
               When you upload files, they are encrypted in your browser before being sent to our servers. We store:
             </p>
@@ -75,7 +77,7 @@
               <li>We do not sell or share data with third parties</li>
             </ul>
 
-            <h3 class="text-lg font-medium text-foreground">2.4 Image Converter (Local-Only)</h3>
+            <h3 class="text-lg font-medium text-foreground">2.4 Image Converter Data (Local-Only)</h3>
             <p class="text-muted-foreground">
               The Image Converter runs entirely in your browser. We do not upload, store, or process your images
               on our servers when you use the converter.
@@ -169,10 +171,14 @@
       </Frame.Panel>
     </Frame.Root>
 
-    <div class="mt-8 text-center">
-      <a href="/" class="text-sm text-muted-foreground hover:text-foreground">
-        Back to JTransfer
-      </a>
+    <div class="mt-8 text-center text-sm text-muted-foreground">
+      <div class="flex items-center justify-center gap-3">
+        <a href="/" class="hover:text-foreground transition-colors">Home</a>
+        <span>·</span>
+        <a href="/security" class="hover:text-foreground transition-colors">Security</a>
+        <span>·</span>
+        <a href="/terms" class="hover:text-foreground transition-colors">Terms of Service</a>
+      </div>
     </div>
   </div>
 </div>

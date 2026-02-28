@@ -21,8 +21,7 @@ Frontend application for JTransfer - a secure, end-to-end encrypted file sharing
 
 ## Prerequisites
 
-- Node.js 18 or higher
-- npm, pnpm, or yarn
+- [Bun](https://bun.sh/) 1.0 or higher
 
 ## Environment Variables
 
@@ -36,19 +35,19 @@ VITE_API_URL=http://localhost:3000
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Start development server
-npm run dev
+bun run dev
 
 # Type check
-npm run check
+bun run check
 
 # Build for production
-npm run build
+bun run build
 
 # Preview production build
-npm run preview
+bun run preview
 ```
 
 The app will be available at `http://localhost:5173`.
@@ -83,6 +82,12 @@ The server never has access to:
 - Unencrypted files
 - Original filenames
 - Encryption keys
+
+## Security & Governance
+
+- Security policy: [SECURITY.md](SECURITY.md)
+- Change history: [CHANGELOG.md](CHANGELOG.md)
+- Security overview page: `/security`
 
 ## License
 

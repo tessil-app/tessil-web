@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-  <title>JTransfer - Secure File Sharing</title>
+  <title>JTransfer</title>
   <meta property="og:site_name" content="JTransfer" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />

@@ -7,22 +7,22 @@ Thank you for your interest in contributing to JTransfer Frontend! This document
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/jtransfer-front.git`
 3. Create a new branch: `git checkout -b feature/your-feature-name`
-4. Install dependencies: `npm install`
+4. Install dependencies: `bun install`
 
 ## Development
 
 ```bash
 # Start development server
-npm run dev
+bun run dev
 
 # Type check
-npm run check
+bun run check
 
 # Build for production
-npm run build
+bun run build
 
 # Preview production build
-npm run preview
+bun run preview
 ```
 
 ## Code Style
@@ -59,7 +59,7 @@ Examples:
 ## Pull Requests
 
 1. Update documentation if needed
-2. Make sure your code passes type checking (`npm run check`)
+2. Make sure your code passes type checking (`bun run check`)
 3. Write a clear PR description explaining your changes
 4. Link any related issues
 

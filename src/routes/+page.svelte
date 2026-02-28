@@ -12,9 +12,9 @@
   import * as Frame from "$lib/components/frame";
 
   const SITE_URL = "https://jtransfer.jimmyverburgt.com";
-  const PAGE_TITLE = "Secure File Sharing with End-to-End Encryption | JTransfer";
+  const PAGE_TITLE = "File Share - JTransfer";
   const PAGE_DESCRIPTION =
-    "Send files securely with end-to-end encryption in your browser. JTransfer never sees your files or encryption keys.";
+    "JTransfer File Share lets you send files with end-to-end encryption in your browser. We never see your files or encryption keys.";
   const homeSchema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -26,7 +26,7 @@
       },
       {
         "@type": "WebApplication",
-        name: "JTransfer Secure File Sharing",
+        name: "File Share - JTransfer",
         applicationCategory: "SecurityApplication",
         operatingSystem: "Any",
         browserRequirements: "Requires JavaScript and modern browser APIs",
@@ -231,7 +231,8 @@
   <div class="min-h-screen">
     <div class="max-w-2xl mx-auto px-4 py-12">
     <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold mb-2">JTransfer</h1>
+      <p class="text-sm font-medium text-muted-foreground mb-1">JTransfer</p>
+      <h1 class="text-3xl font-bold mb-2">File Share</h1>
       <p class="text-muted-foreground">
         Secure, open source, end-to-end encrypted file sharing hosted in the EU
       </p>
@@ -486,6 +487,10 @@
           >Privacy Policy</a
         >
         <span>·</span>
+        <a href="/security" class="hover:text-foreground transition-colors"
+          >Security</a
+        >
+        <span>·</span>
         <a href="/terms" class="hover:text-foreground transition-colors"
           >Terms of Service</a
         >
@@ -508,7 +513,7 @@
     class="max-w-2xl mx-auto px-4 pb-12 pt-10 border-t border-border/60 text-sm text-muted-foreground leading-relaxed space-y-3"
   >
     <h2 class="text-base font-semibold text-foreground">
-      Secure file transfer, explained
+      JTransfer File Share, explained
     </h2>
     <p>
       JTransfer is a secure file transfer service built for fast, private
