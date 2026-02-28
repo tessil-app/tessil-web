@@ -11,6 +11,41 @@
 
   import * as Frame from "$lib/components/frame";
 
+  const SITE_URL = "https://jtransfer.jimmyverburgt.com";
+  const PAGE_TITLE = "Secure File Sharing with End-to-End Encryption | JTransfer";
+  const PAGE_DESCRIPTION =
+    "Send files securely with end-to-end encryption in your browser. JTransfer never sees your files or encryption keys.";
+  const homeSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        name: "JTransfer",
+        url: SITE_URL,
+        description: PAGE_DESCRIPTION,
+      },
+      {
+        "@type": "WebApplication",
+        name: "JTransfer Secure File Sharing",
+        applicationCategory: "SecurityApplication",
+        operatingSystem: "Any",
+        browserRequirements: "Requires JavaScript and modern browser APIs",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "EUR",
+        },
+        featureList: [
+          "End-to-end encrypted file sharing",
+          "Client-side encryption in browser",
+          "Temporary links with expiration",
+          "Optional password protection",
+        ],
+        url: SITE_URL,
+      },
+    ],
+  };
+
   const MIN_PASSWORD_LENGTH = 8;
 
   let showPassword = $state(false);
@@ -176,6 +211,21 @@
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   }
 </script>
+
+<svelte:head>
+  <title>{PAGE_TITLE}</title>
+  <meta name="description" content={PAGE_DESCRIPTION} />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta property="og:title" content={PAGE_TITLE} />
+  <meta property="og:description" content={PAGE_DESCRIPTION} />
+  <meta property="og:url" content={SITE_URL} />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:title" content={PAGE_TITLE} />
+  <meta name="twitter:description" content={PAGE_DESCRIPTION} />
+  <script type="application/ld+json">
+    {JSON.stringify(homeSchema)}
+  </script>
+</svelte:head>
 
 <div class="bg-background text-foreground">
   <div class="min-h-screen">

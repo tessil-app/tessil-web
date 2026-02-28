@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ModeWatcher, setMode } from "mode-watcher";
+  import { ModeWatcher } from "mode-watcher";
   import { page } from "$app/stores";
   import "../app.css";
   let { children } = $props();
@@ -7,6 +7,9 @@
 
 <svelte:head>
   <title>JTransfer - Secure File Sharing</title>
+  <meta property="og:site_name" content="JTransfer" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 <ModeWatcher />
 <div class="min-h-screen bg-background text-foreground">
@@ -28,5 +31,7 @@
     </div>
   </div>
 
-  {@render children()}
+  <main id="main-content">
+    {@render children()}
+  </main>
 </div>

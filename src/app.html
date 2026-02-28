@@ -3,17 +3,111 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JTransfer - Secure File Sharing</title>
     <meta
       name="description"
       content="JTransfer - Secure, end-to-end encrypted file sharing. Your files are encrypted in your browser before upload."
     />
+    <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#111827" />
     <meta name="referrer" content="no-referrer" />
+    <meta property="og:site_name" content="JTransfer" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="JTransfer - Secure File Sharing" />
+    <meta
+      property="og:description"
+      content="JTransfer - Secure, end-to-end encrypted file sharing. Your files are encrypted in your browser before upload."
+    />
+    <meta property="og:url" content="https://jtransfer.jimmyverburgt.com/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="JTransfer - Secure File Sharing" />
+    <meta
+      name="twitter:description"
+      content="JTransfer - Secure, end-to-end encrypted file sharing. Your files are encrypted in your browser before upload."
+    />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <script>
+      (() => {
+        const siteUrl = "https://jtransfer.jimmyverburgt.com";
+        const path = window.location.pathname === "/"
+          ? "/"
+          : window.location.pathname.replace(/\/+$/, "");
+        const isTransferRoute = path.startsWith("/d/");
+
+        const pageMeta = {
+          "/": {
+            title: "Secure File Sharing with End-to-End Encryption | JTransfer",
+            description:
+              "Send files securely with end-to-end encryption in your browser. JTransfer never sees your files or encryption keys.",
+          },
+          "/image-converter": {
+            title:
+              "Image Converter (HEIC, JPG, PNG, WEBP) - Private and Fast | JTransfer",
+            description:
+              "Convert HEIC, JPG, PNG, WEBP, GIF, BMP, and TIFF locally in your browser. No uploads, no tracking, no server processing.",
+          },
+          "/privacy": {
+            title: "Privacy Policy - JTransfer",
+            description:
+              "Read how JTransfer handles data, encryption, retention, and GDPR rights for secure file sharing and local image conversion.",
+          },
+          "/terms": {
+            title: "Terms of Service - JTransfer",
+            description:
+              "Review JTransfer terms of service, usage limits, legal compliance, and acceptable use for secure encrypted file sharing.",
+          },
+          "/abuse": {
+            title: "Report Abuse - JTransfer",
+            description:
+              "Report illegal or abusive content on JTransfer quickly. Submit transfer links for review and action.",
+          },
+        };
+
+        const fallback = pageMeta["/"];
+        const current = pageMeta[path] ?? fallback;
+        document.title = current.title;
+
+        const setMeta = (attrName, attrValue, value) => {
+          let tag = document.head.querySelector(
+            `meta[${attrName}="${attrValue}"]`
+          );
+          if (!tag) {
+            tag = document.createElement("meta");
+            tag.setAttribute(attrName, attrValue);
+            document.head.appendChild(tag);
+          }
+          tag.setAttribute("content", value);
+        };
+
+        setMeta("name", "description", current.description);
+        setMeta("property", "og:title", current.title);
+        setMeta("property", "og:description", current.description);
+        setMeta("name", "twitter:title", current.title);
+        setMeta("name", "twitter:description", current.description);
+
+        const canonicalPath = path === "/" ? "/" : path;
+        const canonicalUrl = `${siteUrl}${canonicalPath}`;
+        setMeta("property", "og:url", canonicalUrl);
+
+        let canonicalTag = document.head.querySelector('link[rel="canonical"]');
+        if (!canonicalTag) {
+          canonicalTag = document.createElement("link");
+          canonicalTag.setAttribute("rel", "canonical");
+          document.head.appendChild(canonicalTag);
+        }
+        canonicalTag.setAttribute("href", canonicalUrl);
+
+        let robots = "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1";
+        if (isTransferRoute) {
+          robots = "noindex, nofollow, noarchive, nosnippet";
+        }
+        setMeta("name", "robots", robots);
+      })();
+    </script>
     %sveltekit.head%
   </head>
   <body
@@ -23,13 +117,31 @@
     <div style="display: contents">%sveltekit.body%</div>
   </body>
 
-  <script src="https://storage.ko-fi.com/cdn/scripts/overlay-widget.js"></script>
   <script>
-    kofiWidgetOverlay.draw("jimmyjtransfer", {
-      type: "floating-chat",
-      "floating-chat.donateButton.text": "Support me",
-      "floating-chat.donateButton.background-color": "#e7000b",
-      "floating-chat.donateButton.text-color": "#fff",
-    });
+    (() => {
+      if (window.location.pathname !== "/") return;
+
+      const loadWidget = () => {
+        const script = document.createElement("script");
+        script.src = "https://storage.ko-fi.com/cdn/scripts/overlay-widget.js";
+        script.async = true;
+        script.onload = () => {
+          if (!window.kofiWidgetOverlay?.draw) return;
+          window.kofiWidgetOverlay.draw("jimmyjtransfer", {
+            type: "floating-chat",
+            "floating-chat.donateButton.text": "Support me",
+            "floating-chat.donateButton.background-color": "#e7000b",
+            "floating-chat.donateButton.text-color": "#fff",
+          });
+        };
+        document.body.appendChild(script);
+      };
+
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(loadWidget, { timeout: 2500 });
+      } else {
+        window.setTimeout(loadWidget, 1500);
+      }
+    })();
   </script>
 </html>

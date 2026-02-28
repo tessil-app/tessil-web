@@ -2,6 +2,13 @@
   import { onDestroy } from "svelte";
   import * as Frame from "$lib/components/frame";
 
+  const SITE_URL = "https://jtransfer.jimmyverburgt.com";
+  const PAGE_URL = `${SITE_URL}/image-converter`;
+  const PAGE_TITLE =
+    "Image Converter (HEIC, JPG, PNG, WEBP) - Private and Fast | JTransfer";
+  const PAGE_DESCRIPTION =
+    "Convert HEIC, JPG, PNG, WEBP, GIF, BMP, and TIFF locally in your browser. No uploads, no tracking, no server processing.";
+
   type OutputItem = {
     id: string;
     name: string;
@@ -72,6 +79,27 @@
   let warning = $state<string | null>(null);
   let isConverting = $state(false);
   let isDragging = $state(false);
+  const imageConverterSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "JTransfer Image Converter",
+    applicationCategory: "MultimediaApplication",
+    operatingSystem: "Any",
+    browserRequirements: "Requires JavaScript and modern browser APIs",
+    description: PAGE_DESCRIPTION,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "EUR",
+    },
+    featureList: [
+      "Client-side conversion in browser",
+      "HEIC to JPG, PNG, WEBP conversion",
+      "Batch conversion up to 10 files",
+      "ZIP export support",
+    ],
+    url: PAGE_URL,
+  };
 
   function handleInputChange(event: Event) {
     const target = event.currentTarget as HTMLInputElement;
@@ -315,11 +343,18 @@
 </script>
 
 <svelte:head>
-  <title>Image Converter - JTransfer</title>
-  <meta
-    name="description"
-    content="Convert images between JPG, PNG, and WEBP locally in your browser. No uploads."
-  />
+  <title>{PAGE_TITLE}</title>
+  <meta name="description" content={PAGE_DESCRIPTION} />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta property="og:title" content={PAGE_TITLE} />
+  <meta property="og:description" content={PAGE_DESCRIPTION} />
+  <meta property="og:url" content={PAGE_URL} />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:title" content={PAGE_TITLE} />
+  <meta name="twitter:description" content={PAGE_DESCRIPTION} />
+  <script type="application/ld+json">
+    {JSON.stringify(imageConverterSchema)}
+  </script>
 </svelte:head>
 
 <div>

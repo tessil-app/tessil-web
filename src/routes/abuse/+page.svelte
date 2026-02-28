@@ -32,6 +32,16 @@
 
 <svelte:head>
   <title>Report Abuse - JTransfer</title>
+  <meta
+    name="description"
+    content="Report illegal or abusive content on JTransfer quickly. Submit transfer links for review and action."
+  />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="Report Abuse - JTransfer" />
+  <meta
+    property="og:description"
+    content="Abuse reporting page for JTransfer secure file sharing."
+  />
 </svelte:head>
 
 <div class="min-h-screen bg-background text-foreground">

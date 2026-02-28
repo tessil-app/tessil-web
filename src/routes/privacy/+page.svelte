@@ -4,6 +4,16 @@
 
 <svelte:head>
   <title>Privacy Policy - JTransfer</title>
+  <meta
+    name="description"
+    content="Read how JTransfer handles data, encryption, retention, and GDPR rights for secure file sharing and local image conversion."
+  />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="Privacy Policy - JTransfer" />
+  <meta
+    property="og:description"
+    content="JTransfer privacy policy for encrypted file sharing and browser-local image conversion."
+  />
 </svelte:head>
 
 <div class="min-h-screen bg-background text-foreground">

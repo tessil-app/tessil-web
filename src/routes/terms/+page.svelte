@@ -13,6 +13,16 @@
 
 <svelte:head>
   <title>Terms of Service - JTransfer</title>
+  <meta
+    name="description"
+    content="Review JTransfer terms of service, usage limits, legal compliance, and acceptable use for secure encrypted file sharing."
+  />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="Terms of Service - JTransfer" />
+  <meta
+    property="og:description"
+    content="Terms of service for using JTransfer secure file sharing and related tools."
+  />
 </svelte:head>
 
 <div class="min-h-screen bg-background text-foreground">

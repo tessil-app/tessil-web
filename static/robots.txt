@@ -1,3 +1,7 @@
-# allow crawling everything by default
 User-agent: *
-Disallow:
+Allow: /
+
+# do not index temporary transfer links
+Disallow: /d/
+
+Sitemap: https://jtransfer.jimmyverburgt.com/sitemap.xml
