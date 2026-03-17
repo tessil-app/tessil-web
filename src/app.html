@@ -115,7 +115,7 @@
     %sveltekit.head%
   </head>
   <body
-    data-sveltekit-preload-data="hover"
+    data-sveltekit-preload-data="tap"
     class="bg-background text-foreground"
   >
     <div style="display: contents">%sveltekit.body%</div>
@@ -124,8 +124,12 @@
   <script>
     (() => {
       if (window.location.pathname !== "/") return;
+      let widgetLoaded = false;
 
       const loadWidget = () => {
+        if (widgetLoaded) return;
+        widgetLoaded = true;
+
         const script = document.createElement("script");
         script.src = "https://storage.ko-fi.com/cdn/scripts/overlay-widget.js";
         script.async = true;
@@ -141,11 +145,23 @@
         document.body.appendChild(script);
       };
 
-      if ("requestIdleCallback" in window) {
-        window.requestIdleCallback(loadWidget, { timeout: 2500 });
-      } else {
-        window.setTimeout(loadWidget, 1500);
-      }
+      const startLoad = () => {
+        if ("requestIdleCallback" in window) {
+          window.requestIdleCallback(loadWidget, { timeout: 2000 });
+        } else {
+          window.setTimeout(loadWidget, 200);
+        }
+      };
+
+      window.addEventListener("pointerdown", startLoad, {
+        once: true,
+        passive: true,
+      });
+      window.addEventListener("keydown", startLoad, { once: true });
+      window.addEventListener("scroll", startLoad, { once: true, passive: true });
+
+      // Fallback for passive users on the homepage.
+      window.setTimeout(startLoad, 8000);
     })();
   </script>
 </html>

@@ -35,6 +35,19 @@
     { label: "Convert + Download ZIP", value: "zip" },
   ] as const;
 
+  const resizeOptions = [
+    { label: "Keep original size", value: "original", maxDimension: null },
+    { label: "Max 2560px (4K friendly)", value: "max-2560", maxDimension: 2560 },
+    { label: "Max 1920px (Full HD)", value: "max-1920", maxDimension: 1920 },
+    { label: "Max 1280px (HD)", value: "max-1280", maxDimension: 1280 },
+  ] as const;
+
+  const qualityOptions = [
+    { label: "Best quality", value: "best", quality: 0.92 },
+    { label: "Balanced", value: "balanced", quality: 0.85 },
+    { label: "Smaller file", value: "smaller", quality: 0.75 },
+  ] as const;
+
   const globalFormatOptions = [
     { label: "JPEG", value: "image/jpeg" },
     { label: "PNG", value: "image/png" },
@@ -74,10 +87,13 @@
   >("image/jpeg");
   let outputs = $state<OutputItem[]>([]);
   let action = $state<(typeof actionOptions)[number]["value"]>("convert");
+  let resizePreset = $state<(typeof resizeOptions)[number]["value"]>("original");
+  let qualityPreset = $state<(typeof qualityOptions)[number]["value"]>("best");
   let error = $state<string | null>(null);
   let warning = $state<string | null>(null);
   let isConverting = $state(false);
   let isDragging = $state(false);
+  let heicConverterPromise: Promise<(typeof import("heic2any"))["default"]> | null = null;
   const imageConverterSchema = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -96,6 +112,7 @@
       "HEIC to JPG, PNG, WEBP conversion",
       "Batch conversion up to 10 files",
       "ZIP export support",
+      "Separate image size and quality controls",
     ],
     url: PAGE_URL,
   };
@@ -191,6 +208,38 @@
     return file.type === "image/gif" || /\.gif$/i.test(file.name);
   }
 
+  async function loadHeicConverter() {
+    if (!heicConverterPromise) {
+      heicConverterPromise = import("heic2any").then((module) => module.default);
+    }
+    return heicConverterPromise;
+  }
+
+  async function canDecodeNatively(file: File) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      bitmap.close?.();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function getSourceBlob(file: File) {
+    if (!isHeic(file)) return file;
+
+    // Prefer native browser decode when available to avoid loading the HEIC fallback bundle.
+    if (await canDecodeNatively(file)) return file;
+
+    const heic2any = await loadHeicConverter();
+    const heicResult = await heic2any({
+      blob: file,
+      toType: "image/png",
+    });
+
+    return Array.isArray(heicResult) ? heicResult[0] : heicResult;
+  }
+
   function getBaseName(name: string) {
     const parts = name.split(".");
     if (parts.length <= 1) return name;
@@ -200,6 +249,41 @@
 
   function getEffectiveFormat(item: SelectedItem) {
     return outputFormat === "individual" ? item.format : outputFormat;
+  }
+
+  function getResizePreset() {
+    return (
+      resizeOptions.find((option) => option.value === resizePreset) ??
+      resizeOptions[0]
+    );
+  }
+
+  function getQualityPreset() {
+    return (
+      qualityOptions.find((option) => option.value === qualityPreset) ??
+      qualityOptions[0]
+    );
+  }
+
+  function getTargetDimensions(
+    width: number,
+    height: number,
+    maxDimension: number | null
+  ) {
+    if (!maxDimension) {
+      return { width, height };
+    }
+
+    const longestEdge = Math.max(width, height);
+    if (longestEdge <= maxDimension) {
+      return { width, height };
+    }
+
+    const scale = maxDimension / longestEdge;
+    return {
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale)),
+    };
   }
 
   function updateGlobalFormat(value: (typeof globalFormatOptions)[number]["value"]) {
@@ -227,28 +311,26 @@
 
     try {
       const zipEntries: { name: string; blob: Blob }[] = [];
+      const selectedResize = getResizePreset();
+      const selectedQuality = getQualityPreset();
 
       for (const item of selectedFiles) {
         const file = item.file;
-        let sourceBlob: Blob = file;
-
-        if (isHeic(file)) {
-          const heic2any = (await import("heic2any")).default;
-          const heicResult = await heic2any({
-            blob: file,
-            toType: "image/png",
-          });
-          sourceBlob = Array.isArray(heicResult) ? heicResult[0] : heicResult;
-        }
+        const sourceBlob = await getSourceBlob(file);
 
         const effectiveFormat = getEffectiveFormat(item);
         const bitmap = await createImageBitmap(sourceBlob);
+        const { width, height } = getTargetDimensions(
+          bitmap.width,
+          bitmap.height,
+          selectedResize.maxDimension
+        );
         const canvas = document.createElement("canvas");
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
+        canvas.width = width;
+        canvas.height = height;
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Canvas not supported in this browser.");
-        ctx.drawImage(bitmap, 0, 0);
+        ctx.drawImage(bitmap, 0, 0, width, height);
         bitmap.close?.();
 
         const formatMeta = outputFormats.find(
@@ -258,7 +340,7 @@
 
         const quality =
           effectiveFormat === "image/jpeg" || effectiveFormat === "image/webp"
-            ? 0.92
+            ? selectedQuality.quality
             : undefined;
 
         const outBlob = await new Promise<Blob>((resolve, reject) => {
@@ -459,8 +541,39 @@
                         <option value={option.value}>{option.label}</option>
                       {/each}
                     </select>
+
+                    <label for="resize" class="text-muted-foreground"
+                      >Image size</label
+                    >
+                    <select
+                      id="resize"
+                      bind:value={resizePreset}
+                      class="py-2 px-3 bg-secondary border border-input rounded-[calc(var(--radius-2xl)-1px)] text-secondary-foreground hover:bg-accent transition-colors hover:cursor-pointer"
+                    >
+                      {#each resizeOptions as option}
+                        <option value={option.value}>{option.label}</option>
+                      {/each}
+                    </select>
+
+                    <label for="quality" class="text-muted-foreground"
+                      >Quality</label
+                    >
+                    <select
+                      id="quality"
+                      bind:value={qualityPreset}
+                      class="py-2 px-3 bg-secondary border border-input rounded-[calc(var(--radius-2xl)-1px)] text-secondary-foreground hover:bg-accent transition-colors hover:cursor-pointer"
+                    >
+                      {#each qualityOptions as option}
+                        <option value={option.value}>{option.label}</option>
+                      {/each}
+                    </select>
                   </div>
                 </div>
+
+                <p class="text-xs text-muted-foreground">
+                  Quality affects JPEG and WEBP. PNG stays lossless and only uses
+                  the image size setting.
+                </p>
 
                 <ul class="space-y-2 text-sm">
                   {#each selectedFiles as item}
@@ -589,8 +702,8 @@
     </p>
     <p>
       Convert single files or batch multiple images, choose a global format, or
-      set individual outputs per file. It is quick, lightweight, and optimized
-      for clean results.
+      set individual outputs per file. You can fine-tune image size and quality
+      separately, so users can choose clarity or smaller files with less guesswork.
     </p>
     <p>
       Perfect for preparing assets for the web, reducing file sizes, or

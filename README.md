@@ -87,6 +87,8 @@ The server never has access to:
 
 - Security policy: [SECURITY.md](SECURITY.md)
 - Change history: [CHANGELOG.md](CHANGELOG.md)
+- Brand guide: [docs/brand.md](docs/brand.md)
+- Cloudflare indexing runbook: [docs/cloudflare-edge-rules.md](docs/cloudflare-edge-rules.md)
 - Security overview page: `/security`
 
 ## License
