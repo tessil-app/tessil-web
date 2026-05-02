@@ -100,7 +100,7 @@
         {#if fileState.status === "encrypting" || fileState.status === "uploading"}
           <div class="mt-1 w-full bg-muted rounded-full h-1">
             <div
-              class="bg-info h-1 rounded-full transition-all duration-300"
+              class="bg-info h-1 rounded-full transition-[width] duration-200 ease-out"
               style="width: {fileState.progress}%"
             ></div>
           </div>

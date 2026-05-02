@@ -4,10 +4,23 @@
   interface Props {
     url: string;
     onReset: () => void;
+    expiresInHours: number;
+    maxDownloads: number | null;
   }
 
-  let { url, onReset }: Props = $props();
+  let { url, onReset, expiresInHours, maxDownloads }: Props = $props();
   let copied = $state(false);
+
+  function formatExpiry(hours: number): string {
+    if (hours < 24) return `${hours}h`;
+    const days = hours / 24;
+    return `${days} day${days !== 1 ? 's' : ''}`;
+  }
+
+  function formatDownloads(max: number | null): string {
+    if (max === null) return 'Unlimited downloads';
+    return `Max ${max} download${max !== 1 ? 's' : ''}`;
+  }
 
   async function copyToClipboard() {
     try {
@@ -53,6 +66,9 @@
   </Frame.Header>
   <Frame.Panel>
     <p class="text-sm text-muted-foreground mb-2">Share this link:</p>
+    <p class="text-xs text-muted-foreground mb-3">
+      Expires in {formatExpiry(expiresInHours)} · {formatDownloads(maxDownloads)}
+    </p>
     <div class="flex gap-2">
       <input
         type="text"

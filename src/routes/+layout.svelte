@@ -27,6 +27,11 @@
           class="transition-colors {($page.url.pathname.startsWith('/image-converter') ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}"
           >Image Converter</a
         >
+        <a
+          href="/pdf-tools"
+          class="transition-colors {($page.url.pathname.startsWith('/pdf-tools') ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}"
+          >PDF Tools</a
+        >
       </nav>
     </div>
   </div>

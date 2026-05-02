@@ -72,7 +72,7 @@
   ondrop={handleDrop}
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}
-  class="not-last:mb-4 w-full p-12 border-2 border-dashed rounded-[calc(var(--radius-2xl)-1px)] transition-all duration-200 cursor-pointer
+  class="not-last:mb-4 w-full p-12 border-2 border-dashed rounded-[calc(var(--radius-2xl)-1px)] transition-[border-color,background-color] duration-200 ease-out cursor-pointer
 		{isDragging
     ? 'border-primary bg-primary/10'
     : 'border-border hover:border-muted-foreground'}

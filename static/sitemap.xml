@@ -13,6 +13,36 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://jtransfer.jimmyverburgt.com/pdf-tools</loc>
+    <lastmod>2026-03-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://jtransfer.jimmyverburgt.com/pdf-tools/merge</loc>
+    <lastmod>2026-03-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://jtransfer.jimmyverburgt.com/pdf-tools/split</loc>
+    <lastmod>2026-03-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://jtransfer.jimmyverburgt.com/pdf-tools/rotate</loc>
+    <lastmod>2026-03-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://jtransfer.jimmyverburgt.com/pdf-tools/remove</loc>
+    <lastmod>2026-03-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://jtransfer.jimmyverburgt.com/privacy</loc>
     <lastmod>2026-02-28</lastmod>
     <changefreq>yearly</changefreq>

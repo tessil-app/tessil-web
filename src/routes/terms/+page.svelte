@@ -15,13 +15,13 @@
   <title>Terms of Service - JTransfer</title>
   <meta
     name="description"
-    content="Review JTransfer terms of service, usage limits, legal compliance, and acceptable use for secure encrypted file sharing."
+    content="Review JTransfer terms of service, usage limits, legal compliance, and acceptable use for File Share, Image Converter, and PDF Tools."
   />
   <meta name="robots" content="index, follow" />
   <meta property="og:title" content="Terms of Service - JTransfer" />
   <meta
     property="og:description"
-    content="Terms of service for using JTransfer secure file sharing and related tools."
+    content="Terms of service for using JTransfer File Share, Image Converter, and PDF Tools."
   />
 </svelte:head>
 
@@ -30,13 +30,13 @@
     <div class="text-center mb-8">
       <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
       <h1 class="text-3xl font-bold mb-2 mt-1">Terms of Service</h1>
-      <p class="text-muted-foreground">Applies to File Share and Image Converter</p>
+      <p class="text-muted-foreground">Applies to File Share, Image Converter, and PDF Tools</p>
     </div>
 
     <Frame.Root>
       <Frame.Panel>
         <div class="prose prose-invert max-w-none space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: February 5, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: March 17, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
@@ -54,6 +54,7 @@
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li><strong>File Share:</strong> End-to-end encrypted file sharing with temporary links</li>
               <li><strong>Image Converter:</strong> Browser-local image conversion with no server upload</li>
+              <li><strong>PDF Tools:</strong> Browser-local PDF merge and split with no server upload</li>
             </ul>
             <p class="text-muted-foreground">
               The Service is provided free of charge. Optional donations via Ko-fi are welcomed but do not
@@ -116,6 +117,10 @@
               <li>If you lose the share link, the files cannot be recovered</li>
               <li>We cannot comply with requests to provide file contents (as we don't have access)</li>
             </ul>
+            <p class="text-muted-foreground">
+              Image Converter and PDF Tools process files locally in your browser and do not require server upload
+              for core functionality.
+            </p>
             <p class="text-muted-foreground">
               For more information, please see our <a href="/privacy" class="text-primary hover:underline">Privacy Policy</a>.
             </p>
@@ -246,6 +251,8 @@
     <div class="mt-8 text-center text-sm text-muted-foreground">
       <div class="flex items-center justify-center gap-3">
         <a href="/" class="hover:text-foreground transition-colors">Home</a>
+        <span>·</span>
+        <a href="/pdf-tools" class="hover:text-foreground transition-colors">PDF Tools</a>
         <span>·</span>
         <a href="/security" class="hover:text-foreground transition-colors">Security</a>
         <span>·</span>

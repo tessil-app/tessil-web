@@ -16,7 +16,7 @@
   {/if}
   <div class="w-full bg-muted rounded-full h-2.5 overflow-hidden">
     <div
-      class="bg-info h-2.5 rounded-full transition-all duration-300 ease-out"
+      class="bg-info h-2.5 rounded-full transition-[width] duration-200 ease-out"
       style="width: {progress}%"
     ></div>
   </div>

@@ -19,8 +19,9 @@ export interface UploadState {
   overallProgress: number;
   error: string | null;
   shareUrl: string | null;
-  expiresInDays: number;
+  expiresInHours: number;
   currentFileIndex: number;
   password: string;
   passwordEnabled: boolean;
+  maxDownloads: number | null;
 }

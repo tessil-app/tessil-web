@@ -25,6 +25,22 @@
       name="twitter:description"
       content="JTransfer File Share lets you send files with end-to-end encryption in your browser. We never see your files or encryption keys."
     />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://storage.ko-fi.com;
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob: https:;
+        font-src 'self' data:;
+        connect-src 'self' https: http://localhost:3000;
+        worker-src 'self' blob:;
+        frame-src 'none';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+      "
+    />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -49,15 +65,40 @@
             description:
               "JTransfer Image Converter converts HEIC, JPG, PNG, WEBP, GIF, BMP, and TIFF locally in your browser. No uploads, no tracking, no server processing.",
           },
+          "/pdf-tools": {
+            title: "PDF Tools - JTransfer",
+            description:
+              "Choose a PDF workflow on JTransfer: merge, split, rotate, or remove pages. Processing stays local in your browser.",
+          },
+          "/pdf-tools/merge": {
+            title: "Merge PDFs - JTransfer",
+            description:
+              "Merge multiple PDFs locally in your browser on JTransfer. Reorder files with drag and drop, then export instantly.",
+          },
+          "/pdf-tools/split": {
+            title: "Split PDF - JTransfer",
+            description:
+              "Split a PDF by page range or extract every page locally in your browser on JTransfer.",
+          },
+          "/pdf-tools/rotate": {
+            title: "Rotate PDF Pages - JTransfer",
+            description:
+              "Rotate selected PDF pages by 90, 180, or 270 degrees locally in your browser with JTransfer.",
+          },
+          "/pdf-tools/remove": {
+            title: "Remove PDF Pages - JTransfer",
+            description:
+              "Remove selected pages from a PDF locally in your browser with JTransfer.",
+          },
           "/privacy": {
             title: "Privacy Policy - JTransfer",
             description:
-              "Read how JTransfer handles data, encryption, retention, and GDPR rights for secure file sharing and local image conversion.",
+              "Read how JTransfer handles data, encryption, retention, and GDPR rights for secure file sharing, local image conversion, and PDF tools.",
           },
           "/terms": {
             title: "Terms of Service - JTransfer",
             description:
-              "Review JTransfer terms of service, usage limits, legal compliance, and acceptable use for secure encrypted file sharing.",
+              "Review JTransfer terms of service, usage limits, legal compliance, and acceptable use for File Share, Image Converter, and PDF Tools.",
           },
           "/abuse": {
             title: "Report Abuse - JTransfer",
@@ -67,7 +108,7 @@
           "/security": {
             title: "Security Overview - JTransfer",
             description:
-              "Security overview for all JTransfer products, including File Share and Image Converter, with threat boundaries and disclosure process.",
+              "Security overview for all JTransfer products, including File Share, Image Converter, and PDF Tools, with threat boundaries and disclosure process.",
           },
         };
 

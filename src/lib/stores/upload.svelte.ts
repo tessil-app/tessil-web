@@ -11,10 +11,11 @@ function createUploadStore() {
     overallProgress: 0,
     error: null,
     shareUrl: null,
-    expiresInDays: 1,
+    expiresInHours: 24,
     currentFileIndex: 0,
     password: "",
     passwordEnabled: false,
+    maxDownloads: null,
   });
 
   function calculateOverallProgress(): number {
@@ -39,8 +40,11 @@ function createUploadStore() {
     get shareUrl() {
       return state.shareUrl;
     },
-    get expiresInDays() {
-      return state.expiresInDays;
+    get expiresInHours() {
+      return state.expiresInHours;
+    },
+    get maxDownloads() {
+      return state.maxDownloads;
     },
     get currentFileIndex() {
       return state.currentFileIndex;
@@ -112,8 +116,12 @@ function createUploadStore() {
       state.status = "complete";
     },
 
-    setExpiresInDays(days: number) {
-      state.expiresInDays = days;
+    setExpiresInHours(hours: number) {
+      state.expiresInHours = hours;
+    },
+
+    setMaxDownloads(max: number | null) {
+      state.maxDownloads = max;
     },
 
     setPassword(password: string) {
@@ -134,10 +142,11 @@ function createUploadStore() {
         overallProgress: 0,
         error: null,
         shareUrl: null,
-        expiresInDays: 1,
+        expiresInHours: 24,
         currentFileIndex: 0,
         password: "",
         passwordEnabled: false,
+        maxDownloads: null,
       };
     },
   };

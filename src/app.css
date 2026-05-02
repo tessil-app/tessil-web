@@ -143,6 +143,30 @@
   --sidebar-ring: var(--color-neutral-400);
 }
 
+.tooltip-help-trigger {
+  transition:
+    background-color 120ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tooltip-help-trigger:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tooltip-help-trigger:hover {
+    background-color: var(--accent);
+  }
+}
+
+/* Disable hover-driven transition animations on touch/non-hover devices. */
+@media (hover: none), (pointer: coarse) {
+  [class*="hover:"][class*="transition"] {
+    transition-duration: 0ms !important;
+  }
+}
+
 /* Ko-fi widget dark mode overrides */
 .dark .floating-chat-kofi-popup-iframe,
 .dark .floating-chat-kofi-popup-iframe-mobi {
