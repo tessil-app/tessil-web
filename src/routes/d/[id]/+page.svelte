@@ -4,7 +4,7 @@
   import * as Frame from "$lib/components/frame";
   import ProgressBar from "$lib/components/ProgressBar.svelte";
   import { decryptFile, decryptFilename } from "$lib/crypto/decrypt";
-  import { importKey } from "$lib/crypto/key";
+  import { importKey, unwrapKey, isWrappedKey } from "$lib/crypto/key";
   import { onMount } from "svelte";
 
   type PageStatus = "loading" | "password_required" | "ready" | "error";
@@ -35,6 +35,7 @@
   let isVerifyingPassword = $state(false);
   let showPassword = $state(false);
   let transferId = $state<string | null>(null);
+  let rawFragment = $state<string | null>(null); // kept for wrapped key unwrapping
 
   function formatSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -72,15 +73,24 @@
         return;
       }
 
-      // Import the key
-      const cryptoKey = await importKey(hash);
-      key = cryptoKey;
+      rawFragment = hash;
 
-      // Fetch transfer metadata
+      // Fetch transfer metadata first
       const meta = await api.getTransferMetadata(id);
       transfer = meta;
 
-      // Check if password is required
+      // If key is wrapped, a password is required to unwrap it
+      if (isWrappedKey(hash)) {
+        // Password prompt will handle both server verify and key unwrapping
+        pageStatus = "password_required";
+        return;
+      }
+
+      // Plain key — import directly
+      const cryptoKey = await importKey(hash);
+      key = cryptoKey;
+
+      // Check if password is required (server-side gate only)
       if (meta.passwordRequired) {
         pageStatus = "password_required";
         return;
@@ -126,15 +136,34 @@
   }
 
   async function handlePasswordSubmit() {
-    if (!transferId || !key || isVerifyingPassword) return;
+    if (!transferId || isVerifyingPassword) return;
 
     passwordError = null;
     isVerifyingPassword = true;
 
     try {
+      // Verify password server-side (gates access to file metadata)
       const meta = await api.verifyTransferPassword(transferId, password);
       transfer = meta;
-      await decryptAndShowFiles(meta, key);
+
+      // Unwrap key if it is wrapped with the password; otherwise use already-imported key
+      let cryptoKey: CryptoKey;
+      if (rawFragment && isWrappedKey(rawFragment)) {
+        try {
+          cryptoKey = await unwrapKey(rawFragment, password);
+        } catch {
+          passwordError = "Incorrect password";
+          return;
+        }
+      } else if (key) {
+        cryptoKey = key;
+      } else {
+        passwordError = "Missing decryption key";
+        return;
+      }
+
+      key = cryptoKey;
+      await decryptAndShowFiles(meta, cryptoKey);
     } catch (err) {
       passwordError = err instanceof Error ? err.message : "Incorrect password";
     } finally {
@@ -477,7 +506,7 @@
                     {#if file.status === "downloading"}
                       <div class="mt-1 w-full bg-muted rounded-full h-1">
                         <div
-                          class="bg-info h-1 rounded-full transition-all duration-300"
+                          class="bg-info h-1 rounded-full transition-[width] duration-200 ease-out"
                           style="width: {file.progress}%"
                         ></div>
                       </div>

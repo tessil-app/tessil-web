@@ -12,13 +12,20 @@ export interface EncryptedFilename {
   iv: string;
 }
 
+const FILENAME_PAD_MULTIPLE = 32;
+
 export async function encryptFilename(
   filename: string,
   key: CryptoKey
 ): Promise<EncryptedFilename> {
   const iv = generateIv();
   const encoder = new TextEncoder();
-  const data = encoder.encode(filename);
+  const raw = encoder.encode(filename);
+
+  // Pad filename to next multiple of FILENAME_PAD_MULTIPLE to hide length metadata
+  const paddedLength = Math.ceil(Math.max(raw.length, 1) / FILENAME_PAD_MULTIPLE) * FILENAME_PAD_MULTIPLE;
+  const data = new Uint8Array(paddedLength);
+  data.set(raw);
 
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },

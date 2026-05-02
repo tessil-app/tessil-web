@@ -11,6 +11,8 @@ Frontend application for JTransfer - a secure, end-to-end encrypted file sharing
 - Configurable expiration (1 or 3 days)
 - Progress tracking for encryption and upload
 - Dark mode UI
+- Local image converter (HEIC/JPG/PNG/WEBP and more)
+- Local PDF tools (merge, split, rotate, remove pages)
 
 ## Tech Stack
 
@@ -57,7 +59,9 @@ The app will be available at `http://localhost:5173`.
 ```
 src/
 ├── routes/              # SvelteKit pages
-│   ├── +page.svelte     # Upload page
+│   ├── +page.svelte     # File Share page
+│   ├── image-converter/ # Image Converter page
+│   ├── pdf-tools/       # PDF Tools page
 │   └── d/[id]/          # Download page
 ├── lib/
 │   ├── api/             # API client

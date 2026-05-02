@@ -103,14 +103,18 @@ class ApiClient {
   }
 
   async createTransfer(
-    expiresInDays: number,
-    password?: string
+    expiresInHours: number,
+    password?: string,
+    maxDownloads?: number | null
   ): Promise<CreateTransferResponse> {
-    const body: { expiresInDays: number; password?: string } = {
-      expiresInDays,
+    const body: { expiresInHours: number; password?: string; maxDownloads?: number } = {
+      expiresInHours,
     };
     if (password) {
       body.password = password;
+    }
+    if (maxDownloads != null) {
+      body.maxDownloads = maxDownloads;
     }
     return this.request("/api/upload/create-transfer", {
       method: "POST",
@@ -163,6 +167,13 @@ class ApiClient {
     transferId: string
   ): Promise<{ success: boolean; shareUrl: string }> {
     return this.request("/api/upload/complete", {
+      method: "POST",
+      body: JSON.stringify({ transferId }),
+    });
+  }
+
+  async abortTransfer(transferId: string): Promise<void> {
+    await this.request("/api/upload/abort", {
       method: "POST",
       body: JSON.stringify({ transferId }),
     });

@@ -15,7 +15,8 @@ export async function decryptFilename(
   );
 
   const decoder = new TextDecoder();
-  return decoder.decode(decrypted);
+  // Strip null-byte padding added during encryption
+  return decoder.decode(decrypted).replace(/\0+$/, '');
 }
 
 export async function decryptFile(

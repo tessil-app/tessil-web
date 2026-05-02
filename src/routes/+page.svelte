@@ -5,7 +5,7 @@
   import ProgressBar from "$lib/components/ProgressBar.svelte";
   import ShareLink from "$lib/components/ShareLink.svelte";
   import { encryptFile, encryptFilename } from "$lib/crypto/encrypt";
-  import { exportKey, generateKey } from "$lib/crypto/key";
+  import { exportKey, generateKey, wrapKey } from "$lib/crypto/key";
   import { uploadStore } from "$lib/stores/upload.svelte";
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
 
@@ -50,7 +50,19 @@
 
   let showPassword = $state(false);
 
+  const MAX_FILENAME_BYTES = 255;
+
   function handleFilesSelect(files: File[]) {
+    const tooLong = files.find(
+      (f) => new TextEncoder().encode(f.name).length > MAX_FILENAME_BYTES
+    );
+    if (tooLong) {
+      uploadStore.setError(
+        `"${tooLong.name}" has a filename that is too long (max ${MAX_FILENAME_BYTES} bytes).`
+      );
+      return;
+    }
+
     const currentTotal = uploadStore.files.reduce(
       (sum, f) => sum + f.file.size,
       0
@@ -103,7 +115,6 @@
 
       // Step 2: Generate a single encryption key for all files
       const key = await generateKey();
-      const keyString = await exportKey(key);
 
       // Step 3: Create transfer (with optional password)
       const password =
@@ -112,13 +123,20 @@
           ? uploadStore.password
           : undefined;
       const transfer = await api.createTransfer(
-        uploadStore.expiresInDays,
-        password
+        uploadStore.expiresInHours,
+        password,
+        uploadStore.maxDownloads
       );
+
+      // If password set, wrap the key with it so link alone is not enough
+      const keyString = password
+        ? await wrapKey(key, password)
+        : await exportKey(key);
 
       // Step 4: Process each file
       uploadStore.setStatus("encrypting");
 
+      let uploadFailed = false;
       for (let i = 0; i < files.length; i++) {
         uploadStore.setCurrentFileIndex(i);
         const fileState = files[i];
@@ -155,10 +173,26 @@
             size: encryptedBlob.size,
           });
 
-          // Upload directly to R2
-          await api.uploadToR2(uploadUrl, encryptedBlob, (p) => {
-            uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5);
-          });
+          // Upload directly to R2 with up to 3 attempts
+          const MAX_ATTEMPTS = 3;
+          let lastUploadError: unknown;
+          for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            try {
+              // Reset progress to start of upload phase on each attempt
+              uploadStore.setFileStatus(i, "uploading", 50);
+              await api.uploadToR2(uploadUrl, encryptedBlob, (p) => {
+                uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5);
+              });
+              lastUploadError = undefined;
+              break;
+            } catch (err) {
+              lastUploadError = err;
+              if (attempt < MAX_ATTEMPTS - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+              }
+            }
+          }
+          if (lastUploadError) throw lastUploadError;
 
           uploadStore.setFileStatus(i, "complete", 100);
         } catch (err) {
@@ -168,8 +202,17 @@
             0,
             err instanceof Error ? err.message : "Upload failed"
           );
-          throw err;
+          uploadFailed = true;
+          break;
         }
+      }
+
+      // If any file failed, abort the transfer to clean up already-uploaded files
+      if (uploadFailed) {
+        api.abortTransfer(transfer.transferId).catch(() => {});
+        throw new Error(
+          uploadStore.files.find(f => f.status === "error")?.error ?? "Upload failed"
+        );
       }
 
       // Step 5: Complete transfer
@@ -240,7 +283,12 @@
 
     <Frame.Root>
       {#if uploadStore.status === "complete" && uploadStore.shareUrl}
-        <ShareLink url={uploadStore.shareUrl} onReset={resetUpload} />
+        <ShareLink
+          url={uploadStore.shareUrl}
+          onReset={resetUpload}
+          expiresInHours={uploadStore.expiresInHours}
+          maxDownloads={uploadStore.maxDownloads}
+        />
       {:else}
         <div class="space-y-6">
           <Frame.Header>
@@ -257,7 +305,7 @@
               </div>
               <div class="w-full bg-muted rounded-full h-2 overflow-hidden">
                 <div
-                  class="h-2 rounded-full transition-all duration-300 {usagePercent >
+                  class="h-2 rounded-full transition-[width,background-color] duration-200 ease-out {usagePercent >
                   90
                     ? 'bg-destructive'
                     : usagePercent > 70
@@ -302,30 +350,59 @@
                         >Expires in</span
                       >
                       <div
-                        class="flex gap-2"
+                        class="flex gap-2 flex-wrap"
                         role="group"
                         aria-label="Expiration options"
                       >
-                        <button
-                          type="button"
-                          onclick={() => uploadStore.setExpiresInDays(1)}
-                          class="hover:cursor-pointer flex-1 py-2 px-4 rounded-[calc(var(--radius-2xl)-1px)] transition-colors
-													{uploadStore.expiresInDays === 1
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-secondary text-secondary-foreground hover:bg-accent'}"
-                        >
-                          1 day
-                        </button>
-                        <button
-                          type="button"
-                          onclick={() => uploadStore.setExpiresInDays(3)}
-                          class="flex-1 hover:cursor-pointer py-2 px-4 rounded-[calc(var(--radius-2xl)-1px)] transition-colors
-													{uploadStore.expiresInDays === 3
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-secondary text-secondary-foreground hover:bg-accent'}"
-                        >
-                          3 days
-                        </button>
+                        {#each [
+                          { hours: 1, label: '1h' },
+                          { hours: 6, label: '6h' },
+                          { hours: 12, label: '12h' },
+                          { hours: 24, label: '1 day' },
+                          { hours: 72, label: '3 days' },
+                        ] as opt}
+                          <button
+                            type="button"
+                            onclick={() => uploadStore.setExpiresInHours(opt.hours)}
+                            class="hover:cursor-pointer flex-1 py-2 px-3 rounded-[calc(var(--radius-2xl)-1px)] transition-colors text-sm
+                            {uploadStore.expiresInHours === opt.hours
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-secondary text-secondary-foreground hover:bg-accent'}"
+                          >
+                            {opt.label}
+                          </button>
+                        {/each}
+                      </div>
+                    </div>
+
+                    <!-- Max downloads -->
+                    <div>
+                      <span class="block text-sm text-muted-foreground mb-2"
+                        >Max downloads</span
+                      >
+                      <div
+                        class="flex gap-2 flex-wrap"
+                        role="group"
+                        aria-label="Max download options"
+                      >
+                        {#each [
+                          { value: null, label: 'Unlimited' },
+                          { value: 1, label: '1' },
+                          { value: 5, label: '5' },
+                          { value: 10, label: '10' },
+                          { value: 25, label: '25' },
+                        ] as opt}
+                          <button
+                            type="button"
+                            onclick={() => uploadStore.setMaxDownloads(opt.value)}
+                            class="hover:cursor-pointer flex-1 py-2 px-3 rounded-[calc(var(--radius-2xl)-1px)] transition-colors text-sm
+                            {uploadStore.maxDownloads === opt.value
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-secondary text-secondary-foreground hover:bg-accent'}"
+                          >
+                            {opt.label}
+                          </button>
+                        {/each}
                       </div>
                     </div>
 
