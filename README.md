@@ -1,5 +1,7 @@
 # JTransfer Frontend
 
+[![CI](https://github.com/VerburgtJimmy/jtransfer-front/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/VerburgtJimmy/jtransfer-front/actions/workflows/ci.yml)
+
 Frontend application for JTransfer - a secure, end-to-end encrypted file sharing service.
 
 ## Status
