@@ -2,13 +2,17 @@
 
 Frontend application for JTransfer - a secure, end-to-end encrypted file sharing service.
 
+## Status
+
+Active development. `main` is the working trunk and is not yet promoted for general production use.
+
 ## Features
 
 - Drag and drop file upload
 - Client-side AES-GCM encryption (files encrypted before upload)
 - Encrypted filenames
 - Optional password protection
-- Configurable expiration (1 or 3 days)
+- Configurable expiration (1, 6, 12, 24, or 72 hours)
 - Progress tracking for encryption and upload
 - Dark mode UI
 - Local image converter (HEIC/JPG/PNG/WEBP and more)
@@ -94,6 +98,10 @@ The server never has access to:
 - Brand guide: [docs/brand.md](docs/brand.md)
 - Cloudflare indexing runbook: [docs/cloudflare-edge-rules.md](docs/cloudflare-edge-rules.md)
 - Security overview page: `/security`
+
+## Author
+
+Built by Jimmy Verburgt. Contact via [jimmyverburgt@gmail.com](mailto:jimmyverburgt@gmail.com) or [GitHub](https://github.com/VerburgtJimmy).
 
 ## License
 
