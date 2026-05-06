@@ -49,7 +49,7 @@
     <div class="text-center mb-8">
       <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
       <h1 class="text-3xl font-bold mb-2 mt-1">Report Abuse</h1>
-      <p class="text-muted-foreground">For File Share transfers and related misuse reports</p>
+      <p class="text-muted-foreground">For JTransfer transfers and related misuse reports</p>
     </div>
 
     <Frame.Root>

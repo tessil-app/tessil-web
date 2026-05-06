@@ -58,7 +58,7 @@ Run checks against production after deploy:
 
 ```bash
 curl -sI https://jtransfer.jimmyverburgt.com/d/test | grep -i x-robots-tag
-curl -sI https://jtransfer.jimmyverburgt.com/image-converter | grep -i x-robots-tag
+curl -sI https://jtransfer.jimmyverburgt.com/security | grep -i x-robots-tag
 ```
 
 Expected:

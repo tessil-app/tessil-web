@@ -6,13 +6,13 @@
   <title>Privacy Policy - JTransfer</title>
   <meta
     name="description"
-    content="Read how JTransfer handles data, encryption, retention, and GDPR rights for secure file sharing, local image conversion, and local PDF tools."
+    content="Read how JTransfer handles data, encryption, retention, and GDPR rights for end-to-end encrypted file transfer."
   />
   <meta name="robots" content="index, follow" />
   <meta property="og:title" content="Privacy Policy - JTransfer" />
   <meta
     property="og:description"
-    content="JTransfer privacy policy for encrypted file sharing and browser-local image and PDF processing."
+    content="JTransfer privacy policy for end-to-end encrypted file transfer."
   />
 </svelte:head>
 
@@ -21,31 +21,31 @@
     <div class="text-center mb-8">
       <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
       <h1 class="text-3xl font-bold mb-2 mt-1">Privacy Policy</h1>
-      <p class="text-muted-foreground">Applies to File Share, Image Converter, and PDF Tools</p>
+      <p class="text-muted-foreground">End-to-end encrypted file transfer</p>
     </div>
 
     <Frame.Root>
       <Frame.Panel>
         <div class="prose prose-invert max-w-none space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: March 17, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: May 6, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Introduction</h2>
             <p class="text-muted-foreground">
-              JTransfer ("we", "our", or "us") is a privacy-focused web product suite that currently includes
-              File Share, Image Converter, and PDF Tools. This Privacy Policy explains how we handle information
-              when you use our services at jtransfer.jimmyverburgt.com.
+              JTransfer ("we", "our", or "us") is a privacy-focused, end-to-end encrypted
+              file transfer service. This Privacy Policy explains how we handle information
+              when you use the service at jtransfer.jimmyverburgt.com.
             </p>
             <p class="text-muted-foreground">
-              We are committed to protecting your privacy. Our service is designed with a zero-knowledge architecture,
-              meaning we cannot access the contents of your files.
+              The service is designed with a zero-knowledge architecture: we cannot access
+              the contents of your files.
             </p>
           </section>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">2. Data We Collect</h2>
 
-            <h3 class="text-lg font-medium text-foreground">2.1 File Share Data (Encrypted)</h3>
+            <h3 class="text-lg font-medium text-foreground">2.1 Transfer Data (Encrypted)</h3>
             <p class="text-muted-foreground">
               When you upload files, they are encrypted in your browser before being sent to our servers. We store:
             </p>
@@ -76,26 +76,13 @@
               <li>We do not use tracking cookies or analytics</li>
               <li>We do not sell or share data with third parties</li>
             </ul>
-
-            <h3 class="text-lg font-medium text-foreground">2.4 Image Converter Data (Local-Only)</h3>
-            <p class="text-muted-foreground">
-              The Image Converter runs entirely in your browser. We do not upload, store, or process your images
-              on our servers when you use the converter.
-            </p>
-
-            <h3 class="text-lg font-medium text-foreground">2.5 PDF Tools Data (Local-Only)</h3>
-            <p class="text-muted-foreground">
-              PDF Tools runs entirely in your browser for merge and split operations. We do not upload, store,
-              or process your PDF files on our servers when you use these tools.
-            </p>
           </section>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">3. How We Use Your Data</h2>
             <p class="text-muted-foreground">We use the collected data solely to:</p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Provide the file sharing service</li>
-              <li>Provide browser-local conversion and PDF processing interfaces</li>
+              <li>Provide the file transfer service</li>
               <li>Enforce rate limits to ensure fair usage</li>
               <li>Protect against abuse and maintain service security</li>
               <li>Automatically delete files after expiration</li>
@@ -111,19 +98,17 @@
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>End-to-end encryption (AES-256-GCM)</li>
               <li>TLS/HTTPS for all data in transit</li>
-              <li>Automatic file deletion after 1 or 3 days (based on your selection)</li>
+              <li>Automatic file deletion after 1, 6, 12, 24, or 72 hours (based on your selection)</li>
               <li>No permanent storage of file contents</li>
-              <li>No server-side storage for local-only product processing</li>
             </ul>
           </section>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">5. Data Retention</h2>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li><strong>Uploaded files:</strong> Automatically deleted after 1 or 3 days (your choice)</li>
+              <li><strong>Uploaded files:</strong> Automatically deleted after 1, 6, 12, 24, or 72 hours (your choice)</li>
               <li><strong>Rate limit data:</strong> Automatically expires after the rate limit window (up to 30 days)</li>
               <li><strong>Server logs:</strong> Retained for up to 7 days, then automatically deleted</li>
-              <li><strong>Image Converter/PDF Tools files:</strong> Processed locally and not retained on our servers</li>
             </ul>
           </section>
 
@@ -183,8 +168,6 @@
     <div class="mt-8 text-center text-sm text-muted-foreground">
       <div class="flex items-center justify-center gap-3">
         <a href="/" class="hover:text-foreground transition-colors">Home</a>
-        <span>·</span>
-        <a href="/pdf-tools" class="hover:text-foreground transition-colors">PDF Tools</a>
         <span>·</span>
         <a href="/security" class="hover:text-foreground transition-colors">Security</a>
         <span>·</span>

@@ -17,8 +17,6 @@ Active development. `main` is the working trunk and is not yet promoted for gene
 - Configurable expiration (1, 6, 12, 24, or 72 hours)
 - Progress tracking for encryption and upload
 - Dark mode UI
-- Local image converter (HEIC/JPG/PNG/WEBP and more)
-- Local PDF tools (merge, split, rotate, remove pages)
 
 ## Tech Stack
 
@@ -65,9 +63,7 @@ The app will be available at `http://localhost:5173`.
 ```
 src/
 ├── routes/              # SvelteKit pages
-│   ├── +page.svelte     # File Share page
-│   ├── image-converter/ # Image Converter page
-│   ├── pdf-tools/       # PDF Tools page
+│   ├── +page.svelte     # Transfer page
 │   └── d/[id]/          # Download page
 ├── lib/
 │   ├── api/             # API client

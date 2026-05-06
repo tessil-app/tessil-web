@@ -2,54 +2,34 @@
 
 ## Brand Structure
 
-- `JTransfer` is the umbrella brand.
-- Each feature is a product under JTransfer, with its own product name and page title.
-
-Current product names:
-
-- `File Share` (route: `/`)
-- `Image Converter` (route: `/image-converter`)
-- `PDF Tools` (route: `/pdf-tools`)
+JTransfer is a single-product service: end-to-end encrypted file transfer.
+The brand and the product are the same thing. There are no sub-products.
 
 ## Naming Rules
 
-- Keep UI labels short:
-  - Navigation label: `File Share`
-  - Navigation label: `Image Converter`
-  - Navigation label: `PDF Tools`
-- Use page/document titles in this format:
-  - `<Product Name> - JTransfer`
-  - Examples:
-    - `File Share - JTransfer`
-    - `Image Converter - JTransfer`
-    - `PDF Tools - JTransfer`
-- Keep legal/policy pages umbrella-first:
+- Page/document title format: `<Page Name> - JTransfer` (e.g. `Privacy Policy - JTransfer`).
+- Home title: `JTransfer - End-to-end encrypted file transfer`.
+- Keep legal/policy page titles umbrella-first:
   - `Privacy Policy - JTransfer`
   - `Terms of Service - JTransfer`
-  - `Security - JTransfer`
+  - `Security Overview - JTransfer`
 
 ## Copy Rules
 
-- Write product copy with explicit scope:
-  - File Share copy talks about encrypted upload/download flows.
-  - Image Converter copy talks about local, in-browser conversion.
-  - PDF Tools copy talks about local, in-browser PDF processing.
-- Do not mix product promises unless the page is a cross-product policy page (`/privacy`, `/terms`, `/security`).
+- Lead with what the service does: send files with end-to-end encryption.
 - Keep security claims precise and verifiable:
-  - Preferred: `client-side encryption`, `encryption key stays in URL fragment`, `local conversion in browser`.
+  - Preferred: `client-side encryption`, `encryption key stays in URL fragment`, `AES-256-GCM`.
   - Avoid vague claims like `military-grade` or `unbreakable`.
+- Do not describe the service as a "suite" or imply additional products.
 
 ## Metadata Rules
 
 - Canonical URL per public page.
-- Product pages should include product-specific description and OG title.
-- Keep the brand signature in metadata:
-  - OG/Twitter title format: `<Product Name> - JTransfer`
+- Keep the brand signature in metadata: OG/Twitter title format `<Page Name> - JTransfer`.
 
 ## Route/SEO Rules
 
-- Public indexable routes:
-  - `/`, `/image-converter`, `/pdf-tools`, `/privacy`, `/terms`, `/abuse`, `/security`
-- Private transfer routes must remain non-indexable:
-  - `/d/*` with `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`
+- Public indexable routes: `/`, `/privacy`, `/terms`, `/abuse`, `/security`.
+- Private transfer routes must remain non-indexable: `/d/*` with
+  `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`.
 - Keep sitemap aligned with public routes only.

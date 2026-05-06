@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-06
+
+### Removed
+
+- `Image Converter` page and local image-conversion workflow.
+- `PDF Tools` page and all PDF workflows (merge, split, rotate, remove).
+- Frontend dependencies no longer required: `pdf-lib`, `jszip`, `heic2any`, `pdfjs-dist`, `bits-ui`.
+- Sitemap entries and metadata for the removed routes.
+
+### Changed
+
+- JTransfer is now a single-product service: end-to-end encrypted file transfer.
+- Navigation simplified to brand-only (no per-feature links).
+- `/security`, `/privacy`, `/terms` rewritten to reflect transfer-only scope.
+- Brand guide rewritten to remove sub-product naming.
+
 ## 2026-03-17
 
 ### Added
