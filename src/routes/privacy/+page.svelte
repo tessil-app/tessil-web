@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as Frame from "$lib/components/frame";
+  import PageLayout from "$lib/components/PageLayout.svelte";
 </script>
 
 <svelte:head>
@@ -16,9 +17,8 @@
   />
 </svelte:head>
 
-<div class="min-h-screen bg-background text-foreground">
-  <div class="max-w-3xl mx-auto px-4 py-12">
-    <div class="text-center mb-8">
+<PageLayout width="3xl">
+  <div class="text-center mb-8">
       <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
       <h1 class="text-3xl font-bold mb-2 mt-1">Privacy Policy</h1>
       <p class="text-muted-foreground">End-to-end encrypted file transfer</p>
@@ -174,5 +174,4 @@
         <a href="/terms" class="hover:text-foreground transition-colors">Terms of Service</a>
       </div>
     </div>
-  </div>
-</div>
+</PageLayout>

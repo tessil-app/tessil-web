@@ -1,7 +1,10 @@
 <script lang="ts">
   import { api } from "$lib/api/client";
+  import Button from "$lib/components/Button.svelte";
   import DropZone from "$lib/components/DropZone.svelte";
   import FileList from "$lib/components/FileList.svelte";
+  import PageLayout from "$lib/components/PageLayout.svelte";
+  import PasswordInput from "$lib/components/PasswordInput.svelte";
   import ProgressBar from "$lib/components/ProgressBar.svelte";
   import ShareLink from "$lib/components/ShareLink.svelte";
   import { encryptFile, encryptFilename } from "$lib/crypto/encrypt";
@@ -48,8 +51,6 @@
   };
 
   const MIN_PASSWORD_LENGTH = 8;
-
-  let showPassword = $state(false);
 
   const MAX_FILENAME_BYTES = 255;
 
@@ -264,8 +265,7 @@
 </svelte:head>
 
 <div class="bg-background text-foreground">
-  <div class="min-h-screen">
-    <div class="max-w-2xl mx-auto px-4 py-12">
+  <PageLayout>
     <div class="text-center mb-8">
       <h1 class="text-3xl font-bold mb-2">Send files securely</h1>
       <p class="text-muted-foreground">
@@ -416,57 +416,14 @@
                       </label>
 
                       {#if uploadStore.passwordEnabled}
-                        <div class="relative">
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Enter password (min 8 characters)"
-                            value={uploadStore.password}
-                            oninput={(e) =>
-                              uploadStore.setPassword(e.currentTarget.value)}
-                            class="w-full py-2 px-3 pr-10 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:border-ring/25 focus:outline-none"
-                          />
-                          <button
-                            type="button"
-                            onclick={() => (showPassword = !showPassword)}
-                            class=" hover:cursor-pointer absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          >
-                            {#if showPassword}
-                              <svg
-                                class="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                                />
-                              </svg>
-                            {:else}
-                              <svg
-                                class="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                />
-                              </svg>
-                            {/if}
-                          </button>
-                        </div>
+                        <PasswordInput
+                          placeholder="Enter password (min 8 characters)"
+                          value={uploadStore.password}
+                          oninput={(e) =>
+                            uploadStore.setPassword(
+                              (e.currentTarget as HTMLInputElement).value
+                            )}
+                        />
                         {#if uploadStore.password.length > 0 && uploadStore.password.length < MIN_PASSWORD_LENGTH}
                           <p class="text-xs text-warning-foreground">
                             Password must be at least {MIN_PASSWORD_LENGTH} characters
@@ -475,16 +432,14 @@
                       {/if}
                     </div>
 
-                    <button
-                      type="button"
+                    <Button
                       onclick={handleUpload}
                       disabled={uploadStore.passwordEnabled &&
                         uploadStore.password.length > 0 &&
                         uploadStore.password.length < MIN_PASSWORD_LENGTH}
-                      class="hover:cursor-pointer w-full py-3 px-4 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground font-medium rounded-[calc(var(--radius-2xl)-1px)] transition-colors"
                     >
                       Create Link
-                    </button>
+                    </Button>
                   </div>
                 {/if}
               </div>
@@ -574,9 +529,7 @@
         >
       </div>
     </div>
-
-    </div>
-  </div>
+  </PageLayout>
 
   <section
     class="max-w-2xl mx-auto px-4 pb-12 pt-10 border-t border-border/60 text-sm text-muted-foreground leading-relaxed space-y-3"

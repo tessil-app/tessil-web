@@ -1,14 +1,8 @@
 <script lang="ts">
   import * as Frame from "$lib/components/frame";
+  import PageLayout from "$lib/components/PageLayout.svelte";
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
-
-  function formatSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  }
+  import { formatSize } from "$lib/utils";
 </script>
 
 <svelte:head>
@@ -25,9 +19,8 @@
   />
 </svelte:head>
 
-<div class="min-h-screen bg-background text-foreground">
-  <div class="max-w-3xl mx-auto px-4 py-12">
-    <div class="text-center mb-8">
+<PageLayout width="3xl">
+  <div class="text-center mb-8">
       <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
       <h1 class="text-3xl font-bold mb-2 mt-1">Terms of Service</h1>
       <p class="text-muted-foreground">End-to-end encrypted file transfer</p>
@@ -249,5 +242,4 @@
         <a href="/privacy" class="hover:text-foreground transition-colors">Privacy Policy</a>
       </div>
     </div>
-  </div>
-</div>
+</PageLayout>

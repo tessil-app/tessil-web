@@ -1,5 +1,9 @@
 <script lang="ts">
+  import Button from "$lib/components/Button.svelte";
   import * as Frame from "$lib/components/frame";
+  import PageLayout from "$lib/components/PageLayout.svelte";
+  import TextInput from "$lib/components/TextInput.svelte";
+  import Textarea from "$lib/components/Textarea.svelte";
 
   let transferUrl = $state("");
   let reason = $state("");
@@ -44,9 +48,8 @@
   />
 </svelte:head>
 
-<div class="min-h-screen bg-background text-foreground">
-  <div class="max-w-3xl mx-auto px-4 py-12">
-    <div class="text-center mb-8">
+<PageLayout width="3xl">
+  <div class="text-center mb-8">
       <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
       <h1 class="text-3xl font-bold mb-2 mt-1">Report Abuse</h1>
       <p class="text-muted-foreground">For JTransfer transfers and related misuse reports</p>
@@ -84,58 +87,40 @@
             </div>
 
             <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
-              <div>
-                <label for="transfer-url" class="block text-sm font-medium text-foreground mb-1">
-                  Transfer URL <span class="text-destructive-foreground">*</span>
-                </label>
-                <input
-                  id="transfer-url"
-                  type="text"
-                  placeholder="https://jtransfer.jimmyverburgt.com/d/..."
-                  bind:value={transferUrl}
-                  required
-                  class="w-full py-2.5 px-3 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:border-ring/25 focus:outline-none"
-                />
-              </div>
+              <TextInput
+                id="transfer-url"
+                label="Transfer URL"
+                required
+                placeholder="https://jtransfer.jimmyverburgt.com/d/..."
+                bind:value={transferUrl}
+              />
 
-              <div>
-                <label for="reason" class="block text-sm font-medium text-foreground mb-1">
-                  Reason for report <span class="text-destructive-foreground">*</span>
-                </label>
-                <textarea
-                  id="reason"
-                  placeholder="Please describe why you are reporting this transfer"
-                  bind:value={reason}
-                  required
-                  rows="4"
-                  class="w-full py-2.5 px-3 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:border-ring/25 focus:outline-none resize-vertical"
-                ></textarea>
-              </div>
+              <Textarea
+                id="reason"
+                label="Reason for report"
+                required
+                placeholder="Please describe why you are reporting this transfer"
+                bind:value={reason}
+              />
 
-              <div>
-                <label for="contact" class="block text-sm font-medium text-foreground mb-1">
-                  Your email (optional)
-                </label>
-                <input
-                  id="contact"
-                  type="email"
-                  placeholder="For follow-up if needed"
-                  bind:value={contact}
-                  class="w-full py-2.5 px-3 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:border-ring/25 focus:outline-none"
-                />
-              </div>
+              <TextInput
+                id="contact"
+                type="email"
+                label="Your email (optional)"
+                placeholder="For follow-up if needed"
+                bind:value={contact}
+              />
 
               {#if error}
                 <p class="text-sm text-destructive-foreground">{error}</p>
               {/if}
 
-              <button
+              <Button
                 type="submit"
                 disabled={!transferUrl.trim() || !reason.trim() || submitting}
-                class="hover:cursor-pointer w-full py-3 px-4 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground font-medium rounded-[calc(var(--radius-2xl)-1px)] transition-colors"
               >
                 {submitting ? "Submitting..." : "Submit Report"}
-              </button>
+              </Button>
             </form>
 
             <p class="text-sm text-muted-foreground">
@@ -159,5 +144,4 @@
         <a href="/terms" class="hover:text-foreground transition-colors">Terms of Service</a>
       </div>
     </div>
-  </div>
-</div>
+</PageLayout>
