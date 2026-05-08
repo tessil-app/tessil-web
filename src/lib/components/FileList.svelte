@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Spinner from "$lib/components/Spinner.svelte";
   import type { FileUploadState } from "$lib/stores/upload.types";
   import { formatSize } from "$lib/utils";
 
@@ -47,9 +48,7 @@
             />
           </svg>
         {:else if fileState.status === "encrypting" || fileState.status === "uploading"}
-          <div
-            class="w-5 h-5 border-2 border-info border-t-transparent rounded-full animate-spin"
-          ></div>
+          <Spinner class="text-info" />
         {:else}
           <svg
             class="w-5 h-5 text-muted-foreground"
@@ -105,7 +104,7 @@
         <button
           type="button"
           onclick={() => onRemove(index)}
-          class="hover:cursor-pointer shrink-0 p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+          class="hover:cursor-pointer shrink-0 p-2.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
           aria-label="Remove file"
         >
           <svg

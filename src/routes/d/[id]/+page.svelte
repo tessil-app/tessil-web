@@ -5,6 +5,7 @@
   import * as Frame from "$lib/components/frame";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
+  import Spinner from "$lib/components/Spinner.svelte";
   import { decryptFile, decryptFilename } from "$lib/crypto/decrypt";
   import { importKey, unwrapKey, isWrappedKey } from "$lib/crypto/key";
   import { formatSize } from "$lib/utils";
@@ -249,10 +250,8 @@
     <Frame.Root>
       <Frame.Panel>
         {#if pageStatus === "loading"}
-          <div class="flex flex-col items-center gap-4 py-8">
-            <div
-              class="w-8 h-8 border-2 border-info border-t-transparent rounded-full animate-spin"
-            ></div>
+          <div class="flex flex-col items-center gap-4 py-8 text-info">
+            <Spinner class="w-8 h-8" />
             <p class="text-muted-foreground">Loading files...</p>
           </div>
         {:else if pageStatus === "password_required"}
@@ -296,9 +295,7 @@
                 disabled={!password || isVerifyingPassword}
               >
                 {#if isVerifyingPassword}
-                  <div
-                    class="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"
-                  ></div>
+                  <Spinner />
                   Verifying...
                 {:else}
                   <svg
@@ -372,9 +369,7 @@
                 disabled={anyDownloading || allComplete}
               >
                 {#if downloadAllStatus === "downloading"}
-                  <div
-                    class="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"
-                  ></div>
+                  <Spinner />
                   Downloading...
                 {:else if allComplete}
                   <svg
@@ -458,7 +453,7 @@
                     type="button"
                     onclick={() => downloadFile(index)}
                     disabled={file.status === "downloading"}
-                    class="hover:cursor-pointer shrink-0 p-2 rounded-[calc(var(--radius-2xl)-1px)] transition-colors
+                    class="hover:cursor-pointer shrink-0 p-2.5 rounded-[calc(var(--radius-2xl)-1px)] transition-colors
 											{file.status === 'complete'
                       ? 'bg-success/20 text-success-foreground'
                       : file.status === 'error'
@@ -482,9 +477,7 @@
                         />
                       </svg>
                     {:else if file.status === "downloading"}
-                      <div
-                        class="w-5 h-5 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"
-                      ></div>
+                      <Spinner />
                     {:else if file.status === "error"}
                       <svg
                         class="w-5 h-5"

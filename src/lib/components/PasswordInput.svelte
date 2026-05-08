@@ -42,14 +42,14 @@
       {required}
       type={show ? "text" : "password"}
       bind:value
-      class="w-full py-2.5 px-3 pr-10 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:border-ring/25 focus:outline-none disabled:opacity-50"
+      class="w-full py-2.5 px-3 pr-12 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:border-ring/25 focus:outline-none disabled:opacity-50"
       {...rest}
     />
     <button
       type="button"
       onclick={() => (show = !show)}
       aria-label={show ? "Hide password" : "Show password"}
-      class="hover:cursor-pointer absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+      class="hover:cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground rounded-md"
     >
       {#if show}
         <svg
