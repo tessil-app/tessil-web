@@ -250,8 +250,12 @@
     <Frame.Root>
       <Frame.Panel>
         {#if pageStatus === "loading"}
-          <div class="flex flex-col items-center gap-4 py-8 text-info">
-            <Spinner class="w-8 h-8" />
+          <div
+            role="status"
+            aria-live="polite"
+            class="flex flex-col items-center gap-4 py-8 text-info"
+          >
+            <Spinner class="w-8 h-8" aria-hidden="true" />
             <p class="text-muted-foreground">Loading files...</p>
           </div>
         {:else if pageStatus === "password_required"}
@@ -284,6 +288,8 @@
               class="max-w-xs mx-auto space-y-4"
             >
               <PasswordInput
+                id="transfer-password"
+                label="Password"
                 placeholder="Enter password"
                 bind:value={password}
                 disabled={isVerifyingPassword}

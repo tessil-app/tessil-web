@@ -20,7 +20,7 @@
   }: Props = $props();
 
   const base =
-    "hover:cursor-pointer py-3 px-4 font-medium rounded-[calc(var(--radius-2xl)-1px)] transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed";
+    "hover:cursor-pointer py-3 px-4 font-medium rounded-[calc(var(--radius-2xl)-1px)] transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
   const variants = {
     primary:

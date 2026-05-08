@@ -417,6 +417,8 @@
 
                       {#if uploadStore.passwordEnabled}
                         <PasswordInput
+                          id="upload-password"
+                          aria-label="Transfer password"
                           placeholder="Enter password (min 8 characters)"
                           value={uploadStore.password}
                           oninput={(e) =>

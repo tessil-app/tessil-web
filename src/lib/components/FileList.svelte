@@ -90,7 +90,16 @@
           {/if}
         </div>
         {#if fileState.status === "encrypting" || fileState.status === "uploading"}
-          <div class="mt-1 w-full bg-muted rounded-full h-1">
+          <div
+            class="mt-1 w-full bg-muted rounded-full h-1"
+            role="progressbar"
+            aria-label="{fileState.status === 'encrypting'
+              ? 'Encrypting'
+              : 'Uploading'} {fileState.file.name}"
+            aria-valuenow={Math.round(fileState.progress)}
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
             <div
               class="bg-info h-1 rounded-full transition-[width] duration-200 ease-out"
               style="width: {fileState.progress}%"
@@ -104,8 +113,8 @@
         <button
           type="button"
           onclick={() => onRemove(index)}
-          class="hover:cursor-pointer shrink-0 p-2.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
-          aria-label="Remove file"
+          class="hover:cursor-pointer shrink-0 p-2.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          aria-label="Remove {fileState.file.name}"
         >
           <svg
             class="w-4 h-4"

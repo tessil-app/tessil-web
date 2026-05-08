@@ -66,7 +66,8 @@
   ondrop={handleDrop}
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}
-  class="not-last:mb-4 w-full p-12 border-2 border-dashed rounded-[calc(var(--radius-2xl)-1px)] transition-[border-color,background-color] duration-200 ease-out cursor-pointer
+  aria-label="Choose files to upload — opens file picker"
+  class="not-last:mb-4 w-full p-12 border-2 border-dashed rounded-[calc(var(--radius-2xl)-1px)] transition-[border-color,background-color] duration-200 ease-out cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring
 		{isDragging
     ? 'border-primary bg-primary/10'
     : 'border-border hover:border-muted-foreground'}

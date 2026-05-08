@@ -143,10 +143,15 @@
   --sidebar-ring: var(--color-neutral-400);
 }
 
-/* Disable hover-driven transition animations on touch/non-hover devices. */
-@media (hover: none), (pointer: coarse) {
-  [class*="hover:"][class*="transition"] {
-    transition-duration: 0ms !important;
+/* Respect prefers-reduced-motion: kill non-essential transitions and animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

@@ -22,8 +22,10 @@
     ...rest
   }: Props = $props();
 
+  const errorId = $derived(id ? `${id}-error` : undefined);
+
   const fieldClass =
-    "w-full py-2.5 px-3 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:border-ring/25 focus:outline-none disabled:opacity-50";
+    "w-full py-2.5 px-3 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
 </script>
 
 <div class={cn("space-y-1", className)}>
@@ -43,11 +45,15 @@
     {id}
     {required}
     bind:value
+    aria-invalid={error ? true : undefined}
+    aria-describedby={error ? errorId : undefined}
     class={cn(fieldClass, inputClass)}
     {...rest}
   />
 
   {#if error}
-    <p class="text-xs text-destructive-foreground">{error}</p>
+    <p id={errorId} role="alert" class="text-xs text-destructive-foreground">
+      {error}
+    </p>
   {/if}
 </div>
