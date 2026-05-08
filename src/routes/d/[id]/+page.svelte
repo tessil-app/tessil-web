@@ -5,6 +5,7 @@
   import ProgressBar from "$lib/components/ProgressBar.svelte";
   import { decryptFile, decryptFilename } from "$lib/crypto/decrypt";
   import { importKey, unwrapKey, isWrappedKey } from "$lib/crypto/key";
+  import { formatSize } from "$lib/utils";
   import { onMount } from "svelte";
 
   type PageStatus = "loading" | "password_required" | "ready" | "error";
@@ -36,14 +37,6 @@
   let showPassword = $state(false);
   let transferId = $state<string | null>(null);
   let rawFragment = $state<string | null>(null); // kept for wrapped key unwrapping
-
-  function formatSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  }
 
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr);

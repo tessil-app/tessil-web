@@ -76,7 +76,7 @@ class ApiClient {
 
     const text = await response.text();
 
-    let data: any;
+    let data: unknown;
     try {
       data = JSON.parse(text);
     } catch {
@@ -89,10 +89,14 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      throw new Error(data.error ?? `Request failed: ${response.status}`);
+      const errorMessage =
+        typeof data === "object" && data !== null && "error" in data
+          ? String((data as { error: unknown }).error)
+          : `Request failed: ${response.status}`;
+      throw new Error(errorMessage);
     }
 
-    return data;
+    return data as T;
   }
 
   async validateMagicBytes(magicBytes: string): Promise<ValidationResponse> {

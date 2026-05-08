@@ -8,6 +8,7 @@
   import { exportKey, generateKey, wrapKey } from "$lib/crypto/key";
   import { uploadStore } from "$lib/stores/upload.svelte";
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
+  import { formatSize } from "$lib/utils";
 
   import * as Frame from "$lib/components/frame";
 
@@ -245,14 +246,6 @@
 
   const remainingSize = $derived(MAX_TOTAL_UPLOAD_SIZE - totalSize);
   const usagePercent = $derived((totalSize / MAX_TOTAL_UPLOAD_SIZE) * 100);
-
-  function formatSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  }
 </script>
 
 <svelte:head>
