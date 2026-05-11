@@ -74,6 +74,9 @@
           If <span class="text-foreground">{email}</span> is a valid email, a
           sign-in link is on its way. The link expires in 15 minutes.
         </p>
+        <p class="text-xs text-muted-foreground mt-2">
+          Don't see it after a minute or two? Check your spam or junk folder.
+        </p>
       </div>
       <Button variant="secondary" onclick={reset}>Send another link</Button>
     {:else}
