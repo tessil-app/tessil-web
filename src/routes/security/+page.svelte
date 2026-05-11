@@ -26,7 +26,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 6, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: May 9, 2026</p>
 
           <section class="space-y-3">
             <h1 class="text-xl font-semibold text-foreground">Scope</h1>
@@ -91,9 +91,35 @@
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>Transport security via HTTPS/TLS</li>
               <li>Client-side cryptography before network transfer</li>
-              <li>No account system required for core usage</li>
+              <li>Accounts are optional — anonymous transfers are first-class</li>
               <li>No third-party analytics or tracking SDKs</li>
             </ul>
+          </section>
+
+          <section class="space-y-3">
+            <h2 class="text-lg font-semibold text-foreground">Optional Accounts</h2>
+            <p class="text-muted-foreground">
+              You can optionally sign in to manage transfers from a single
+              place. Accounts use magic-link email — there is no password to
+              remember, lose, or breach. <strong>Accounts do not weaken the
+              encryption model:</strong> file payloads remain end-to-end
+              encrypted whether you are signed in or not, and the encryption
+              key still lives only in the URL fragment.
+            </p>
+            <p class="text-muted-foreground">When you have an account we store:</p>
+            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+              <li>Your email address (for sign-in)</li>
+              <li>Your tier (free or paid)</li>
+              <li>A hashed session token for as long as you stay signed in</li>
+              <li>The IP address and browser at sign-in time, for security context in your sign-in email</li>
+              <li>Authentication events (sign-in requests, successes, sign-outs) — kept for 90 days then automatically deleted</li>
+            </ul>
+            <p class="text-muted-foreground">
+              We never store the magic-link token itself or your session cookie
+              in plaintext — both are SHA-256 hashed before being written to
+              the database. Sign-in links expire after 15 minutes and can only
+              be used once.
+            </p>
           </section>
 
           <section class="space-y-3">

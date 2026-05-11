@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+// Relative by default — same-origin in prod (reverse proxy), and dev uses the
+// Vite /api proxy (see vite.config.ts). VITE_API_URL is an explicit override
+// for environments that prefer cross-origin (must set up CORS + credentials).
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 export interface CreateTransferResponse {
   transferId: string;
@@ -48,6 +51,20 @@ export interface ValidationResponse {
   reason?: string;
 }
 
+export interface MeResponse {
+  user: {
+    id: string;
+    email: string;
+    tier: string;
+    createdAt: string;
+  } | null;
+}
+
+export interface RequestMagicLinkResponse {
+  ok: true;
+  message: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -64,6 +81,7 @@ class ApiClient {
     let response: Response;
     try {
       response = await fetch(url, {
+        credentials: "include",
         ...options,
         headers: {
           "Content-Type": "application/json",
@@ -71,7 +89,7 @@ class ApiClient {
         },
       });
     } catch (err) {
-      throw new Error(`Network error: Unable to reach API at ${this.baseUrl}`);
+      throw new Error(`Network error: Unable to reach API at ${this.baseUrl || "/"}`);
     }
 
     const text = await response.text();
@@ -213,6 +231,25 @@ class ApiClient {
     }
 
     return response.arrayBuffer();
+  }
+
+  async requestMagicLink(email: string): Promise<RequestMagicLinkResponse> {
+    return this.request("/api/auth/request-magic-link", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async getMe(): Promise<MeResponse> {
+    return this.request("/api/auth/me");
+  }
+
+  async logout(): Promise<{ ok: true }> {
+    return this.request("/api/auth/logout", { method: "POST" });
+  }
+
+  async logoutAll(): Promise<{ ok: true; sessionsRevoked: number }> {
+    return this.request("/api/auth/logout-all", { method: "POST" });
   }
 }
 
