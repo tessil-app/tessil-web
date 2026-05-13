@@ -85,6 +85,10 @@ export interface RequestMagicLinkResponse {
   message: string;
 }
 
+export interface VerifyCodeResponse {
+  ok: true;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -259,6 +263,13 @@ class ApiClient {
     return this.request("/api/auth/request-magic-link", {
       method: "POST",
       body: JSON.stringify({ email }),
+    });
+  }
+
+  async verifyCode(code: string): Promise<VerifyCodeResponse> {
+    return this.request("/api/auth/verify-code", {
+      method: "POST",
+      body: JSON.stringify({ code }),
     });
   }
 

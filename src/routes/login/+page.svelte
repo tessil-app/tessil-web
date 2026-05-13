@@ -17,6 +17,16 @@
   let submitted = $state(false);
   let errorMessage = $state<string | null>(null);
 
+  // Cross-device code entry — visible after the magic link has been sent. The
+  // user only fills this in when they opened the link on a different device
+  // and got back here with the 6-digit code. See audit doc 21.
+  let code = $state("");
+  let isVerifyingCode = $state(false);
+  let codeError = $state<string | null>(null);
+
+  const codeDigits = $derived(code.replace(/\D/g, ""));
+  const codeReady = $derived(codeDigits.length === 6);
+
   onMount(() => {
     if (page.url.searchParams.get("error") === "link-invalid") {
       errorMessage =
@@ -43,9 +53,30 @@
     }
   }
 
+  async function handleVerifyCode(e: SubmitEvent) {
+    e.preventDefault();
+    if (isVerifyingCode || !codeReady) return;
+    codeError = null;
+    isVerifyingCode = true;
+    try {
+      await api.verifyCode(codeDigits);
+      await auth.refresh();
+      goto("/dashboard", { replaceState: true });
+    } catch (err) {
+      codeError =
+        err instanceof Error
+          ? err.message
+          : "That code didn't match. Try again or request a new link.";
+    } finally {
+      isVerifyingCode = false;
+    }
+  }
+
   function reset() {
     submitted = false;
     email = "";
+    code = "";
+    codeError = null;
   }
 </script>
 
@@ -63,14 +94,53 @@
   <Frame.Root>
     <Frame.Panel>
       {#if submitted}
-        <div class="space-y-4">
+        <div class="space-y-6">
           <Alert tone="success" title="Check your inbox">
             If <span class="text-foreground">{email}</span> is a valid email, a
             sign-in link is on its way. The link expires in 15 minutes.
             Don't see it after a minute or two? Check your spam or junk folder.
           </Alert>
+
+          <div class="space-y-3 border-t pt-6">
+            <div class="space-y-1">
+              <div class="text-sm font-medium text-foreground">
+                Opened the link on a different device?
+              </div>
+              <p class="text-sm text-muted-foreground">
+                The other device will show you a 6-digit code. Enter it here
+                to sign in on this device.
+              </p>
+            </div>
+            <form onsubmit={handleVerifyCode} class="space-y-3" novalidate>
+              <TextInput
+                id="code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                placeholder="000000"
+                maxlength={7}
+                mono
+                bind:value={code}
+                disabled={isVerifyingCode}
+                error={codeError ?? undefined}
+              />
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={isVerifyingCode || !codeReady}
+              >
+                {#if isVerifyingCode}
+                  <Spinner aria-hidden="true" />
+                  Verifying…
+                {:else}
+                  Sign in with code
+                {/if}
+              </Button>
+            </form>
+          </div>
+
           <div class="flex">
-            <Button variant="secondary" fullWidth={false} onclick={reset}>
+            <Button variant="ghost" fullWidth={false} onclick={reset}>
               Send another link
             </Button>
           </div>

@@ -125,6 +125,28 @@
           </section>
 
           <section class="space-y-3">
+            <h2 class="text-lg font-semibold text-foreground">Sign-in codes and anti-phishing</h2>
+            <p class="text-muted-foreground">
+              If you open a sign-in link on a different device than the one you
+              started signing in on, JTransfer will show you a 6-digit code
+              instead of signing you in on the wrong device. You then type that
+              code back on the device where you started.
+            </p>
+            <p class="text-muted-foreground">
+              <strong>JTransfer will never ask you to share that code.</strong>
+              We will never email, call, message, or otherwise contact you to
+              request a sign-in code. If anyone — claiming to be JTransfer
+              support, a friend, a delivery service, or anyone else — asks for
+              the code, it is a phishing attempt. Do not share it.
+            </p>
+            <p class="text-muted-foreground">
+              The code is shown only on the device that opened the link, never
+              in the email itself, and never in any other communication from
+              us.
+            </p>
+          </section>
+
+          <section class="space-y-3">
             <h2 class="text-lg font-semibold text-foreground">Responsible Disclosure</h2>
             <p class="text-muted-foreground">
               If you find a security vulnerability, report it privately first so we
