@@ -14,7 +14,7 @@
 </script>
 
 <div class="min-h-screen bg-background text-foreground">
-  <div class={cn(widthClass, "mx-auto px-4 py-12", className)}>
+  <div class={cn(widthClass, "mx-auto px-4 py-16", className)}>
     {@render children()}
   </div>
 </div>

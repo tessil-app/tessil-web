@@ -38,6 +38,10 @@ export interface TransferMetadata {
   passwordRequired: boolean;
   fileCount?: number;
   files?: FileInfo[];
+  // Issued by /transfer/:id/verify when the transfer is password-protected.
+  // Must be presented as `X-Transfer-Token` on subsequent /file/:id/url calls.
+  accessToken?: string;
+  accessTokenExpiresAt?: string;
 }
 
 export interface DownloadUrlResponse {
@@ -58,6 +62,22 @@ export interface MeResponse {
     tier: string;
     createdAt: string;
   } | null;
+}
+
+export interface OwnedTransferSummary {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+  fileCount: number;
+  totalBytes: number;
+  downloadCount: number;
+  isCompleted: boolean;
+  hasPassword: boolean;
+}
+
+export interface ListMyTransfersResponse {
+  transfers: OwnedTransferSummary[];
+  nextCursor: string | null;
 }
 
 export interface RequestMagicLinkResponse {
@@ -215,13 +235,15 @@ class ApiClient {
     });
   }
 
-  async getDownloadUrl(fileId: string): Promise<DownloadUrlResponse> {
-    return this.request(`/api/download/file/${fileId}/url`);
+  async getDownloadUrl(fileId: string, accessToken?: string): Promise<DownloadUrlResponse> {
+    const headers: Record<string, string> = {};
+    if (accessToken) headers["X-Transfer-Token"] = accessToken;
+    return this.request(`/api/download/file/${fileId}/url`, { headers });
   }
 
-  async downloadFile(fileId: string): Promise<ArrayBuffer> {
+  async downloadFile(fileId: string, accessToken?: string): Promise<ArrayBuffer> {
     // Get presigned download URL from API
-    const { downloadUrl } = await this.getDownloadUrl(fileId);
+    const { downloadUrl } = await this.getDownloadUrl(fileId, accessToken);
 
     // Download directly from R2
     const response = await fetch(downloadUrl);
@@ -250,6 +272,95 @@ class ApiClient {
 
   async logoutAll(): Promise<{ ok: true; sessionsRevoked: number }> {
     return this.request("/api/auth/logout-all", { method: "POST" });
+  }
+
+  async listMyTransfers(
+    cursor: string | null = null,
+    limit = 20,
+  ): Promise<ListMyTransfersResponse> {
+    const params = new URLSearchParams();
+    if (cursor) params.set("cursor", cursor);
+    if (limit) params.set("limit", String(limit));
+    const qs = params.toString();
+    return this.request(`/api/me/transfers${qs ? `?${qs}` : ""}`);
+  }
+
+  async deleteMyTransfer(id: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/me/transfers/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      // 404 covers both "not found" and "not yours" by design (audit doc 20 §4).
+      if (response.status === 404) {
+        throw new Error("Transfer not found.");
+      }
+      throw new Error(`Request failed: ${response.status}`);
+    }
+  }
+
+  async exportMyAccount(): Promise<{ blob: Blob; filename: string }> {
+    const response = await fetch(`${this.baseUrl}/api/me/export`, {
+      method: "GET",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      if (response.status === 401) throw new Error("Not signed in.");
+      if (response.status === 429) {
+        let message = "Too many export requests. Try again later.";
+        try {
+          const data = await response.json();
+          if (data && typeof data === "object" && "error" in data) {
+            message = String((data as { error: unknown }).error);
+          }
+        } catch {
+          /* fall through */
+        }
+        throw new Error(message);
+      }
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    // Prefer the filename the server suggested via Content-Disposition.
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const match = disposition.match(/filename="([^"]+)"/);
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = match?.[1] ?? `jtransfer-export-${stamp}.json`;
+
+    const blob = await response.blob();
+    return { blob, filename };
+  }
+
+  async deleteMyAccount(confirmEmail: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/me`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmEmail }),
+    });
+    if (response.ok) return;
+
+    // The error body is small JSON — parse but tolerate non-JSON.
+    let message: string | null = null;
+    try {
+      const data = await response.json();
+      if (data && typeof data === "object" && "error" in data) {
+        message = String((data as { error: unknown }).error);
+      }
+    } catch {
+      /* fall through */
+    }
+
+    if (response.status === 400) {
+      throw new Error(message ?? "Confirmation does not match account email.");
+    }
+    if (response.status === 401) {
+      throw new Error("Not signed in.");
+    }
+    if (response.status === 429) {
+      throw new Error(message ?? "Too many attempts. Try again later.");
+    }
+    throw new Error(message ?? `Request failed: ${response.status}`);
   }
 }
 

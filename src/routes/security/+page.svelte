@@ -1,6 +1,8 @@
 <script lang="ts">
   import * as Frame from "$lib/components/frame";
+  import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
+  import SiteFooter from "$lib/components/SiteFooter.svelte";
 </script>
 
 <svelte:head>
@@ -18,10 +20,10 @@
 </svelte:head>
 
 <PageLayout width="3xl">
-  <div class="text-center mb-8">
-      <a href="/" class="text-3xl font-bold mb-2 hover:text-primary transition-colors">JTransfer</a>
-      <p class="text-muted-foreground">Security Overview</p>
-    </div>
+  <PageHeader
+    title="Security Overview"
+    tagline="How end-to-end encryption works on JTransfer, and how to report a vulnerability."
+  />
 
     <Frame.Root>
       <Frame.Panel>
@@ -29,7 +31,7 @@
           <p class="text-sm text-muted-foreground">Last updated: May 9, 2026</p>
 
           <section class="space-y-3">
-            <h1 class="text-xl font-semibold text-foreground">Scope</h1>
+            <h2 class="text-xl font-semibold text-foreground">Scope</h2>
             <p class="text-muted-foreground">
               JTransfer is a single-product service: end-to-end encrypted file transfer.
               This page describes the security model behind that service — what we can
@@ -144,13 +146,5 @@
       </Frame.Panel>
     </Frame.Root>
 
-    <div class="mt-8 text-center text-sm text-muted-foreground">
-      <div class="flex items-center justify-center gap-3">
-        <a href="/" class="hover:text-foreground transition-colors">Home</a>
-        <span>·</span>
-        <a href="/privacy" class="hover:text-foreground transition-colors">Privacy Policy</a>
-        <span>·</span>
-        <a href="/terms" class="hover:text-foreground transition-colors">Terms of Service</a>
-      </div>
-    </div>
+  <SiteFooter current="security" />
 </PageLayout>

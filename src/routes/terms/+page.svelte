@@ -1,6 +1,8 @@
 <script lang="ts">
   import * as Frame from "$lib/components/frame";
+  import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
+  import SiteFooter from "$lib/components/SiteFooter.svelte";
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
   import { formatSize } from "$lib/utils";
 </script>
@@ -20,15 +22,14 @@
 </svelte:head>
 
 <PageLayout width="3xl">
-  <div class="text-center mb-8">
-      <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">JTransfer</a>
-      <h1 class="text-3xl font-bold mb-2 mt-1">Terms of Service</h1>
-      <p class="text-muted-foreground">End-to-end encrypted file transfer</p>
-    </div>
+  <PageHeader
+    title="Terms of Service"
+    tagline="End-to-end encrypted file transfer."
+  />
 
     <Frame.Root>
       <Frame.Panel>
-        <div class="prose prose-invert max-w-none space-y-6">
+        <div class="space-y-6">
           <p class="text-sm text-muted-foreground">Last updated: May 6, 2026</p>
 
           <section class="space-y-3">
@@ -233,13 +234,5 @@
       </Frame.Panel>
     </Frame.Root>
 
-    <div class="mt-8 text-center text-sm text-muted-foreground">
-      <div class="flex items-center justify-center gap-3">
-        <a href="/" class="hover:text-foreground transition-colors">Home</a>
-        <span>·</span>
-        <a href="/security" class="hover:text-foreground transition-colors">Security</a>
-        <span>·</span>
-        <a href="/privacy" class="hover:text-foreground transition-colors">Privacy Policy</a>
-      </div>
-    </div>
+  <SiteFooter current="terms" />
 </PageLayout>

@@ -1,13 +1,17 @@
 <script lang="ts">
+  import { cn } from "$lib/utils";
   import { formatSize } from "$lib/utils";
+  import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
 
   interface Props {
     onFilesSelect: (files: File[]) => void;
     disabled?: boolean;
     maxTotalSize?: number;
+    compact?: boolean;
   }
 
-  let { onFilesSelect, disabled = false, maxTotalSize }: Props = $props();
+  let { onFilesSelect, disabled = false, maxTotalSize, compact = false }: Props =
+    $props();
 
   let isDragging = $state(false);
   let fileInput: HTMLInputElement;
@@ -66,35 +70,33 @@
   ondrop={handleDrop}
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}
-  aria-label="Choose files to upload — opens file picker"
-  class="not-last:mb-4 w-full p-12 border-2 border-dashed rounded-[calc(var(--radius-2xl)-1px)] transition-[border-color,background-color] duration-200 ease-out cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring
-		{isDragging
-    ? 'border-primary bg-primary/10'
-    : 'border-border hover:border-muted-foreground'}
-		{disabled ? 'opacity-50 cursor-not-allowed' : ''}"
+  aria-label={compact ? "Add more files" : "Choose files to upload — opens file picker"}
+  class={cn(
+    "w-full border-2 border-dashed rounded-[calc(var(--radius-2xl)-1px)] transition-[border-color,background-color] duration-200 ease-out cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+    compact ? "p-4" : "p-10",
+    isDragging
+      ? "border-primary bg-primary/10"
+      : "border-border hover:border-muted-foreground",
+    disabled && "opacity-50 cursor-not-allowed"
+  )}
   {disabled}
 >
-  <div class="flex flex-col items-center gap-4 text-primary">
-    <svg
-      class="w-12 h-12"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="1.5"
-        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-      />
-    </svg>
-    <div class="text-center">
-      <p class="text-lg font-medium text-foreground">
-        Drop files here or click to browse
-      </p>
-      <p class="text-sm mt-1">
-        Maximum {maxTotalSize ? formatSize(maxTotalSize) : "1 GB"} total
-      </p>
+  {#if compact}
+    <div class="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+      <IconUploadRegular class="size-4" />
+      <span>Add more files</span>
     </div>
-  </div>
+  {:else}
+    <div class="flex flex-col items-center gap-4 text-primary">
+      <IconUploadRegular class="size-10" />
+      <div class="text-center">
+        <p class="text-lg font-medium text-foreground">
+          Drop files here or click to browse
+        </p>
+        <p class="text-sm mt-1 text-muted-foreground">
+          Maximum {maxTotalSize ? formatSize(maxTotalSize) : "1 GB"} total
+        </p>
+      </div>
+    </div>
+  {/if}
 </button>

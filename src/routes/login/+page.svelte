@@ -1,7 +1,10 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
+  import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
+  import * as Frame from "$lib/components/frame";
+  import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
@@ -19,7 +22,6 @@
       errorMessage =
         "That sign-in link has expired or been used. Request a new one below.";
     }
-    // If already signed in, bounce to dashboard.
     if (auth.isAuthenticated) {
       goto("/dashboard", { replaceState: true });
     }
@@ -49,58 +51,53 @@
 
 <svelte:head>
   <title>Sign in — JTransfer</title>
-  <meta
-    name="robots"
-    content="noindex, nofollow, noarchive, nosnippet"
-  />
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
 <PageLayout>
-  <div class="bg-card border border-border rounded-2xl p-8">
-    <h1 class="text-2xl font-semibold text-foreground mb-2">Sign in</h1>
-    <p class="text-sm text-muted-foreground mb-6">
-      We'll email you a one-time sign-in link. New here? We'll create your
-      account on first sign-in — no password needed.
-    </p>
+  <PageHeader
+    title="Sign in"
+    tagline="We'll email you a one-time sign-in link. New here? We'll create your account on first sign-in — no password needed."
+  />
 
-    {#if submitted}
-      <div
-        role="status"
-        aria-live="polite"
-        class="bg-success/10 border border-success/30 rounded-[calc(var(--radius-2xl)-1px)] p-4 mb-4"
-      >
-        <p class="text-sm text-foreground font-medium">Check your inbox</p>
-        <p class="text-sm text-muted-foreground mt-1">
-          If <span class="text-foreground">{email}</span> is a valid email, a
-          sign-in link is on its way. The link expires in 15 minutes.
-        </p>
-        <p class="text-xs text-muted-foreground mt-2">
-          Don't see it after a minute or two? Check your spam or junk folder.
-        </p>
-      </div>
-      <Button variant="secondary" onclick={reset}>Send another link</Button>
-    {:else}
-      <form onsubmit={handleSubmit} class="space-y-4" novalidate>
-        <TextInput
-          id="email"
-          type="email"
-          label="Email"
-          placeholder="you@example.com"
-          autocomplete="email"
-          required
-          bind:value={email}
-          disabled={isSubmitting}
-          error={errorMessage ?? undefined}
-        />
-        <Button type="submit" disabled={isSubmitting || email.length === 0}>
-          {#if isSubmitting}
-            <Spinner aria-hidden="true" />
-            Sending…
-          {:else}
-            Send sign-in link
-          {/if}
-        </Button>
-      </form>
-    {/if}
-  </div>
+  <Frame.Root>
+    <Frame.Panel>
+      {#if submitted}
+        <div class="space-y-4">
+          <Alert tone="success" title="Check your inbox">
+            If <span class="text-foreground">{email}</span> is a valid email, a
+            sign-in link is on its way. The link expires in 15 minutes.
+            Don't see it after a minute or two? Check your spam or junk folder.
+          </Alert>
+          <div class="flex">
+            <Button variant="secondary" fullWidth={false} onclick={reset}>
+              Send another link
+            </Button>
+          </div>
+        </div>
+      {:else}
+        <form onsubmit={handleSubmit} class="space-y-4" novalidate>
+          <TextInput
+            id="email"
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autocomplete="email"
+            required
+            bind:value={email}
+            disabled={isSubmitting}
+            error={errorMessage ?? undefined}
+          />
+          <Button type="submit" disabled={isSubmitting || email.length === 0}>
+            {#if isSubmitting}
+              <Spinner aria-hidden="true" />
+              Sending…
+            {:else}
+              Send sign-in link
+            {/if}
+          </Button>
+        </form>
+      {/if}
+    </Frame.Panel>
+  </Frame.Root>
 </PageLayout>

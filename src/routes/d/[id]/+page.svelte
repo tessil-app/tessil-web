@@ -1,14 +1,21 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { api, type TransferMetadata } from "$lib/api/client";
+  import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
+  import FileRow from "$lib/components/FileRow.svelte";
   import * as Frame from "$lib/components/frame";
+  import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
+  import SiteFooter from "$lib/components/SiteFooter.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import { decryptFile, decryptFilename } from "$lib/crypto/decrypt";
-  import { importKey, unwrapKey, isWrappedKey } from "$lib/crypto/key";
+  import { importKey, isWrappedKey, unwrapKey } from "$lib/crypto/key";
   import { formatSize } from "$lib/utils";
+  import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
+  import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
+  import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
   import { onMount } from "svelte";
 
   type PageStatus = "loading" | "password_required" | "ready" | "error";
@@ -26,36 +33,26 @@
   }
 
   let pageStatus = $state<PageStatus>("loading");
-  let error = $state<string | null>(null);
+  let errorMessage = $state<string | null>(null);
+  let errorTitle = $state<string>("This link is no longer valid");
   let transfer = $state<TransferMetadata | null>(null);
   let files = $state<DecryptedFileInfo[]>([]);
   let key = $state<CryptoKey | null>(null);
-  let downloadAllStatus = $state<"idle" | "downloading" | "complete">("idle");
-  let downloadAllProgress = $state(0);
+  let accessToken = $state<string | null>(null);
+  let downloadAllInProgress = $state(false);
 
-  // Password protection state
   let password = $state("");
   let passwordError = $state<string | null>(null);
   let isVerifyingPassword = $state(false);
   let transferId = $state<string | null>(null);
-  let rawFragment = $state<string | null>(null); // kept for wrapped key unwrapping
-
-  function formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
+  let rawFragment = $state<string | null>(null);
 
   onMount(async () => {
     try {
       const id = $page.params.id;
       if (!id) {
-        error = "Invalid link: missing transfer ID";
+        errorTitle = "This link is no longer valid";
+        errorMessage = "Invalid link: missing transfer ID.";
         pageStatus = "error";
         return;
       }
@@ -63,38 +60,45 @@
 
       const hash = window.location.hash.slice(1);
       if (!hash) {
-        error = "Invalid link: missing decryption key";
+        errorTitle = "This link is no longer valid";
+        errorMessage = "Invalid link: missing decryption key.";
         pageStatus = "error";
         return;
       }
-
       rawFragment = hash;
 
-      // Fetch transfer metadata first
       const meta = await api.getTransferMetadata(id);
       transfer = meta;
 
-      // If key is wrapped, a password is required to unwrap it
       if (isWrappedKey(hash)) {
-        // Password prompt will handle both server verify and key unwrapping
         pageStatus = "password_required";
         return;
       }
 
-      // Plain key — import directly
       const cryptoKey = await importKey(hash);
       key = cryptoKey;
 
-      // Check if password is required (server-side gate only)
       if (meta.passwordRequired) {
         pageStatus = "password_required";
         return;
       }
 
-      // No password required - decrypt filenames
       await decryptAndShowFiles(meta, cryptoKey);
     } catch (err) {
-      error = err instanceof Error ? err.message : "Failed to load files";
+      const message =
+        err instanceof Error ? err.message : "Failed to load files";
+      const lower = message.toLowerCase();
+      if (lower.includes("expired")) {
+        errorTitle = "This transfer has expired";
+        errorMessage = "The sender set an expiry date that has passed.";
+      } else if (lower.includes("not found") || lower.includes("404")) {
+        errorTitle = "This link is no longer valid";
+        errorMessage =
+          "The transfer may have expired, been deleted, or the link is incorrect.";
+      } else {
+        errorTitle = "Unable to access files";
+        errorMessage = message;
+      }
       pageStatus = "error";
     }
   });
@@ -104,7 +108,8 @@
     cryptoKey: CryptoKey
   ) {
     if (!meta.files) {
-      error = "No files found in transfer";
+      errorTitle = "Unable to access files";
+      errorMessage = "No files found in transfer.";
       pageStatus = "error";
       return;
     }
@@ -137,11 +142,10 @@
     isVerifyingPassword = true;
 
     try {
-      // Verify password server-side (gates access to file metadata)
       const meta = await api.verifyTransferPassword(transferId, password);
       transfer = meta;
+      accessToken = meta.accessToken ?? null;
 
-      // Unwrap key if it is wrapped with the password; otherwise use already-imported key
       let cryptoKey: CryptoKey;
       if (rawFragment && isWrappedKey(rawFragment)) {
         try {
@@ -160,7 +164,8 @@
       key = cryptoKey;
       await decryptAndShowFiles(meta, cryptoKey);
     } catch (err) {
-      passwordError = err instanceof Error ? err.message : "Incorrect password";
+      passwordError =
+        err instanceof Error ? err.message : "Incorrect password";
     } finally {
       isVerifyingPassword = false;
     }
@@ -174,12 +179,13 @@
       files[index].status = "downloading";
       files[index].progress = 0;
 
-      // Download encrypted file
       files[index].progress = 10;
-      const encryptedData = await api.downloadFile(file.id);
+      const encryptedData = await api.downloadFile(
+        file.id,
+        accessToken ?? undefined
+      );
       files[index].progress = 70;
 
-      // Decrypt
       const decryptedBlob = await decryptFile(
         encryptedData,
         file.fileIv,
@@ -189,7 +195,6 @@
         }
       );
 
-      // Trigger download
       const url = URL.createObjectURL(decryptedBlob);
       const a = document.createElement("a");
       a.href = url;
@@ -200,6 +205,7 @@
       URL.revokeObjectURL(url);
 
       files[index].status = "complete";
+      files[index].progress = 100;
     } catch (err) {
       files[index].status = "error";
       files[index].error =
@@ -208,29 +214,33 @@
   }
 
   async function downloadAllFiles() {
-    if (!key || downloadAllStatus === "downloading") return;
-
-    downloadAllStatus = "downloading";
-    downloadAllProgress = 0;
-
-    const totalFiles = files.length;
-    let completedFiles = 0;
-
-    for (let i = 0; i < files.length; i++) {
-      if (files[i].status !== "complete") {
-        await downloadFile(i);
+    if (!key || downloadAllInProgress) return;
+    downloadAllInProgress = true;
+    try {
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].status !== "complete") {
+          await downloadFile(i);
+        }
       }
-      completedFiles++;
-      downloadAllProgress = (completedFiles / totalFiles) * 100;
+    } finally {
+      downloadAllInProgress = false;
     }
-
-    downloadAllStatus = "complete";
   }
 
-  const totalSize = $derived(files.reduce((sum, f) => sum + f.size, 0));
-  const allComplete = $derived(files.every((f) => f.status === "complete"));
+  const allComplete = $derived(
+    files.length > 0 && files.every((f) => f.status === "complete")
+  );
   const anyDownloading = $derived(
     files.some((f) => f.status === "downloading")
+  );
+  const isSingleFile = $derived(files.length === 1);
+  const fileCountTitle = $derived(
+    `${files.length} file${files.length !== 1 ? "s" : ""} received`
+  );
+  const downloadAllLabel = $derived(
+    isSingleFile && files[0]
+      ? `Download ${files[0].name}`
+      : `Download all (${files.length})`
   );
 </script>
 
@@ -240,308 +250,122 @@
 </svelte:head>
 
 <PageLayout>
-  <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold mb-2">JTransfer</h1>
-      <p class="text-muted-foreground">
-        Secure, open source, end-to-end encrypted file sharing hosted in the EU
-      </p>
-    </div>
+  <PageHeader
+    title="Encrypted in your browser."
+    tagline="Your files are scrambled before they leave your device — we never see the contents."
+    wordmarkHref={null}
+  />
 
-    <Frame.Root>
-      <Frame.Panel>
-        {#if pageStatus === "loading"}
-          <div
-            role="status"
-            aria-live="polite"
-            class="flex flex-col items-center gap-4 py-8 text-info"
-          >
-            <Spinner class="w-8 h-8" aria-hidden="true" />
-            <p class="text-muted-foreground">Loading files...</p>
-          </div>
-        {:else if pageStatus === "password_required"}
-          <div class="text-center py-8">
-            <!-- Lock icon -->
-            <div class="w-16 h-16 mx-auto mb-4 text-primary">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-            </div>
-            <h2 class="text-xl font-semibold mb-2">Password Protected</h2>
-            <p class="text-muted-foreground mb-6">
-              {#if transfer?.fileCount}
-                {transfer.fileCount} file{transfer.fileCount !== 1 ? "s" : ""} available
-              {:else}
-                This transfer requires a password to access
-              {/if}
-            </p>
-
-            <form
-              onsubmit={(e) => {
-                e.preventDefault();
-                handlePasswordSubmit();
-              }}
-              class="max-w-xs mx-auto space-y-4"
-            >
-              <PasswordInput
-                id="transfer-password"
-                label="Password"
-                placeholder="Enter password"
-                bind:value={password}
-                disabled={isVerifyingPassword}
-                error={passwordError ?? undefined}
-              />
-
-              <Button
-                type="submit"
-                disabled={!password || isVerifyingPassword}
-              >
-                {#if isVerifyingPassword}
-                  <Spinner />
-                  Verifying...
-                {:else}
-                  <svg
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
-                    />
-                  </svg>
-                  Unlock Files
-                {/if}
-              </Button>
-            </form>
-
-            {#if transfer}
-              <p class="text-xs text-muted-foreground mt-4">
-                Expires {formatDate(transfer.expiresAt)}
-              </p>
-            {/if}
-          </div>
-        {:else if pageStatus === "error"}
-          <div class="text-center py-8">
-            <div class="w-16 h-16 mx-auto mb-4 text-destructive-foreground">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-            <h2 class="text-xl font-semibold mb-2">Unable to access files</h2>
-            <p class="text-muted-foreground">{error}</p>
-            <a
-              href="/"
-              class="inline-block mt-4 text-info-foreground hover:text-info"
-            >
-              Upload your own files
-            </a>
-          </div>
-        {:else if pageStatus === "ready"}
-          <div class="space-y-6">
-            <!-- Header -->
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-lg font-semibold">
-                  {files.length} file{files.length !== 1 ? "s" : ""}
-                </h2>
-                <p class="text-sm text-muted-foreground">
-                  {formatSize(totalSize)} total
-                </p>
-              </div>
-              {#if transfer}
-                <p class="text-sm text-muted-foreground">
-                  Expires {formatDate(transfer.expiresAt)}
-                </p>
-              {/if}
-            </div>
-
-            <!-- Download All button -->
-            {#if files.length > 1}
-              <Button
-                onclick={downloadAllFiles}
-                disabled={anyDownloading || allComplete}
-              >
-                {#if downloadAllStatus === "downloading"}
-                  <Spinner />
-                  Downloading...
-                {:else if allComplete}
-                  <svg
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  All Downloaded
-                {:else}
-                  <svg
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                  Download All
-                {/if}
-              </Button>
-            {/if}
-
-            <!-- File list -->
-            <div class="space-y-2">
-              {#each files as file, index}
-                <div
-                  class="flex items-center gap-3 p-3 bg-card/50 rounded-[calc(var(--radius-2xl)-1px)] border border-border"
-                >
-                  <!-- File icon -->
-                  <div
-                    class="shrink-0 w-10 h-10 flex items-center justify-center bg-muted rounded-[calc(var(--radius-2xl)-1px)]"
-                  >
-                    <svg
-                      class="w-5 h-5 text-muted-foreground"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="1.5"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                  </div>
-
-                  <!-- File info -->
-                  <div class="flex-1 min-w-0">
-                    <p class="text-foreground text-sm font-medium truncate">
-                      {file.name}
-                    </p>
-                    <p class="text-xs text-muted-foreground">
-                      {formatSize(file.size)}
-                    </p>
-                    {#if file.status === "downloading"}
-                      <div class="mt-1 w-full bg-muted rounded-full h-1">
-                        <div
-                          class="bg-info h-1 rounded-full transition-[width] duration-200 ease-out"
-                          style="width: {file.progress}%"
-                        ></div>
-                      </div>
-                    {/if}
-                  </div>
-
-                  <!-- Download button -->
-                  <button
-                    type="button"
-                    onclick={() => downloadFile(index)}
-                    disabled={file.status === "downloading"}
-                    class="hover:cursor-pointer shrink-0 p-2.5 rounded-[calc(var(--radius-2xl)-1px)] transition-colors
-											{file.status === 'complete'
-                      ? 'bg-success/20 text-success-foreground'
-                      : file.status === 'error'
-                        ? 'bg-destructive/20 text-destructive-foreground hover:bg-destructive/30'
-                        : file.status === 'downloading'
-                          ? 'bg-muted text-muted-foreground'
-                          : 'bg-muted hover:bg-accent text-foreground'}"
-                  >
-                    {#if file.status === "complete"}
-                      <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    {:else if file.status === "downloading"}
-                      <Spinner />
-                    {:else if file.status === "error"}
-                      <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                    {:else}
-                      <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                    {/if}
-                  </button>
-                </div>
-              {/each}
-            </div>
-
-            <!-- Security notice -->
-            <div
-              class="p-3 bg-success/10 border border-success/30 rounded-[calc(var(--radius-2xl)-1px)]"
-            >
-              <p class="text-sm text-success-foreground">
-                <strong>End-to-end encrypted:</strong> Files are decrypted in your
-                browser. The server never sees your content.
-              </p>
-            </div>
-          </div>
+  <Frame.Root>
+    <Frame.Header>
+      <Frame.Title>
+        {#if pageStatus === "ready"}
+          {fileCountTitle}
+        {:else}
+          Encrypted transfer
         {/if}
-      </Frame.Panel>
-    </Frame.Root>
+      </Frame.Title>
+      <Frame.Description class="flex items-center gap-2">
+        <IconLockRegular class="size-4" />
+        Encrypted end-to-end. The server never saw the contents.
+      </Frame.Description>
+    </Frame.Header>
 
-    <div class="mt-8 text-center text-sm text-muted-foreground space-y-2">
-      <a href="/" class="hover:text-foreground transition-colors">
-        Share your own files securely
+    <Frame.Panel>
+      {#if pageStatus === "loading"}
+        <div
+          class="flex items-center justify-center py-8 text-muted-foreground"
+        >
+          <Spinner aria-label="Loading transfer" />
+        </div>
+      {:else if pageStatus === "password_required"}
+        <form
+          onsubmit={(e) => {
+            e.preventDefault();
+            handlePasswordSubmit();
+          }}
+          class="space-y-4"
+        >
+          <p class="text-sm text-muted-foreground">
+            This transfer is password protected. Enter the password to decrypt.
+          </p>
+          <PasswordInput
+            id="transfer-password"
+            label="Password"
+            placeholder="Enter the password"
+            bind:value={password}
+            disabled={isVerifyingPassword}
+            error={passwordError ?? undefined}
+          />
+        </form>
+      {:else if pageStatus === "error"}
+        <Alert tone="destructive" title={errorTitle}>
+          {errorMessage}
+        </Alert>
+      {:else if pageStatus === "ready"}
+        <div>
+          {#each files as file, index (file.id)}
+            <FileRow
+              name={file.name}
+              size={formatSize(file.size)}
+              kind="download"
+              status={file.status}
+              percent={file.progress}
+              trailingHidden={isSingleFile}
+              errorSub={file.status === "error" ? file.error : undefined}
+              onDownload={() => downloadFile(index)}
+              onRetry={() => downloadFile(index)}
+            />
+          {/each}
+        </div>
+      {/if}
+    </Frame.Panel>
+
+    {#if pageStatus === "password_required"}
+      <Frame.Footer>
+        <Button
+          variant="primary"
+          onclick={handlePasswordSubmit}
+          disabled={!password || isVerifyingPassword}
+        >
+          {#if isVerifyingPassword}
+            <Spinner class="size-4" />
+            Verifying…
+          {:else}
+            Unlock
+          {/if}
+        </Button>
+      </Frame.Footer>
+    {:else if pageStatus === "ready"}
+      <Frame.Footer>
+        {#if allComplete}
+          <Button variant="primary" disabled>
+            <IconCheckRegular class="size-4" />
+            Downloaded
+          </Button>
+        {:else if downloadAllInProgress || anyDownloading}
+          <Button variant="primary" disabled>
+            <Spinner class="size-4" />
+            Downloading…
+          </Button>
+        {:else}
+          <Button variant="primary" onclick={downloadAllFiles}>
+            <IconDownloadRegular class="size-4" />
+            {downloadAllLabel}
+          </Button>
+        {/if}
+      </Frame.Footer>
+    {/if}
+  </Frame.Root>
+
+  <SiteFooter current="download">
+    {#snippet tagline()}
+      <a
+        href="/"
+        class="hover:text-foreground transition-colors duration-200 ease-out"
+      >
+        Share your own files securely →
       </a>
-      <div class="flex items-center justify-center gap-3 pt-2">
-        <a href="/privacy" class="hover:text-foreground transition-colors">Privacy</a>
-        <span>·</span>
-        <a href="/terms" class="hover:text-foreground transition-colors">Terms</a>
-        <span>·</span>
-        <a href="/abuse" class="hover:text-foreground transition-colors">Report Abuse</a>
-      </div>
-    </div>
+    {/snippet}
+  </SiteFooter>
 </PageLayout>
