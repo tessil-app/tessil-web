@@ -17,9 +17,11 @@
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
   import { encryptFile, encryptFilename } from "$lib/crypto/encrypt";
   import { exportKey, generateKey, wrapKey } from "$lib/crypto/key";
+  import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
   import type { FileUploadState } from "$lib/stores/upload.types";
   import { formatSize } from "$lib/utils";
+  import { hasVaultCapableCredential, wrapWithVault } from "$lib/vault/client";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconCopyRegular from "phosphor-icons-svelte/IconCopyRegular.svelte";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
@@ -79,6 +81,28 @@
   ];
 
   let copied = $state(false);
+  let vaultCapable = $state(false);
+  let lastUploadVaulted = $state(false);
+
+  // Probe once when sign-in state resolves. The check itself is the
+  // /api/auth/passkey/prf-salts call — auth-gated server-side, so we
+  // don't bother firing it when the user is anonymous.
+  $effect(() => {
+    if (!auth.loaded) return;
+    if (!auth.isAuthenticated) {
+      vaultCapable = false;
+      return;
+    }
+    let cancelled = false;
+    hasVaultCapableCredential().then((capable) => {
+      if (!cancelled) vaultCapable = capable;
+    });
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  const showVaultToggle = $derived(auth.isAuthenticated && vaultCapable);
 
   function fileRowStatus(
     s: FileUploadState["status"]
@@ -275,7 +299,32 @@
       }
 
       uploadStore.setStatus("uploading");
-      const completeResponse = await api.completeTransfer(transfer.transferId);
+
+      // Phase F vault wrap (doc 28 §3). Strictly additive — any failure
+      // falls back to the unvaulted /complete path. Wrap operates on the
+      // raw K_transfer bytes, independent of password-protected mode (the
+      // recipient still needs the password; the dashboard owner unwraps
+      // via PRF). Per D-112 we honour the toggle only when the user is
+      // signed in and has a PRF-capable credential.
+      let vaultWrap: { wrappedKey: string; wrapCredentialId: string } | undefined;
+      lastUploadVaulted = false;
+      if (auth.isAuthenticated && vaultCapable && uploadStore.vaultEnabled) {
+        try {
+          const rawTransferKey = await crypto.subtle.exportKey("raw", key);
+          const wrap = await wrapWithVault(rawTransferKey);
+          if (wrap) {
+            vaultWrap = wrap;
+            lastUploadVaulted = true;
+          }
+        } catch {
+          // Swallow — keep the upload unvaulted on any unexpected failure.
+        }
+      }
+
+      const completeResponse = await api.completeTransfer(
+        transfer.transferId,
+        vaultWrap,
+      );
 
       const baseUrl = window.location.origin;
       const shareUrl = `${baseUrl}${completeResponse.shareUrl}#${keyString}`;
@@ -376,6 +425,11 @@
               uploadStore.maxDownloads
             )}.
           </p>
+          {#if lastUploadVaulted}
+            <p class="text-xs text-muted-foreground">
+              You can also recover this link from your dashboard later.
+            </p>
+          {/if}
         </div>
       </Frame.Panel>
       <Frame.Footer class="px-5 py-4">
@@ -457,6 +511,28 @@
               onChange={(v) => uploadStore.setMaxDownloads(v)}
               disabled={isProcessing}
             />
+
+            {#if showVaultToggle}
+              <div class="space-y-1">
+                <Checkbox
+                  checked={uploadStore.vaultEnabled}
+                  onchange={(e) =>
+                    uploadStore.setVaultEnabled(
+                      (e.currentTarget as HTMLInputElement).checked
+                    )}
+                  disabled={isProcessing}
+                >
+                  Save filenames to my dashboard
+                </Checkbox>
+                <p class="pl-7 text-xs text-muted-foreground">
+                  {#if uploadStore.vaultEnabled}
+                    You'll be able to see filenames and recover the share link from your dashboard. Requires a passkey unlock.
+                  {:else}
+                    This transfer will appear in your dashboard, but filenames stay hidden and the share link can't be recovered.
+                  {/if}
+                </p>
+              </div>
+            {/if}
 
             <div class="space-y-2">
               <Checkbox

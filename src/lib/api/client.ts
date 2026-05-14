@@ -79,11 +79,26 @@ export interface OwnedTransferSummary {
   downloadCount: number;
   isCompleted: boolean;
   hasPassword: boolean;
+  // Vault wrap (Phase F). NULL on anonymous-at-creation and on
+  // signed-in-without-vault rows. See docs/audit/28 §4 + §5.
+  wrappedKey: string | null;
+  wrapCredentialId: string | null;
 }
 
 export interface ListMyTransfersResponse {
   transfers: OwnedTransferSummary[];
   nextCursor: string | null;
+}
+
+// Returned by GET /api/me/transfers/:id/files for a transfer the caller
+// owns. encryptedName + encryptedNameIv are decrypted client-side under
+// K_transfer (unwrapped from the row's wrappedKey blob, per doc 28 §3).
+export interface OwnedTransferFileMetadata {
+  id: string;
+  encryptedName: string;
+  encryptedNameIv: string;
+  size: number;
+  mimeType: string | null;
 }
 
 export interface RequestMagicLinkResponse {
@@ -104,6 +119,17 @@ export interface PasskeySummary {
   transports: string[];
   createdAt: string;
   lastUsedAt: string | null;
+}
+
+export interface PrfSaltEntry {
+  // base64url-encoded raw credential id (matches WebAuthn `id` from the
+  // browser library's JSON shape).
+  credentialId: string;
+  // Stable, versioned purpose identifier (e.g. "jtransfer:vault:transfer-key:v1").
+  purpose: string;
+  // base64url-encoded 32 random bytes — the PRF input salt for this
+  // (credential, purpose) pair. Public bytes.
+  salt: string;
 }
 
 class ApiClient {
@@ -227,11 +253,21 @@ class ApiClient {
   }
 
   async completeTransfer(
-    transferId: string
+    transferId: string,
+    vaultWrap?: { wrappedKey: string; wrapCredentialId: string },
   ): Promise<{ success: boolean; shareUrl: string }> {
+    const body: {
+      transferId: string;
+      wrappedKey?: string;
+      wrapCredentialId?: string;
+    } = { transferId };
+    if (vaultWrap) {
+      body.wrappedKey = vaultWrap.wrappedKey;
+      body.wrapCredentialId = vaultWrap.wrapCredentialId;
+    }
     return this.request("/api/upload/complete", {
       method: "POST",
-      body: JSON.stringify({ transferId }),
+      body: JSON.stringify(body),
     });
   }
 
@@ -313,6 +349,12 @@ class ApiClient {
     return this.request(`/api/me/transfers${qs ? `?${qs}` : ""}`);
   }
 
+  async getMyTransferFiles(
+    id: string,
+  ): Promise<{ files: OwnedTransferFileMetadata[] }> {
+    return this.request(`/api/me/transfers/${encodeURIComponent(id)}/files`);
+  }
+
   async deleteMyTransfer(id: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/me/transfers/${id}`, {
       method: "DELETE",
@@ -392,6 +434,16 @@ class ApiClient {
 
   async listPasskeys(): Promise<{ authenticators: PasskeySummary[] }> {
     return this.request("/api/auth/passkeys");
+  }
+
+  async getPasskeyWrappedTransferCount(id: string): Promise<{ count: number }> {
+    return this.request(
+      `/api/auth/passkey/${encodeURIComponent(id)}/wrapped-transfer-count`,
+    );
+  }
+
+  async getPrfSalts(): Promise<{ salts: PrfSaltEntry[] }> {
+    return this.request("/api/auth/passkey/prf-salts");
   }
 
   async renamePasskey(

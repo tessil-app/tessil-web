@@ -28,7 +28,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 13, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: May 14, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">Scope</h2>
@@ -178,6 +178,51 @@
               the URL fragment. Signing in with a passkey only authenticates
               you to JTransfer — it does not give us access to your transfers'
               contents.
+            </p>
+          </section>
+
+          <section class="space-y-3">
+            <h2 class="text-lg font-semibold text-foreground">Vaulted filenames (optional)</h2>
+            <p class="text-muted-foreground">
+              If you have a passkey that supports the WebAuthn PRF extension,
+              you can opt in — at upload time — to save a transfer's filename
+              to your dashboard. When enabled, your browser derives a vault
+              key from your passkey and wraps the transfer's encryption key
+              under that vault key before sending the wrapped blob to us. The
+              vault key never touches our servers, and the wrap happens only
+              if you ticked the box for that upload.
+            </p>
+            <p class="text-muted-foreground">
+              On your dashboard, unlocking the vault prompts your authenticator
+              once per session. After that, vaulted transfers show their
+              original filename and let you recover the full share link
+              (including the URL fragment) without re-uploading. Transfers
+              you uploaded without the vault toggle, or while signed out,
+              remain blind to the dashboard exactly as before.
+            </p>
+            <p class="text-muted-foreground">
+              <strong>Trade-off to be aware of:</strong> the vault moves part
+              of the threat boundary onto your authenticator. An attacker who
+              possesses both a signed-in JTransfer session and your
+              passkey-bearing device, and who can satisfy the user-verification
+              gesture (Touch ID, Face ID, PIN), can decrypt the filenames and
+              recover the share links of your vaulted transfers — the same
+              capability you have. The user-verification gesture is required
+              every time the vault is unlocked, which is why we lean on it
+              rather than caching the vault key across sessions. For transfers
+              where this matters, leave the toggle off; the dashboard will
+              still list those transfers, just without filenames or
+              recoverable links.
+            </p>
+            <p class="text-muted-foreground">
+              Each passkey on your account gets its own independent vault key.
+              A transfer is wrapped under whichever passkey unlocked the
+              vault when you uploaded it. If you remove that specific
+              passkey from your account, the filenames and share links for
+              transfers wrapped under it stop being recoverable from the
+              dashboard — the underlying file payload is still downloadable
+              by anyone who has the full share link, because the link itself
+              already carries the encryption key in its fragment.
             </p>
           </section>
 

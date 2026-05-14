@@ -45,6 +45,12 @@
   let deletingId = $state<string | null>(null);
   let deleteConfirmId = $state<string | null>(null);
   let deleteError = $state<string | null>(null);
+  // Phase F (D-117): show "N transfers will lose filename visibility"
+  // when the user opens the Remove confirmation. Fetched on demand —
+  // null while loading; -1 if the count lookup failed (treated as "we
+  // couldn't check, proceed at your own risk").
+  let deleteImpactCount = $state<number | null>(null);
+  let deleteImpactError = $state(false);
 
   onMount(() => {
     if (auth.loaded && !auth.isAuthenticated) {
@@ -144,13 +150,29 @@
   function askDelete(p: PasskeySummary) {
     deleteConfirmId = p.id;
     deleteError = null;
+    deleteImpactCount = null;
+    deleteImpactError = false;
     renamingId = null;
+    void loadDeleteImpact(p.id);
+  }
+
+  async function loadDeleteImpact(id: string) {
+    try {
+      const { count } = await api.getPasskeyWrappedTransferCount(id);
+      // Stale-response guard: user may have flipped to a different
+      // passkey's confirm by the time this resolves.
+      if (deleteConfirmId === id) deleteImpactCount = count;
+    } catch {
+      if (deleteConfirmId === id) deleteImpactError = true;
+    }
   }
 
   function cancelDelete() {
     if (deletingId) return;
     deleteConfirmId = null;
     deleteError = null;
+    deleteImpactCount = null;
+    deleteImpactError = false;
   }
 
   async function confirmDelete(id: string) {
@@ -427,6 +449,18 @@
                         This is the sign-in key for your current session.
                         You'll stay signed in here, but you'll need to sign in
                         by email or another passkey next time.
+                      </Alert>
+                    {/if}
+                    {#if deleteImpactCount !== null && deleteImpactCount > 0}
+                      <Alert tone="warning">
+                        {deleteImpactCount}
+                        {deleteImpactCount === 1 ? "transfer" : "transfers"} will lose filename visibility after this. The files themselves stay downloadable to anyone with the share link.
+                      </Alert>
+                    {:else if deleteImpactError}
+                      <Alert tone="warning">
+                        Couldn't check whether transfers are saved under this
+                        key. Removing it may make some filenames unreadable on
+                        your dashboard.
                       </Alert>
                     {/if}
                     {#if deleteError}

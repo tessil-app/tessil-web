@@ -24,4 +24,7 @@ export interface UploadState {
   password: string;
   passwordEnabled: boolean;
   maxDownloads: number | null;
+  // Phase F vault opt-in (doc 28 §10 D-112). Only honoured when the
+  // signed-in user has ≥1 PRF-capable credential — otherwise ignored.
+  vaultEnabled: boolean;
 }

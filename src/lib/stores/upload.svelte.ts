@@ -16,6 +16,7 @@ function createUploadStore() {
     password: "",
     passwordEnabled: false,
     maxDownloads: null,
+    vaultEnabled: true,
   });
 
   function calculateOverallProgress(): number {
@@ -54,6 +55,9 @@ function createUploadStore() {
     },
     get passwordEnabled() {
       return state.passwordEnabled;
+    },
+    get vaultEnabled() {
+      return state.vaultEnabled;
     },
 
     addFiles(newFiles: File[]) {
@@ -135,6 +139,10 @@ function createUploadStore() {
       }
     },
 
+    setVaultEnabled(enabled: boolean) {
+      state.vaultEnabled = enabled;
+    },
+
     reset() {
       state = {
         files: [],
@@ -147,6 +155,7 @@ function createUploadStore() {
         password: "",
         passwordEnabled: false,
         maxDownloads: null,
+        vaultEnabled: true,
       };
     },
   };

@@ -2,6 +2,7 @@
 // after login/logout actions.
 
 import { api, type MeResponse } from "$lib/api/client";
+import { clearVaultCache } from "$lib/vault/client";
 
 type User = NonNullable<MeResponse["user"]>;
 
@@ -31,6 +32,9 @@ class AuthState {
     try {
       await api.logout();
     } finally {
+      // Sign-out must drop the vault key from memory (D-116) — otherwise
+      // the next signed-in user on the same tab inherits the prior K_vault.
+      clearVaultCache();
       this.user = null;
     }
   }
