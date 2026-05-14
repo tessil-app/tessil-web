@@ -10,6 +10,12 @@
   import TextInput from "$lib/components/TextInput.svelte";
   import { api } from "$lib/api/client";
   import { auth } from "$lib/stores/auth.svelte";
+  import {
+    conditionalUiAvailable,
+    isPasskeySupported,
+    PasskeyError,
+    signInWithPasskey,
+  } from "$lib/auth/passkey";
   import { onMount } from "svelte";
 
   let email = $state("");
@@ -24,6 +30,13 @@
   let isVerifyingCode = $state(false);
   let codeError = $state<string | null>(null);
 
+  // Passkey path (audit doc 27). Visible on browsers that support
+  // WebAuthn; conditional UI fires silently in parallel with the email
+  // input when the platform supports it.
+  let passkeySupported = $state(false);
+  let isPasskeySigningIn = $state(false);
+  let passkeyError = $state<string | null>(null);
+
   const codeDigits = $derived(code.replace(/\D/g, ""));
   const codeReady = $derived(codeDigits.length === 6);
 
@@ -34,8 +47,50 @@
     }
     if (auth.isAuthenticated) {
       goto("/dashboard", { replaceState: true });
+      return;
     }
+
+    passkeySupported = isPasskeySupported();
+    if (!passkeySupported) return;
+
+    // Fire-and-forget conditional UI: opens the autofill passkey picker on
+    // the email input. Silent on browsers that don't support it, and any
+    // cancel is a no-op (the user can still click the button below).
+    void (async () => {
+      const supportsAutofill = await conditionalUiAvailable();
+      if (!supportsAutofill || auth.isAuthenticated) return;
+      try {
+        await signInWithPasskey("conditional");
+        await auth.refresh();
+        goto("/dashboard", { replaceState: true });
+      } catch {
+        // Conditional UI swallows cancels.
+      }
+    })();
   });
+
+  async function handlePasskeyClick() {
+    if (isPasskeySigningIn) return;
+    passkeyError = null;
+    isPasskeySigningIn = true;
+    try {
+      await signInWithPasskey("required");
+      await auth.refresh();
+      goto("/dashboard", { replaceState: true });
+    } catch (err) {
+      if (err instanceof PasskeyError) {
+        // "cancelled" — keep the surface quiet; user knows they cancelled.
+        if (err.kind !== "cancelled") {
+          passkeyError = err.message;
+        }
+      } else {
+        passkeyError =
+          err instanceof Error ? err.message : "Passkey sign-in failed.";
+      }
+    } finally {
+      isPasskeySigningIn = false;
+    }
+  }
 
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -146,27 +201,67 @@
           </div>
         </div>
       {:else}
-        <form onsubmit={handleSubmit} class="space-y-4" novalidate>
-          <TextInput
-            id="email"
-            type="email"
-            label="Email"
-            placeholder="you@example.com"
-            autocomplete="email"
-            required
-            bind:value={email}
-            disabled={isSubmitting}
-            error={errorMessage ?? undefined}
-          />
-          <Button type="submit" disabled={isSubmitting || email.length === 0}>
-            {#if isSubmitting}
-              <Spinner aria-hidden="true" />
-              Sending…
-            {:else}
-              Send sign-in link
-            {/if}
-          </Button>
-        </form>
+        <div class="space-y-6">
+          {#if passkeySupported}
+            <div class="space-y-3">
+              {#if passkeyError}
+                <Alert tone="destructive" title="Passkey sign-in failed">
+                  {passkeyError}
+                </Alert>
+              {/if}
+              <Button
+                type="button"
+                variant="secondary"
+                onclick={handlePasskeyClick}
+                disabled={isPasskeySigningIn}
+              >
+                {#if isPasskeySigningIn}
+                  <Spinner aria-hidden="true" />
+                  Waiting for passkey…
+                {:else}
+                  Sign in with passkey
+                {/if}
+              </Button>
+              <p class="text-sm text-muted-foreground">
+                Use a passkey saved on this device, or pick one from another
+                device.
+              </p>
+            </div>
+
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                <div class="w-full border-t"></div>
+              </div>
+              <div class="relative flex justify-center">
+                <span class="bg-background px-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  or
+                </span>
+              </div>
+            </div>
+          {/if}
+
+          <form onsubmit={handleSubmit} class="space-y-4" novalidate>
+            <TextInput
+              id="email"
+              type="email"
+              label="Email"
+              placeholder="you@example.com"
+              autocomplete="email webauthn"
+              required
+              bind:value={email}
+              disabled={isSubmitting}
+              error={errorMessage ?? undefined}
+            />
+            <Button type="submit" disabled={isSubmitting || email.length === 0}>
+              {#if isSubmitting}
+                <Spinner aria-hidden="true" />
+                Sending…
+              {:else}
+                Send sign-in link
+              {/if}
+            </Button>
+          </form>
+        </div>
       {/if}
     </Frame.Panel>
   </Frame.Root>

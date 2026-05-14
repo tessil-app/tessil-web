@@ -10,7 +10,6 @@
   import { api, type OwnedTransferSummary } from "$lib/api/client";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
-  import { onMount } from "svelte";
 
   let transfers = $state<OwnedTransferSummary[]>([]);
   let nextCursor = $state<string | null>(null);
@@ -19,25 +18,19 @@
   let errorMessage = $state<string | null>(null);
   let confirmingId = $state<string | null>(null);
   let deletingId = $state<string | null>(null);
+  // Sentinel so the auth-driven $effect fires loadFirstPage exactly once.
+  // Gating on `transfers.length === 0` instead loops forever for accounts
+  // with no transfers.
+  let hasAttemptedLoad = $state(false);
 
-  onMount(() => {
-    if (auth.loaded && !auth.isAuthenticated) {
-      goto("/login", { replaceState: true });
-      return;
-    }
-    if (auth.isAuthenticated) {
-      void loadFirstPage();
-    }
-  });
-
-  // Once auth finishes loading (e.g. on a hard refresh), kick off the fetch.
   $effect(() => {
     if (!auth.loaded) return;
     if (!auth.isAuthenticated) {
       goto("/login", { replaceState: true });
       return;
     }
-    if (transfers.length === 0 && !isLoading && !errorMessage) {
+    if (!hasAttemptedLoad) {
+      hasAttemptedLoad = true;
       void loadFirstPage();
     }
   });

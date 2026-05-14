@@ -61,6 +61,12 @@ export interface MeResponse {
     email: string;
     tier: string;
     createdAt: string;
+    /**
+     * The authenticator that minted the current session, or null. Used by
+     * /dashboard/settings to mark which passkey signed in here. Sessions
+     * minted via magic link, verify-code, or pre-migration rows are null.
+     */
+    currentAuthenticatorId: string | null;
   } | null;
 }
 
@@ -87,6 +93,17 @@ export interface RequestMagicLinkResponse {
 
 export interface VerifyCodeResponse {
   ok: true;
+}
+
+export interface PasskeySummary {
+  id: string;
+  nickname: string | null;
+  deviceType: "singleDevice" | "multiDevice";
+  backedUp: boolean;
+  supportsPrf: boolean;
+  transports: string[];
+  createdAt: string;
+  lastUsedAt: string | null;
 }
 
 class ApiClient {
@@ -340,6 +357,57 @@ class ApiClient {
 
     const blob = await response.blob();
     return { blob, filename };
+  }
+
+  // ── Passkeys / WebAuthn ─────────────────────────────────────────────────
+
+  async passkeyRegisterBegin(): Promise<{ options: unknown; challengeId: string }> {
+    return this.request("/api/auth/passkey/register/begin", { method: "POST" });
+  }
+
+  async passkeyRegisterFinish(
+    challengeId: string,
+    response: unknown,
+    nickname: string | null,
+  ): Promise<{ authenticator: PasskeySummary }> {
+    return this.request("/api/auth/passkey/register/finish", {
+      method: "POST",
+      body: JSON.stringify({ challengeId, response, nickname }),
+    });
+  }
+
+  async passkeyLoginBegin(): Promise<{ options: unknown; challengeId: string }> {
+    return this.request("/api/auth/passkey/login/begin", { method: "POST" });
+  }
+
+  async passkeyLoginFinish(
+    challengeId: string,
+    response: unknown,
+  ): Promise<{ ok: true }> {
+    return this.request("/api/auth/passkey/login/finish", {
+      method: "POST",
+      body: JSON.stringify({ challengeId, response }),
+    });
+  }
+
+  async listPasskeys(): Promise<{ authenticators: PasskeySummary[] }> {
+    return this.request("/api/auth/passkeys");
+  }
+
+  async renamePasskey(
+    id: string,
+    nickname: string | null,
+  ): Promise<{ authenticator: PasskeySummary }> {
+    return this.request(`/api/auth/passkey/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ nickname }),
+    });
+  }
+
+  async deletePasskey(id: string): Promise<void> {
+    await this.request<{ ok: true }>(`/api/auth/passkey/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
   }
 
   async deleteMyAccount(confirmEmail: string): Promise<void> {

@@ -28,7 +28,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 9, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: May 13, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">Scope</h2>
@@ -102,8 +102,9 @@
             <h2 class="text-lg font-semibold text-foreground">Optional Accounts</h2>
             <p class="text-muted-foreground">
               You can optionally sign in to manage transfers from a single
-              place. Accounts use magic-link email — there is no password to
-              remember, lose, or breach. <strong>Accounts do not weaken the
+              place. Accounts use magic-link email or a device-bound passkey —
+              there is no password to remember, lose, or breach.
+              <strong>Accounts do not weaken the
               encryption model:</strong> file payloads remain end-to-end
               encrypted whether you are signed in or not, and the encryption
               key still lives only in the URL fragment.
@@ -143,6 +144,40 @@
               The code is shown only on the device that opened the link, never
               in the email itself, and never in any other communication from
               us.
+            </p>
+          </section>
+
+          <section class="space-y-3">
+            <h2 class="text-lg font-semibold text-foreground">Passkeys</h2>
+            <p class="text-muted-foreground">
+              If your device supports it, you can add a passkey to your account
+              and sign in without an email round-trip. A passkey is a
+              cryptographic key pair generated and stored by your device's
+              authenticator (Touch ID, Face ID, Windows Hello, a hardware
+              security key, or a synced credential from your platform
+              password manager).
+            </p>
+            <p class="text-muted-foreground">
+              <strong>Passkeys are bound to this site's domain.</strong> Your
+              browser will only release a JTransfer passkey to JTransfer — it
+              cannot be used on a look-alike site, even one that copies our
+              design pixel-for-pixel. This is enforced by the browser itself
+              (the WebAuthn standard), not by us, and it is the main reason
+              passkeys resist phishing in a way that passwords and one-time
+              codes cannot.
+            </p>
+            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+              <li>The private key never leaves your device (or your platform's secure sync, if you opt in)</li>
+              <li>We only store a public key, a credential identifier, and basic device info</li>
+              <li>You can add, rename, and remove passkeys from your account settings at any time</li>
+              <li>Passkeys do not replace email sign-in — both options stay available, so a lost device doesn't lock you out</li>
+            </ul>
+            <p class="text-muted-foreground">
+              Passkeys do not change the encryption model: file payloads remain
+              end-to-end encrypted, and the encryption key still lives only in
+              the URL fragment. Signing in with a passkey only authenticates
+              you to JTransfer — it does not give us access to your transfers'
+              contents.
             </p>
           </section>
 
