@@ -26,7 +26,12 @@
 		"vite": "^8"
 	},
 	"dependencies": {
+		"@scure/bip39": "^2.2.0",
 		"@simplewebauthn/browser": "^13.3.0",
+		"@zxcvbn-ts/core": "^3.0.4",
+		"@zxcvbn-ts/language-common": "^3.0.4",
+		"@zxcvbn-ts/language-en": "^3.0.2",
+		"hash-wasm": "^4.12.0",
 		"mode-watcher": "^1.1.0",
 		"phosphor-icons-svelte": "^2.1.0",
 		"tailwind-merge": "^3.4.0"

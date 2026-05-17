@@ -1,38 +1,42 @@
 <script lang="ts">
+  // Dashboard list. Post-ADR-0004 every owned transfer is wrapped under a
+  // single per-user K_vault, so unlocking is one password prompt — no more
+  // per-credential branching. Eager prompt on mount; "Skip" collapses to a
+  // banner the user can re-tap.
+
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
   import * as Frame from "$lib/components/frame";
+  import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
+  import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
+  import Textarea from "$lib/components/Textarea.svelte";
   import { api, type OwnedTransferSummary } from "$lib/api/client";
   import { decryptFilename } from "$lib/crypto/decrypt";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
   import {
-    deriveVaultKey,
     importTransferKey,
-    isVaultUnlocked,
+    isUnlocked,
+    subscribeToVaultState,
     transferKeyToFragment,
+    unlockWithPassword,
+    unlockWithPhrase,
     unwrapTransferKey,
   } from "$lib/vault/client";
+  import { onDestroy, onMount } from "svelte";
 
-  // States per vaulted row.
-  //   "locked"           — server says vaulted, K_vault not derived yet.
-  //   "unlocking"        — vault unlock in flight (one row or batch).
-  //   "unlocked"         — filenames decrypted, names[] populated.
-  //   "blind-credential" — wrappedKey present but unwrap returned null
-  //                        (credential gone server-side or wrong device).
-  //   "blind-error"      — files fetch or filename decrypt threw mid-flight.
-  // Non-vaulted rows (`wrappedKey === null`) skip this state entirely and
-  // render the legacy "N files" line.
+  // Per-row decrypt state. Without per-credential wraps the only failure
+  // modes left are "vault locked" (recover by unlocking) and "tag failed"
+  // (genuine corruption / wrong vault — rare). We keep one error bucket.
   type VaultRowState =
     | { status: "locked" }
     | { status: "unlocking" }
     | { status: "unlocked"; names: string[] }
-    | { status: "blind-credential" }
     | { status: "blind-error" };
 
   let transfers = $state<OwnedTransferSummary[]>([]);
@@ -43,20 +47,46 @@
   let confirmingId = $state<string | null>(null);
   let deletingId = $state<string | null>(null);
   let vaultStates = $state<Record<string, VaultRowState>>({});
+
+  // Unlock modal state
+  let vaultUnlocked = $state(false);
+  let promptOpen = $state(false);
+  let skipped = $state(false);
+  let unlockMode = $state<"password" | "phrase">("password");
+  let unlockPassword = $state("");
+  let unlockPhrase = $state("");
   let isUnlocking = $state(false);
-  let vaultUnlockError = $state<string | null>(null);
-  // "Get share link" per-row reveal (doc 28 §3 / D-117). The URL is
-  // rebuilt on demand from the unwrapped K_transfer; we keep the
-  // recovered URL in component state only as long as the user has the
-  // reveal panel open (cleared on hide / cancel / row delete).
+  let unlockError = $state<string | null>(null);
+
+  // "Get share link" reveal — same as before, just sourced from K_vault.
   let recoveredShareUrl = $state<Record<string, string>>({});
   let recoveringId = $state<string | null>(null);
   let recoverError = $state<string | null>(null);
   let copiedShareId = $state<string | null>(null);
-  // Sentinel so the auth-driven $effect fires loadFirstPage exactly once.
-  // Gating on `transfers.length === 0` instead loops forever for accounts
-  // with no transfers.
+
   let hasAttemptedLoad = $state(false);
+
+  // Subscribe to vault lock/unlock notifications. When the cached K_vault
+  // expires (24h TTL) or the user manually locks, we flip every "unlocked"
+  // row back to "locked" so the UI matches reality.
+  const unsubscribeVault = subscribeToVaultState(({ unlocked }) => {
+    vaultUnlocked = unlocked;
+    if (!unlocked) {
+      for (const id of Object.keys(vaultStates)) {
+        if (transfers.find((t) => t.id === id)?.wrappedKey) {
+          vaultStates[id] = { status: "locked" };
+        }
+      }
+    }
+  });
+
+  onMount(async () => {
+    if (auth.user) {
+      vaultUnlocked = await isUnlocked(auth.user.id);
+    }
+  });
+
+  onDestroy(() => unsubscribeVault());
 
   $effect(() => {
     if (!auth.loaded) return;
@@ -70,20 +100,16 @@
     }
   });
 
-  function seedVaultStates(rows: OwnedTransferSummary[]) {
-    for (const t of rows) {
-      if (!t.wrappedKey || !t.wrapCredentialId) continue;
-      if (vaultStates[t.id]) continue;
-      // If K_vault is already cached this session (e.g. user unlocked, then
-      // paginated), kick off unwrap-and-decrypt for this row immediately.
-      if (isVaultUnlocked(t.wrapCredentialId)) {
-        vaultStates[t.id] = { status: "unlocking" };
-        void unwrapRow(t);
-      } else {
-        vaultStates[t.id] = { status: "locked" };
-      }
-    }
-  }
+  // Eager prompt: as soon as we know the user is signed in and the vault
+  // is locked, surface the modal. Don't prompt again after Skip — the
+  // banner takes over for the rest of the visit.
+  $effect(() => {
+    if (!auth.loaded || !auth.isAuthenticated) return;
+    if (skipped || vaultUnlocked || promptOpen) return;
+    if (!hasAttemptedLoad) return;
+    if (lockedVaultedCount === 0) return;
+    promptOpen = true;
+  });
 
   async function loadFirstPage() {
     isLoading = true;
@@ -92,7 +118,7 @@
       const res = await api.listMyTransfers();
       transfers = res.transfers;
       nextCursor = res.nextCursor;
-      seedVaultStates(res.transfers);
+      await seedVaultStates(res.transfers);
     } catch (err) {
       errorMessage =
         err instanceof Error ? err.message : "Couldn't load your transfers.";
@@ -108,7 +134,7 @@
       const res = await api.listMyTransfers(nextCursor);
       transfers = [...transfers, ...res.transfers];
       nextCursor = res.nextCursor;
-      seedVaultStates(res.transfers);
+      await seedVaultStates(res.transfers);
     } catch (err) {
       errorMessage =
         err instanceof Error ? err.message : "Couldn't load more transfers.";
@@ -117,16 +143,28 @@
     }
   }
 
-  async function unwrapRow(t: OwnedTransferSummary) {
-    if (!t.wrappedKey || !t.wrapCredentialId) return;
+  async function seedVaultStates(rows: OwnedTransferSummary[]) {
+    if (!auth.user) return;
+    const unlockedNow = await isUnlocked(auth.user.id);
+    for (const t of rows) {
+      if (!t.wrappedKey) continue;
+      if (vaultStates[t.id]) continue;
+      if (unlockedNow) {
+        vaultStates[t.id] = { status: "unlocking" };
+        void unwrapRow(t);
+      } else {
+        vaultStates[t.id] = { status: "locked" };
+      }
+    }
+  }
 
-    const raw = await unwrapTransferKey(t.wrappedKey, t.wrapCredentialId);
+  async function unwrapRow(t: OwnedTransferSummary) {
+    if (!t.wrappedKey || !auth.user) return;
+    const raw = await unwrapTransferKey(auth.user.id, t.wrappedKey);
     if (!raw) {
-      // Per doc 28 §4: missing credential or tag failure → soft fail.
-      vaultStates[t.id] = { status: "blind-credential" };
+      vaultStates[t.id] = { status: "blind-error" };
       return;
     }
-
     try {
       const transferKey = await importTransferKey(raw);
       const { files } = await api.getMyTransferFiles(t.id);
@@ -141,51 +179,80 @@
     }
   }
 
-  async function unlockVault() {
-    if (isUnlocking) return;
-    vaultUnlockError = null;
+  function openUnlockPrompt() {
+    skipped = false;
+    unlockError = null;
+    unlockPassword = "";
+    unlockPhrase = "";
+    unlockMode = "password";
+    promptOpen = true;
+  }
+
+  function closeUnlockPrompt() {
+    promptOpen = false;
+    if (!vaultUnlocked) skipped = true;
+    unlockError = null;
+    unlockPassword = "";
+    unlockPhrase = "";
+  }
+
+  async function handleUnlock(e: SubmitEvent) {
+    e.preventDefault();
+    if (isUnlocking || !auth.user) return;
+    unlockError = null;
     isUnlocking = true;
     try {
-      const derived = await deriveVaultKey();
-      if (!derived) {
-        vaultUnlockError =
-          "Couldn't unlock filenames — passkey verification was cancelled or unavailable.";
+      const result =
+        unlockMode === "password"
+          ? await unlockWithPassword(auth.user.id, unlockPassword)
+          : await unlockWithPhrase(auth.user.id, unlockPhrase);
+      if (!result.ok) {
+        unlockError = unlockErrorMessage(result.reason);
         return;
       }
-
-      // Flip all locked rows that match the derived credential to "unlocking"
-      // first so the UI shows progress, then resolve them in parallel.
-      const targets: OwnedTransferSummary[] = [];
-      for (const t of transfers) {
-        const st = vaultStates[t.id];
-        if (
-          st?.status === "locked" &&
-          t.wrapCredentialId === derived.credentialId
-        ) {
-          vaultStates[t.id] = { status: "unlocking" };
-          targets.push(t);
-        }
-      }
+      // Successful unlock — flip every locked row to "unlocking" and
+      // resolve them in parallel. `subscribeToVaultState` already updated
+      // `vaultUnlocked` for us.
+      const targets = transfers.filter(
+        (t) => t.wrappedKey && vaultStates[t.id]?.status !== "unlocked",
+      );
+      for (const t of targets) vaultStates[t.id] = { status: "unlocking" };
+      promptOpen = false;
+      unlockPassword = "";
+      unlockPhrase = "";
       await Promise.all(targets.map((t) => unwrapRow(t)));
-
-      // Rows wrapped under a *different* credential of the same user stay
-      // locked — surfaced via the per-row helper text. They'll unlock when
-      // the user signs in with that other passkey on this device.
+    } catch (err) {
+      unlockError = err instanceof Error ? err.message : "Couldn't unlock.";
     } finally {
       isUnlocking = false;
     }
   }
 
+  function unlockErrorMessage(
+    reason: "not_setup" | "wrong_password" | "wrong_phrase" | "malformed",
+  ): string {
+    switch (reason) {
+      case "wrong_password":
+        return "That password didn't unlock the vault.";
+      case "wrong_phrase":
+        return "That recovery phrase doesn't match. Check spelling and word order.";
+      case "not_setup":
+        return "Vault isn't set up yet. Finish setup first.";
+      case "malformed":
+        return "We couldn't read your vault. Try again — contact support if this keeps happening.";
+    }
+  }
+
   async function recoverShareLink(t: OwnedTransferSummary) {
-    if (!t.wrappedKey || !t.wrapCredentialId) return;
+    if (!t.wrappedKey || !auth.user) return;
     if (recoveringId === t.id) return;
     recoveringId = t.id;
     recoverError = null;
     try {
-      const raw = await unwrapTransferKey(t.wrappedKey, t.wrapCredentialId);
+      const raw = await unwrapTransferKey(auth.user.id, t.wrappedKey);
       if (!raw) {
         recoverError =
-          "Couldn't rebuild the share link — the sign-in key that wrapped this transfer isn't available here.";
+          "Couldn't rebuild the share link — the vault couldn't decrypt this transfer.";
         return;
       }
       const fragment = transferKeyToFragment(raw);
@@ -228,7 +295,8 @@
   }
 
   const lockedVaultedCount = $derived(
-    transfers.filter((t) => vaultStates[t.id]?.status === "locked").length,
+    transfers.filter((t) => t.wrappedKey && vaultStates[t.id]?.status === "locked")
+      .length,
   );
 
   async function confirmDelete(id: string) {
@@ -243,7 +311,6 @@
     } catch (err) {
       errorMessage =
         err instanceof Error ? err.message : "Couldn't delete that transfer.";
-      // If the row already vanished server-side, drop it from the UI too.
       if (errorMessage === "Transfer not found.") {
         transfers = transfers.filter((t) => t.id !== id);
         confirmingId = null;
@@ -257,7 +324,10 @@
     confirmingId = null;
   }
 
-  function statusOf(t: OwnedTransferSummary): { label: string; tone: "success" | "warning" | "muted" } {
+  function statusOf(t: OwnedTransferSummary): {
+    label: string;
+    tone: "success" | "warning" | "muted";
+  } {
     const expired = new Date(t.expiresAt) < new Date();
     if (expired) return { label: "Expired", tone: "muted" };
     if (!t.isCompleted) return { label: "In progress", tone: "warning" };
@@ -286,6 +356,11 @@
     const days = Math.round(hours / 24);
     return `in ${days}d`;
   }
+
+  const canSubmitUnlock = $derived(
+    !isUnlocking &&
+      (unlockMode === "password" ? unlockPassword.length > 0 : unlockPhrase.trim().length > 0),
+  );
 </script>
 
 <svelte:head>
@@ -304,61 +379,34 @@
       <p class="text-muted-foreground">Loading…</p>
     </div>
   {:else if auth.user}
-    {@const userEmail = auth.user.email}
-    <PageHeader title="Your transfers" align="left">
-      {#snippet actions()}
-        <span class="text-sm text-muted-foreground">
-          Signed in as <span class="text-foreground">{userEmail}</span>
-        </span>
-        <a
-          href="/dashboard/settings"
-          class="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-        >
-          Settings
-        </a>
-      {/snippet}
-    </PageHeader>
+    <PageHeader title="Your transfers" align="left" />
 
     <div class="space-y-6">
       <p class="text-sm text-muted-foreground">
         Transfers you create while signed in appear here. File contents stay
-        end-to-end encrypted — only the original share link (with its key) can
-        decrypt them.
+        end-to-end encrypted — only the original share link (with its key)
+        can decrypt them.
       </p>
 
       {#if errorMessage}
         <Alert tone="destructive">{errorMessage}</Alert>
       {/if}
 
-      {#if vaultUnlockError}
-        <Alert tone="warning">{vaultUnlockError}</Alert>
-      {/if}
-
       {#if recoverError}
         <Alert tone="warning">{recoverError}</Alert>
       {/if}
 
-      {#if lockedVaultedCount > 0}
+      {#if !vaultUnlocked && lockedVaultedCount > 0 && skipped}
         <div
           class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-border bg-card p-4"
         >
           <p class="text-sm text-muted-foreground">
-            {lockedVaultedCount}
-            {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted filenames saved to your dashboard. Unlock them with your passkey to view.
+            Vault is locked. {lockedVaultedCount}
+            {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted filenames waiting.
           </p>
           <div class="sm:shrink-0">
-            <Button
-              variant="secondary"
-              fullWidth={false}
-              onclick={unlockVault}
-              disabled={isUnlocking}
-            >
-              {#if isUnlocking}
-                <Spinner aria-hidden="true" />
-                Unlocking…
-              {:else}
-                Unlock filenames
-              {/if}
+            <Button variant="secondary" fullWidth={false} onclick={openUnlockPrompt}>
+              Unlock vault
             </Button>
           </div>
         </div>
@@ -425,18 +473,14 @@
                   </p>
                   {#if vaultState?.status === "locked"}
                     <p class="text-xs text-muted-foreground">
-                      Filenames saved — unlock with your passkey to view.
+                      Filenames saved — unlock the vault to view.
                     </p>
                   {:else if vaultState?.status === "unlocking"}
                     <p class="text-xs text-muted-foreground">Unlocking filenames…</p>
-                  {:else if vaultState?.status === "blind-credential"}
-                    <p class="text-xs text-muted-foreground">
-                      Filenames are saved under a sign-in key that isn't available here.
-                      The files stay downloadable to anyone with the share link.
-                    </p>
                   {:else if vaultState?.status === "blind-error"}
                     <p class="text-xs text-muted-foreground">
-                      Couldn't read saved filenames for this transfer.
+                      Couldn't read saved filenames for this transfer. The files
+                      themselves stay downloadable to anyone with the share link.
                     </p>
                   {/if}
                 </div>
@@ -555,3 +599,77 @@
     </div>
   {/if}
 </PageLayout>
+
+<Modal
+  open={promptOpen}
+  title="Unlock your vault"
+  description="Enter your vault password to see filenames and rebuild share links for your saved transfers."
+  onClose={closeUnlockPrompt}
+>
+  <form onsubmit={handleUnlock} class="space-y-4" novalidate>
+    {#if unlockMode === "password"}
+      <PasswordInput
+        id="unlock-vault-password"
+        label="Vault password"
+        autocomplete="current-password"
+        required
+        bind:value={unlockPassword}
+        disabled={isUnlocking}
+      />
+    {:else}
+      <Textarea
+        id="unlock-recovery-phrase"
+        label="Recovery phrase"
+        placeholder="word word word …"
+        rows={3}
+        bind:value={unlockPhrase}
+        disabled={isUnlocking}
+      />
+      <p class="text-xs text-muted-foreground">
+        12 words, separated by spaces. Case and extra spacing don't matter.
+      </p>
+    {/if}
+
+    {#if unlockError}
+      <Alert tone="destructive">{unlockError}</Alert>
+    {/if}
+
+    <button
+      type="button"
+      onclick={() => {
+        unlockMode = unlockMode === "password" ? "phrase" : "password";
+        unlockError = null;
+      }}
+      class="text-xs text-muted-foreground hover:text-foreground hover:cursor-pointer underline-offset-4 hover:underline focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+      disabled={isUnlocking}
+    >
+      {unlockMode === "password"
+        ? "Forgot your password? Use your recovery phrase instead."
+        : "Have your password? Use it instead."}
+    </button>
+
+    {#snippet footerActions()}
+      <Button
+        type="button"
+        variant="ghost"
+        fullWidth={false}
+        onclick={closeUnlockPrompt}
+        disabled={isUnlocking}
+      >
+        Skip for now
+      </Button>
+      <Button type="submit" fullWidth={false} disabled={!canSubmitUnlock}>
+        {#if isUnlocking}
+          <Spinner aria-hidden="true" />
+          Unlocking…
+        {:else}
+          Unlock
+        {/if}
+      </Button>
+    {/snippet}
+
+    <div class="flex items-center justify-end gap-2 pt-2 border-t border-border">
+      {@render footerActions()}
+    </div>
+  </form>
+</Modal>

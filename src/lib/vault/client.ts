@@ -1,269 +1,353 @@
-// Phase F vault client — wrap-on-create + (later) unwrap-on-dashboard.
-// See docs/audit/28-dashboard-transfer-key-vault.md.
+// High-level vault client. See docs/adr/0004-vault-redesign-password-and-recovery-phrase.md.
 //
-// Flow at upload time:
-//   1. fetchPrfSalts()  → list of (credentialId, salt) for the user's
-//      PRF-capable credentials. Cached for the session.
-//   2. deriveVaultKey() → triggers ONE WebAuthn assertion with PRF eval,
-//      derives K_vault via HKDF-SHA-256, and caches it (non-extractable
-//      CryptoKey) in module-level closure keyed by credentialId. Per
-//      D-116 the cache lives only as long as the JS module instance —
-//      cleared on tab close, page navigation away from the SPA shell,
-//      or via clearVaultCache() on sign-out.
-//   3. wrapTransferKey(rawKey, credentialId) → AES-GCM-wraps the 32-byte
-//      K_transfer under K_vault. Returns the 60-byte wire format
-//      (wrap_iv || ct || tag) base64url-encoded for the API.
+// Flow at first sign-in:
+//   1. setupVault(password) — generates K_vault + recovery phrase, wraps
+//      K_vault under Argon2id(password) and Argon2id(phrase), POSTs the
+//      blobs to /api/me/vault/setup, caches K_vault in IDB. Returns the
+//      phrase for the UI to display once.
 //
-// The wrap path is strictly additive — any failure here (no PRF cred,
-// UV dismissed, network glitch on salt fetch) returns null/throws and
-// the caller falls back to the unvaulted /complete path. See doc 28 §3.
+// Flow on every subsequent visit:
+//   - If the IDB cache has a non-expired entry for the current user,
+//     `isUnlocked()` is true and `getKVault()` returns the cached key.
+//   - Otherwise the UI must prompt for the password or recovery phrase
+//     and call `unlockWithPassword(...)` or `unlockWithPhrase(...)`.
+//
+// All wrap blobs are 60 bytes (iv|ct|tag) and round-trip the server as
+// base64url. The server is blind — every KDF and AES-GCM call happens
+// in the browser.
 
+import { api, type VaultStatus } from "$lib/api/client";
 import {
-  startAuthentication,
-  type AuthenticationResponseJSON,
-  type PublicKeyCredentialRequestOptionsJSON,
-} from "@simplewebauthn/browser";
-import { api, type PrfSaltEntry } from "$lib/api/client";
+  KDF_VERSION,
+  WRAP_BYTES,
+  base64UrlToBytes,
+  bytesToBase64Url,
+  deriveKekFromPassword,
+  deriveKekFromPhrase,
+  generateRecoveryPhrase,
+  importKVault,
+  importKek,
+  isValidRecoveryPhrase,
+  normaliseRecoveryPhrase,
+  randomKVault,
+  randomSalt,
+  unwrapSecret,
+  wrapSecret,
+} from "./crypto";
+import {
+  clearVaultKey,
+  readVaultKey,
+  storeVaultKey,
+  subscribeToVaultState,
+} from "./session";
 
-const PRF_PURPOSE_VAULT = "jtransfer:vault:transfer-key:v1";
-const HKDF_SALT_LABEL = "jtransfer.hkdf.vault.v1";
-const WRAP_IV_LEN = 12;
-const TRANSFER_KEY_BYTES = 32;
-const WRAP_WIRE_BYTES = 60; // wrap_iv(12) || ct(32) || tag(16)
+// ─── shared state ───────────────────────────────────────────────────────────
 
-// Non-extractable AES-GCM K_vault per credentialId (base64url). Module-level
-// per D-116 — survives only as long as the JS module instance.
-const vaultKeyCache = new Map<string, CryptoKey>();
+// Cached server-side vault status so multiple consumers (dashboard, upload
+// page, settings) don't re-fetch on every navigation. Invalidated after any
+// write that changes salts/wraps.
+let statusCache: VaultStatus | null = null;
+let statusInflight: Promise<VaultStatus> | null = null;
 
-let prfSaltsCache: PrfSaltEntry[] | null = null;
-let prfSaltsCachePromise: Promise<PrfSaltEntry[]> | null = null;
-
-export function clearVaultCache(): void {
-  vaultKeyCache.clear();
-  prfSaltsCache = null;
-  prfSaltsCachePromise = null;
+function invalidateStatusCache(): void {
+  statusCache = null;
+  statusInflight = null;
 }
 
-function base64UrlToBytes(s: string): Uint8Array {
-  let b64 = s.replace(/-/g, "+").replace(/_/g, "/");
-  while (b64.length % 4) b64 += "=";
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
+export async function getVaultStatus(force = false): Promise<VaultStatus> {
+  if (!force && statusCache) return statusCache;
+  if (statusInflight) return statusInflight;
+  statusInflight = api.getVault().then((s) => {
+    statusCache = s;
+    return s;
+  }).finally(() => {
+    statusInflight = null;
+  });
+  return statusInflight;
 }
 
-function bytesToBase64Url(bytes: Uint8Array): string {
-  let bin = "";
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-async function fetchPrfSalts(): Promise<PrfSaltEntry[]> {
-  if (prfSaltsCache) return prfSaltsCache;
-  if (prfSaltsCachePromise) return prfSaltsCachePromise;
-  prfSaltsCachePromise = api
-    .getPrfSalts()
-    .then((r) => {
-      prfSaltsCache = r.salts;
-      return r.salts;
-    })
-    .finally(() => {
-      prfSaltsCachePromise = null;
-    });
-  return prfSaltsCachePromise;
-}
+// ─── unlock state ───────────────────────────────────────────────────────────
 
 /**
- * Returns true if the signed-in user has at least one PRF-capable credential
- * with the vault purpose salt provisioned. Used by the upload UI to decide
- * whether to expose the vault toggle.
- *
- * Caches the underlying salt list to avoid a round trip per render.
- * Returns false (and does NOT throw) if the user is not signed in or the
- * endpoint errors — vault is strictly additive.
+ * Resolve the cached K_vault for the signed-in user, or null when the
+ * session has expired / never been unlocked. Reads IDB; the result lives
+ * in a non-extractable CryptoKey so callers can wrap/unwrap but not export
+ * the raw bytes.
  */
-export async function hasVaultCapableCredential(): Promise<boolean> {
-  try {
-    const salts = await fetchPrfSalts();
-    return salts.some((s) => s.purpose === PRF_PURPOSE_VAULT);
-  } catch {
-    return false;
-  }
+export async function getKVault(userId: string): Promise<CryptoKey | null> {
+  return readVaultKey(userId);
 }
 
-interface DerivedVault {
-  credentialId: string; // base64url
-  key: CryptoKey;
+export async function isUnlocked(userId: string): Promise<boolean> {
+  return (await readVaultKey(userId)) !== null;
+}
+
+/** Drop the cached K_vault. Idempotent. Called on sign-out and on Lock. */
+export async function lock(): Promise<void> {
+  await clearVaultKey();
+}
+
+export { subscribeToVaultState };
+
+// ─── setup (first-time) ─────────────────────────────────────────────────────
+
+export interface VaultSetupResult {
+  recoveryPhrase: string;
 }
 
 /**
- * Triggers a single WebAuthn assertion with PRF eval to derive K_vault.
- * The assertion is *not* sent back to the server — only its PRF output is
- * used. The challenge is therefore client-generated (no server round trip
- * needed for replay protection; the bytes never leave the browser).
+ * One-shot vault setup. Generates a fresh K_vault and recovery phrase,
+ * wraps K_vault under both KEKs, persists the blobs server-side, and
+ * caches K_vault locally. The returned phrase MUST be shown to the user
+ * exactly once — the server never sees the plaintext, so it cannot be
+ * recovered afterwards.
  *
- * On success, caches the derived non-extractable CryptoKey keyed by the
- * credentialId the user picked, and returns both.
- *
- * Returns null on any soft failure (no PRF creds, user cancels, PRF output
- * empty). Caller treats null as "skip vault" per doc 28 §3.
+ * Idempotency: re-running setup against an already-initialised vault is
+ * rejected server-side (409). Callers should branch on `getVaultStatus()`
+ * before calling.
  */
-export async function deriveVaultKey(): Promise<DerivedVault | null> {
-  let salts: PrfSaltEntry[];
-  try {
-    salts = await fetchPrfSalts();
-  } catch {
-    return null;
-  }
-  const vaultEntries = salts.filter((s) => s.purpose === PRF_PURPOSE_VAULT);
-  if (vaultEntries.length === 0) return null;
+export async function setupVault(
+  userId: string,
+  password: string,
+): Promise<VaultSetupResult> {
+  const phrase = generateRecoveryPhrase();
+  const kVault = randomKVault();
+  const saltPassword = randomSalt();
+  const saltPhrase = randomSalt();
 
-  // Build the PRF eval map. SimpleWebAuthn v13 expects base64url credential
-  // IDs and base64url salt bytes in the JSON request shape.
-  const evalByCredential: Record<string, { first: string }> = {};
-  for (const e of vaultEntries) {
-    evalByCredential[e.credentialId] = { first: e.salt };
-  }
+  const [kekPassword, kekPhrase] = await Promise.all([
+    deriveKekFromPassword(password, saltPassword, KDF_VERSION),
+    deriveKekFromPhrase(phrase, saltPhrase, KDF_VERSION),
+  ]);
+  const [kekPasswordKey, kekPhraseKey] = await Promise.all([
+    importKek(kekPassword),
+    importKek(kekPhrase),
+  ]);
 
-  const challenge = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-  const allowCredentials = vaultEntries.map((e) => ({
-    id: e.credentialId,
-    type: "public-key" as const,
-  }));
+  const [wrapPassword, wrapPhrase] = await Promise.all([
+    wrapSecret(kekPasswordKey, kVault),
+    wrapSecret(kekPhraseKey, kVault),
+  ]);
 
-  const optionsJSON: PublicKeyCredentialRequestOptionsJSON = {
-    challenge,
-    rpId: window.location.hostname,
-    allowCredentials,
-    userVerification: "required",
-    // Cast: PRF lives in the WebAuthn Level 3 extension namespace and
-    // simplewebauthn's typing for `extensions` accepts the open shape.
-    extensions: { prf: { evalByCredential } } as unknown as Record<
-      string,
-      unknown
-    >,
-  };
+  await api.setupVault({
+    kdfVersion: KDF_VERSION,
+    saltPassword: bytesToBase64Url(saltPassword),
+    saltPhrase: bytesToBase64Url(saltPhrase),
+    wrapPassword: bytesToBase64Url(wrapPassword),
+    wrapPhrase: bytesToBase64Url(wrapPhrase),
+  });
 
-  let response: AuthenticationResponseJSON;
-  try {
-    response = await startAuthentication({ optionsJSON });
-  } catch {
-    // User cancelled, no authenticator available, origin mismatch — all
-    // surface here. Soft-fail; caller falls back to unvaulted flow.
-    return null;
-  }
+  const kVaultKey = await importKVault(kVault);
+  await storeVaultKey(userId, kVaultKey);
 
-  // Pull the PRF output from clientExtensionResults. SimpleWebAuthn v13
-  // returns these as base64url strings. The type for the extensions blob
-  // is open, so cast narrowly here.
-  const ext = response.clientExtensionResults as {
-    prf?: { results?: { first?: string } };
-  } | undefined;
-  const prfB64Url = ext?.prf?.results?.first;
-  if (typeof prfB64Url !== "string" || prfB64Url.length === 0) return null;
+  // Zero the raw KEK + K_vault bytes once the AES-GCM CryptoKeys exist.
+  // WebCrypto holds its own copy; the original Uint8Arrays are now redundant
+  // and could survive in GC memory longer than needed.
+  kekPassword.fill(0);
+  kekPhrase.fill(0);
+  kVault.fill(0);
 
-  const prfBytes = base64UrlToBytes(prfB64Url);
-  if (prfBytes.byteLength === 0) return null;
-
-  // HKDF-SHA-256 → 256-bit AES-GCM key, non-extractable (D-116).
-  let ikm: CryptoKey;
-  try {
-    ikm = await crypto.subtle.importKey(
-      "raw",
-      prfBytes.buffer as ArrayBuffer,
-      "HKDF",
-      false,
-      ["deriveKey"],
-    );
-  } catch {
-    return null;
-  }
-
-  let key: CryptoKey;
-  try {
-    key = await crypto.subtle.deriveKey(
-      {
-        name: "HKDF",
-        hash: "SHA-256",
-        salt: new TextEncoder().encode(HKDF_SALT_LABEL),
-        info: new TextEncoder().encode(PRF_PURPOSE_VAULT),
-      },
-      ikm,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["encrypt", "decrypt"],
-    );
-  } catch {
-    return null;
-  }
-
-  vaultKeyCache.set(response.id, key);
-  return { credentialId: response.id, key };
+  invalidateStatusCache();
+  return { recoveryPhrase: phrase };
 }
 
+// ─── unlock ─────────────────────────────────────────────────────────────────
+
+export type UnlockResult =
+  | { ok: true }
+  | { ok: false; reason: "not_setup" | "wrong_password" | "wrong_phrase" | "malformed" };
+
+export async function unlockWithPassword(
+  userId: string,
+  password: string,
+): Promise<UnlockResult> {
+  const status = await getVaultStatus(true);
+  if (!status.isSetup) return { ok: false, reason: "not_setup" };
+
+  const saltPassword = base64UrlToBytes(status.saltPassword);
+  const wrapPassword = base64UrlToBytes(status.wrapPassword);
+  if (wrapPassword.byteLength !== WRAP_BYTES) {
+    return { ok: false, reason: "malformed" };
+  }
+
+  const kek = await deriveKekFromPassword(password, saltPassword, status.kdfVersion);
+  const kekKey = await importKek(kek);
+  const kVaultBytes = await unwrapSecret(kekKey, wrapPassword);
+  kek.fill(0);
+  if (!kVaultBytes) return { ok: false, reason: "wrong_password" };
+
+  const kVaultKey = await importKVault(kVaultBytes);
+  await storeVaultKey(userId, kVaultKey);
+  kVaultBytes.fill(0);
+  return { ok: true };
+}
+
+export async function unlockWithPhrase(
+  userId: string,
+  rawPhrase: string,
+): Promise<UnlockResult> {
+  if (!isValidRecoveryPhrase(rawPhrase)) {
+    return { ok: false, reason: "wrong_phrase" };
+  }
+  const phrase = normaliseRecoveryPhrase(rawPhrase);
+
+  const status = await getVaultStatus(true);
+  if (!status.isSetup) return { ok: false, reason: "not_setup" };
+
+  const saltPhrase = base64UrlToBytes(status.saltPhrase);
+  const wrapPhrase = base64UrlToBytes(status.wrapPhrase);
+  if (wrapPhrase.byteLength !== WRAP_BYTES) {
+    return { ok: false, reason: "malformed" };
+  }
+
+  const kek = await deriveKekFromPhrase(phrase, saltPhrase, status.kdfVersion);
+  const kekKey = await importKek(kek);
+  const kVaultBytes = await unwrapSecret(kekKey, wrapPhrase);
+  kek.fill(0);
+  if (!kVaultBytes) return { ok: false, reason: "wrong_phrase" };
+
+  const kVaultKey = await importKVault(kVaultBytes);
+  await storeVaultKey(userId, kVaultKey);
+  kVaultBytes.fill(0);
+  return { ok: true };
+}
+
+// ─── change password / regenerate phrase ────────────────────────────────────
+
+export type ChangePasswordResult =
+  | { ok: true }
+  | { ok: false; reason: "not_setup" | "wrong_password" | "malformed" };
+
 /**
- * Wraps a 32-byte raw K_transfer under the cached K_vault for `credentialId`.
- * Throws if the K_vault has not been derived this session — caller must
- * deriveVaultKey() first.
- *
- * Wire format (doc 28 §5 / D-115):
- *   wrap_iv(12) || AES-GCM-ciphertext(32) || tag(16)  = 60 bytes
- * Encoded to base64url at the API boundary.
+ * Change the vault password. The recovery phrase wrap is untouched, so
+ * phrase recovery continues to work afterwards. Server-side this updates
+ * only the password salt + wrap.
+ */
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<ChangePasswordResult> {
+  const status = await getVaultStatus(true);
+  if (!status.isSetup) return { ok: false, reason: "not_setup" };
+
+  const oldSalt = base64UrlToBytes(status.saltPassword);
+  const oldWrap = base64UrlToBytes(status.wrapPassword);
+  if (oldWrap.byteLength !== WRAP_BYTES) return { ok: false, reason: "malformed" };
+
+  const oldKek = await deriveKekFromPassword(currentPassword, oldSalt, status.kdfVersion);
+  const oldKekKey = await importKek(oldKek);
+  const kVaultBytes = await unwrapSecret(oldKekKey, oldWrap);
+  oldKek.fill(0);
+  if (!kVaultBytes) return { ok: false, reason: "wrong_password" };
+
+  const newSalt = randomSalt();
+  const newKek = await deriveKekFromPassword(newPassword, newSalt, KDF_VERSION);
+  const newKekKey = await importKek(newKek);
+  const newWrap = await wrapSecret(newKekKey, kVaultBytes);
+  newKek.fill(0);
+
+  await api.changeVaultPassword({
+    kdfVersion: KDF_VERSION,
+    saltPassword: bytesToBase64Url(newSalt),
+    wrapPassword: bytesToBase64Url(newWrap),
+  });
+
+  // Re-prime IDB so the user stays unlocked through the password change.
+  const kVaultKey = await importKVault(kVaultBytes);
+  await storeVaultKey(userId, kVaultKey);
+  kVaultBytes.fill(0);
+
+  invalidateStatusCache();
+  return { ok: true };
+}
+
+export type RegeneratePhraseResult =
+  | { ok: true; recoveryPhrase: string }
+  | { ok: false; reason: "not_setup" | "wrong_password" | "malformed" };
+
+/**
+ * Generate a fresh recovery phrase and rewrap K_vault under it. Requires
+ * the current password — the old phrase becomes invalid the moment this
+ * succeeds, so we never accept the old phrase as authorisation. Returns
+ * the new phrase for one-time display.
+ */
+export async function regeneratePhrase(
+  userId: string,
+  currentPassword: string,
+): Promise<RegeneratePhraseResult> {
+  const status = await getVaultStatus(true);
+  if (!status.isSetup) return { ok: false, reason: "not_setup" };
+
+  const saltPassword = base64UrlToBytes(status.saltPassword);
+  const wrapPassword = base64UrlToBytes(status.wrapPassword);
+  if (wrapPassword.byteLength !== WRAP_BYTES) return { ok: false, reason: "malformed" };
+
+  const kekPassword = await deriveKekFromPassword(currentPassword, saltPassword, status.kdfVersion);
+  const kekPasswordKey = await importKek(kekPassword);
+  const kVaultBytes = await unwrapSecret(kekPasswordKey, wrapPassword);
+  kekPassword.fill(0);
+  if (!kVaultBytes) return { ok: false, reason: "wrong_password" };
+
+  const newPhrase = generateRecoveryPhrase();
+  const newSalt = randomSalt();
+  const newKek = await deriveKekFromPhrase(newPhrase, newSalt, KDF_VERSION);
+  const newKekKey = await importKek(newKek);
+  const newWrap = await wrapSecret(newKekKey, kVaultBytes);
+  newKek.fill(0);
+
+  await api.regenerateVaultPhrase({
+    kdfVersion: KDF_VERSION,
+    saltPhrase: bytesToBase64Url(newSalt),
+    wrapPhrase: bytesToBase64Url(newWrap),
+  });
+
+  // Re-prime IDB. The K_vault itself did not change but the unlock state
+  // should persist through the regen UI.
+  const kVaultKey = await importKVault(kVaultBytes);
+  await storeVaultKey(userId, kVaultKey);
+  kVaultBytes.fill(0);
+
+  invalidateStatusCache();
+  return { ok: true, recoveryPhrase: newPhrase };
+}
+
+// ─── per-transfer wrap/unwrap ───────────────────────────────────────────────
+
+const K_TRANSFER_BYTES = 32;
+
+/**
+ * Wrap a raw 32-byte K_transfer under the cached K_vault. Throws when the
+ * vault is locked — callers must call `unlockWith*` first. Returns the
+ * 60-byte wire format as base64url, suitable for the upload-complete body.
  */
 export async function wrapTransferKey(
+  userId: string,
   rawTransferKey: ArrayBuffer,
-  credentialId: string,
-): Promise<{ wrappedKey: string; wrapCredentialId: string }> {
-  if (rawTransferKey.byteLength !== TRANSFER_KEY_BYTES) {
+): Promise<string> {
+  if (rawTransferKey.byteLength !== K_TRANSFER_BYTES) {
     throw new Error("K_transfer must be exactly 32 bytes.");
   }
-  const vaultKey = vaultKeyCache.get(credentialId);
-  if (!vaultKey) {
-    throw new Error("K_vault not derived for this credential.");
-  }
+  const kVault = await readVaultKey(userId);
+  if (!kVault) throw new Error("Vault is locked.");
 
-  const wrapIv = crypto.getRandomValues(new Uint8Array(WRAP_IV_LEN));
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: wrapIv.buffer as ArrayBuffer },
-    vaultKey,
-    rawTransferKey,
-  );
-
-  const wire = new Uint8Array(WRAP_WIRE_BYTES);
-  wire.set(wrapIv, 0);
-  wire.set(new Uint8Array(ciphertext), WRAP_IV_LEN);
-
-  return {
-    wrappedKey: bytesToBase64Url(wire),
-    wrapCredentialId: credentialId,
-  };
+  const wrap = await wrapSecret(kVault, new Uint8Array(rawTransferKey));
+  return bytesToBase64Url(wrap);
 }
 
 /**
- * Returns true iff the K_vault for `credentialId` is already cached
- * this session. Lets the dashboard decide whether to gate unwrap behind
- * a single "Unlock filenames" gesture (doc 28 §3, §9).
- */
-export function isVaultUnlocked(credentialId: string): boolean {
-  return vaultKeyCache.has(credentialId);
-}
-
-/**
- * Unwraps a 60-byte wire-format `wrappedKey` blob to a raw 32-byte
- * K_transfer using the cached K_vault for `credentialId`. Returns null on
- * any failure (cache miss, malformed blob, GCM tag mismatch — typically
- * "credential was deleted server-side, no longer recoverable"). Doc 28 §4
- * says the dashboard treats missing-credential as a silent soft failure
- * and reverts the row to blind, so callers should not surface anything
- * scarier than "(encrypted — original sign-in key no longer available)".
+ * Unwrap a base64url-encoded `wrappedKey` into raw K_transfer bytes. Returns
+ * null when the vault is locked or the blob fails authentication (typically
+ * "different K_vault than the one that wrapped this transfer"). The
+ * dashboard treats null as "filename unavailable" and falls back to
+ * showing the row in blind mode.
  */
 export async function unwrapTransferKey(
+  userId: string,
   wrappedKeyB64Url: string,
-  credentialId: string,
 ): Promise<ArrayBuffer | null> {
-  const vaultKey = vaultKeyCache.get(credentialId);
-  if (!vaultKey) return null;
+  const kVault = await readVaultKey(userId);
+  if (!kVault) return null;
 
   let wire: Uint8Array;
   try {
@@ -271,38 +355,16 @@ export async function unwrapTransferKey(
   } catch {
     return null;
   }
-  if (wire.byteLength !== WRAP_WIRE_BYTES) return null;
-
-  const wrapIv = wire.subarray(0, WRAP_IV_LEN);
-  const ciphertextAndTag = wire.subarray(WRAP_IV_LEN);
-
-  try {
-    return await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: wrapIv.buffer.slice(wrapIv.byteOffset, wrapIv.byteOffset + wrapIv.byteLength) as ArrayBuffer },
-      vaultKey,
-      ciphertextAndTag.buffer.slice(
-        ciphertextAndTag.byteOffset,
-        ciphertextAndTag.byteOffset + ciphertextAndTag.byteLength,
-      ) as ArrayBuffer,
-    );
-  } catch {
-    return null;
-  }
+  const pt = await unwrapSecret(kVault, wire);
+  if (!pt) return null;
+  return pt.buffer.slice(pt.byteOffset, pt.byteOffset + pt.byteLength) as ArrayBuffer;
 }
 
 /**
- * Encodes raw K_transfer bytes as the base64url string that goes in the
- * share URL fragment (matches the unvaulted flow's `exportKey` output).
- */
-export function transferKeyToFragment(rawKey: ArrayBuffer): string {
-  return bytesToBase64Url(new Uint8Array(rawKey));
-}
-
-/**
- * Imports a raw 32-byte K_transfer (the output of unwrapTransferKey) as
- * an AES-GCM CryptoKey suitable for decrypting filenames + file payloads.
- * Extractable=true so the dashboard can hand the raw bytes back as a URL
- * fragment in the "Get share link" recovery flow (doc 28 §3).
+ * Import raw K_transfer bytes as an extractable AES-GCM CryptoKey suitable
+ * for decrypting filenames and file payloads. Extractable so the dashboard
+ * can hand the raw bytes back as a URL-fragment in the "Get share link"
+ * recovery flow.
  */
 export async function importTransferKey(rawKey: ArrayBuffer): Promise<CryptoKey> {
   return crypto.subtle.importKey(
@@ -314,31 +376,14 @@ export async function importTransferKey(rawKey: ArrayBuffer): Promise<CryptoKey>
   );
 }
 
-/**
- * Convenience: derive K_vault (if not already) and wrap a raw K_transfer
- * in one call. Returns null on any soft failure — caller falls back to the
- * unvaulted /complete path.
- */
-export async function wrapWithVault(
-  rawTransferKey: ArrayBuffer,
-): Promise<{ wrappedKey: string; wrapCredentialId: string } | null> {
-  // If any cached vault key exists from earlier in this session, reuse the
-  // first one (single-credential is the dominant case; for multi-credential
-  // users we keep using whichever credential they first unlocked with this
-  // session — fewer UV prompts).
-  let credentialId: string | undefined;
-  for (const id of vaultKeyCache.keys()) {
-    credentialId = id;
-    break;
-  }
-  if (!credentialId) {
-    const derived = await deriveVaultKey();
-    if (!derived) return null;
-    credentialId = derived.credentialId;
-  }
-  try {
-    return await wrapTransferKey(rawTransferKey, credentialId);
-  } catch {
-    return null;
-  }
+export function transferKeyToFragment(rawKey: ArrayBuffer): string {
+  return bytesToBase64Url(new Uint8Array(rawKey));
+}
+
+// ─── back-compat shim ───────────────────────────────────────────────────────
+
+/** Drop in-memory caches. Called by the auth store on sign-out. */
+export async function clearVaultCache(): Promise<void> {
+  invalidateStatusCache();
+  await clearVaultKey();
 }

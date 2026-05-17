@@ -1,4 +1,9 @@
 <script lang="ts">
+  // Home / upload page. Anonymous uploads run unmodified; signed-in
+  // uploads always wrap the transfer key under the user's K_vault, and
+  // prompt for the password mid-flow when the vault is locked.
+
+  import { goto } from "$app/navigation";
   import { api } from "$lib/api/client";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -6,6 +11,7 @@
   import DropZone from "$lib/components/DropZone.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
   import * as Frame from "$lib/components/frame";
+  import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
@@ -13,6 +19,7 @@
   import SegmentedControl from "$lib/components/SegmentedControl.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
+  import Textarea from "$lib/components/Textarea.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
   import { encryptFile, encryptFilename } from "$lib/crypto/encrypt";
@@ -21,7 +28,12 @@
   import { uploadStore } from "$lib/stores/upload.svelte";
   import type { FileUploadState } from "$lib/stores/upload.types";
   import { formatSize } from "$lib/utils";
-  import { hasVaultCapableCredential, wrapWithVault } from "$lib/vault/client";
+  import {
+    isUnlocked,
+    unlockWithPassword,
+    unlockWithPhrase,
+    wrapTransferKey,
+  } from "$lib/vault/client";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconCopyRegular from "phosphor-icons-svelte/IconCopyRegular.svelte";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
@@ -81,31 +93,21 @@
   ];
 
   let copied = $state(false);
-  let vaultCapable = $state(false);
   let lastUploadVaulted = $state(false);
 
-  // Probe once when sign-in state resolves. The check itself is the
-  // /api/auth/passkey/prf-salts call — auth-gated server-side, so we
-  // don't bother firing it when the user is anonymous.
-  $effect(() => {
-    if (!auth.loaded) return;
-    if (!auth.isAuthenticated) {
-      vaultCapable = false;
-      return;
-    }
-    let cancelled = false;
-    hasVaultCapableCredential().then((capable) => {
-      if (!cancelled) vaultCapable = capable;
-    });
-    return () => {
-      cancelled = true;
-    };
-  });
-
-  const showVaultToggle = $derived(auth.isAuthenticated && vaultCapable);
+  // Vault unlock modal (only shown when the user is signed in and tries to
+  // upload with a locked vault). Pending raw-K_transfer + pending complete
+  // hooks live on `pendingWrap` so we can resume after a successful unlock.
+  let unlockOpen = $state(false);
+  let unlockMode = $state<"password" | "phrase">("password");
+  let unlockPassword = $state("");
+  let unlockPhrase = $state("");
+  let unlockError = $state<string | null>(null);
+  let isUnlockingVault = $state(false);
+  let pendingResume: ((unlocked: boolean) => void) | null = null;
 
   function fileRowStatus(
-    s: FileUploadState["status"]
+    s: FileUploadState["status"],
   ): "idle" | "uploading" | "complete" | "error" {
     if (s === "pending") return "idle";
     if (s === "complete") return "complete";
@@ -115,18 +117,18 @@
 
   function handleFilesSelect(files: File[]) {
     const tooLong = files.find(
-      (f) => new TextEncoder().encode(f.name).length > MAX_FILENAME_BYTES
+      (f) => new TextEncoder().encode(f.name).length > MAX_FILENAME_BYTES,
     );
     if (tooLong) {
       uploadStore.setError(
-        `"${tooLong.name}" has a filename that is too long (max ${MAX_FILENAME_BYTES} bytes).`
+        `"${tooLong.name}" has a filename that is too long (max ${MAX_FILENAME_BYTES} bytes).`,
       );
       return;
     }
 
     const currentTotal = uploadStore.files.reduce(
       (sum, f) => sum + f.file.size,
-      0
+      0,
     );
     const newFilesSize = files.reduce((sum, f) => sum + f.size, 0);
     const projectedTotal = currentTotal + newFilesSize;
@@ -134,7 +136,7 @@
     if (projectedTotal > MAX_TOTAL_UPLOAD_SIZE) {
       const remaining = MAX_TOTAL_UPLOAD_SIZE - currentTotal;
       uploadStore.setError(
-        `Not enough space. You have ${formatSize(remaining)} remaining.`
+        `Not enough space. You have ${formatSize(remaining)} remaining.`,
       );
       return;
     }
@@ -181,6 +183,65 @@
     return `Max ${max} download${max !== 1 ? "s" : ""}`;
   }
 
+  // Returns true once the vault is unlocked, false if the user cancelled.
+  // Caller must already know auth.user is non-null.
+  async function ensureVaultUnlocked(): Promise<boolean> {
+    if (!auth.user) return false;
+    if (await isUnlocked(auth.user.id)) return true;
+    unlockMode = "password";
+    unlockPassword = "";
+    unlockPhrase = "";
+    unlockError = null;
+    unlockOpen = true;
+    return await new Promise<boolean>((resolve) => {
+      pendingResume = resolve;
+    });
+  }
+
+  function closeUnlockModal() {
+    unlockOpen = false;
+    unlockError = null;
+    unlockPassword = "";
+    unlockPhrase = "";
+    const resume = pendingResume;
+    pendingResume = null;
+    resume?.(false);
+  }
+
+  async function submitUnlock(e: SubmitEvent) {
+    e.preventDefault();
+    if (isUnlockingVault || !auth.user) return;
+    unlockError = null;
+    isUnlockingVault = true;
+    try {
+      const result =
+        unlockMode === "password"
+          ? await unlockWithPassword(auth.user.id, unlockPassword)
+          : await unlockWithPhrase(auth.user.id, unlockPhrase);
+      if (!result.ok) {
+        unlockError =
+          result.reason === "wrong_password"
+            ? "That password didn't unlock the vault."
+            : result.reason === "wrong_phrase"
+              ? "That recovery phrase doesn't match. Check spelling and word order."
+              : result.reason === "not_setup"
+                ? "Vault isn't set up yet. Set one up from settings first."
+                : "We couldn't read your vault. Try again.";
+        return;
+      }
+      unlockOpen = false;
+      unlockPassword = "";
+      unlockPhrase = "";
+      const resume = pendingResume;
+      pendingResume = null;
+      resume?.(true);
+    } catch (err) {
+      unlockError = err instanceof Error ? err.message : "Couldn't unlock.";
+    } finally {
+      isUnlockingVault = false;
+    }
+  }
+
   async function handleUpload() {
     const files = uploadStore.files;
     if (files.length === 0) return;
@@ -192,13 +253,27 @@
         const file = files[i].file;
         const firstBytes = await file.slice(0, 16).arrayBuffer();
         const magicBytes = btoa(
-          String.fromCharCode(...new Uint8Array(firstBytes))
+          String.fromCharCode(...new Uint8Array(firstBytes)),
         );
 
         const validation = await api.validateMagicBytes(magicBytes);
         if (!validation.valid) {
           uploadStore.setError(
-            `"${file.name}": ${validation.reason ?? "File type not allowed"}`
+            `"${file.name}": ${validation.reason ?? "File type not allowed"}`,
+          );
+          return;
+        }
+      }
+
+      // Signed-in path: every upload is vault-wrapped. If the vault is
+      // locked, prompt now so we can wrap once the K_transfer is generated.
+      // We do this before generating any encryption keys to avoid wasting
+      // CPU if the user cancels the unlock.
+      if (auth.isAuthenticated && auth.user) {
+        const unlocked = await ensureVaultUnlocked();
+        if (!unlocked) {
+          uploadStore.setError(
+            "Vault stays locked — sign in or unlock to keep this transfer in your dashboard.",
           );
           return;
         }
@@ -214,7 +289,7 @@
       const transfer = await api.createTransfer(
         uploadStore.expiresInHours,
         password,
-        uploadStore.maxDownloads
+        uploadStore.maxDownloads,
       );
 
       const keyString = password
@@ -233,7 +308,7 @@
           uploadStore.setFileStatus(i, "encrypting", 0);
           const { encryptedName, iv: nameIv } = await encryptFilename(
             file.name,
-            key
+            key,
           );
 
           const { encryptedBlob, iv: fileIv } = await encryptFile(
@@ -241,7 +316,7 @@
             key,
             (p) => {
               uploadStore.setFileStatus(i, "encrypting", p * 0.5);
-            }
+            },
           );
 
           uploadStore.setFileStatus(i, "encrypting", 50);
@@ -270,7 +345,7 @@
               lastUploadError = err;
               if (attempt < MAX_ATTEMPTS - 1) {
                 await new Promise((resolve) =>
-                  setTimeout(resolve, 500 * (attempt + 1))
+                  setTimeout(resolve, 500 * (attempt + 1)),
                 );
               }
             }
@@ -283,7 +358,7 @@
             i,
             "error",
             0,
-            err instanceof Error ? err.message : "Upload failed"
+            err instanceof Error ? err.message : "Upload failed",
           );
           uploadFailed = true;
           break;
@@ -294,31 +369,23 @@
         api.abortTransfer(transfer.transferId).catch(() => {});
         throw new Error(
           uploadStore.files.find((f) => f.status === "error")?.error ??
-            "Upload failed"
+            "Upload failed",
         );
       }
 
       uploadStore.setStatus("uploading");
 
-      // Phase F vault wrap (doc 28 §3). Strictly additive — any failure
-      // falls back to the unvaulted /complete path. Wrap operates on the
-      // raw K_transfer bytes, independent of password-protected mode (the
-      // recipient still needs the password; the dashboard owner unwraps
-      // via PRF). Per D-112 we honour the toggle only when the user is
-      // signed in and has a PRF-capable credential.
-      let vaultWrap: { wrappedKey: string; wrapCredentialId: string } | undefined;
+      // Vault wrap for signed-in uploads. ensureVaultUnlocked() ran earlier
+      // so wrapTransferKey() should never throw here unless the IDB cache
+      // was wiped mid-upload — in that rare case we still abort cleanly
+      // rather than ship a transfer the dashboard can't manage.
+      let vaultWrap: { wrappedKey: string } | undefined;
       lastUploadVaulted = false;
-      if (auth.isAuthenticated && vaultCapable && uploadStore.vaultEnabled) {
-        try {
-          const rawTransferKey = await crypto.subtle.exportKey("raw", key);
-          const wrap = await wrapWithVault(rawTransferKey);
-          if (wrap) {
-            vaultWrap = wrap;
-            lastUploadVaulted = true;
-          }
-        } catch {
-          // Swallow — keep the upload unvaulted on any unexpected failure.
-        }
+      if (auth.isAuthenticated && auth.user) {
+        const rawTransferKey = await crypto.subtle.exportKey("raw", key);
+        const wrapped = await wrapTransferKey(auth.user.id, rawTransferKey);
+        vaultWrap = { wrappedKey: wrapped };
+        lastUploadVaulted = true;
       }
 
       const completeResponse = await api.completeTransfer(
@@ -333,7 +400,7 @@
     } catch (error) {
       if (uploadStore.status !== "error") {
         uploadStore.setError(
-          error instanceof Error ? error.message : "Upload failed"
+          error instanceof Error ? error.message : "Upload failed",
         );
       }
     }
@@ -342,27 +409,38 @@
   const isProcessing = $derived(
     uploadStore.status === "validating" ||
       uploadStore.status === "encrypting" ||
-      uploadStore.status === "uploading"
+      uploadStore.status === "uploading",
   );
 
   const totalSize = $derived(
-    uploadStore.files.reduce((sum, f) => sum + f.file.size, 0)
+    uploadStore.files.reduce((sum, f) => sum + f.file.size, 0),
   );
 
   const hasFiles = $derived(uploadStore.files.length > 0);
 
   const headerCount = $derived(
-    `${uploadStore.files.length} file${uploadStore.files.length !== 1 ? "s" : ""} · ${formatSize(totalSize)}`
+    `${uploadStore.files.length} file${uploadStore.files.length !== 1 ? "s" : ""} · ${formatSize(totalSize)}`,
   );
 
   const passwordTooShort = $derived(
     uploadStore.passwordEnabled &&
-      uploadStore.password.length < MIN_PASSWORD_LENGTH
+      uploadStore.password.length < MIN_PASSWORD_LENGTH,
   );
 
   const isSuccess = $derived(
-    uploadStore.status === "complete" && !!uploadStore.shareUrl
+    uploadStore.status === "complete" && !!uploadStore.shareUrl,
   );
+
+  const canSubmitUnlock = $derived(
+    !isUnlockingVault &&
+      (unlockMode === "password"
+        ? unlockPassword.length > 0
+        : unlockPhrase.trim().length > 0),
+  );
+
+  function goToSetup() {
+    goto("/setup/vault");
+  }
 </script>
 
 <svelte:head>
@@ -422,7 +500,7 @@
           </div>
           <p class="text-xs text-muted-foreground">
             Expires in {formatExpiry(uploadStore.expiresInHours)}. {formatDownloads(
-              uploadStore.maxDownloads
+              uploadStore.maxDownloads,
             )}.
           </p>
           {#if lastUploadVaulted}
@@ -477,6 +555,18 @@
             </Alert>
           {/if}
 
+          {#if auth.isAuthenticated && auth.needsVaultSetup}
+            <Alert tone="warning" title="Set up your vault first">
+              Signed-in uploads save filenames to your dashboard. Finish vault
+              setup before uploading.
+              {#snippet action()}
+                <Button variant="secondary" fullWidth={false} onclick={goToSetup}>
+                  Set up vault
+                </Button>
+              {/snippet}
+            </Alert>
+          {/if}
+
           <div>
             {#each uploadStore.files as fileState, index (fileState.file.name + index)}
               <FileRow
@@ -512,34 +602,12 @@
               disabled={isProcessing}
             />
 
-            {#if showVaultToggle}
-              <div class="space-y-1">
-                <Checkbox
-                  checked={uploadStore.vaultEnabled}
-                  onchange={(e) =>
-                    uploadStore.setVaultEnabled(
-                      (e.currentTarget as HTMLInputElement).checked
-                    )}
-                  disabled={isProcessing}
-                >
-                  Save filenames to my dashboard
-                </Checkbox>
-                <p class="pl-7 text-xs text-muted-foreground">
-                  {#if uploadStore.vaultEnabled}
-                    You'll be able to see filenames and recover the share link from your dashboard. Requires a passkey unlock.
-                  {:else}
-                    This transfer will appear in your dashboard, but filenames stay hidden and the share link can't be recovered.
-                  {/if}
-                </p>
-              </div>
-            {/if}
-
             <div class="space-y-2">
               <Checkbox
                 checked={uploadStore.passwordEnabled}
                 onchange={(e) =>
                   uploadStore.setPasswordEnabled(
-                    (e.currentTarget as HTMLInputElement).checked
+                    (e.currentTarget as HTMLInputElement).checked,
                   )}
                 disabled={isProcessing}
               >
@@ -555,7 +623,7 @@
                   value={uploadStore.password}
                   oninput={(e) =>
                     uploadStore.setPassword(
-                      (e.currentTarget as HTMLInputElement).value
+                      (e.currentTarget as HTMLInputElement).value,
                     )}
                   disabled={isProcessing}
                 />
@@ -566,6 +634,13 @@
                 {/if}
               {/if}
             </div>
+
+            {#if auth.isAuthenticated && !auth.needsVaultSetup}
+              <p class="text-xs text-muted-foreground">
+                Signed in — this transfer will be saved to your dashboard so
+                you can rename, delete, or rebuild the share link later.
+              </p>
+            {/if}
           </div>
         </div>
       </Frame.Panel>
@@ -579,7 +654,7 @@
           <Button
             variant="primary"
             onclick={handleUpload}
-            disabled={passwordTooShort}
+            disabled={passwordTooShort || (auth.isAuthenticated && auth.needsVaultSetup)}
           >
             Create share link
           </Button>
@@ -637,3 +712,70 @@
     </p>
   </section>
 </PageLayout>
+
+<Modal
+  open={unlockOpen}
+  title="Unlock your vault to upload"
+  description="Signed-in transfers are saved to your dashboard. Unlock your vault so we can wrap this transfer for later."
+  onClose={closeUnlockModal}
+>
+  <form onsubmit={submitUnlock} class="space-y-4" novalidate>
+    {#if unlockMode === "password"}
+      <PasswordInput
+        id="upload-unlock-password"
+        label="Vault password"
+        autocomplete="current-password"
+        required
+        bind:value={unlockPassword}
+        disabled={isUnlockingVault}
+      />
+    {:else}
+      <Textarea
+        id="upload-unlock-phrase"
+        label="Recovery phrase"
+        placeholder="word word word …"
+        rows={3}
+        bind:value={unlockPhrase}
+        disabled={isUnlockingVault}
+      />
+    {/if}
+
+    {#if unlockError}
+      <Alert tone="destructive">{unlockError}</Alert>
+    {/if}
+
+    <button
+      type="button"
+      onclick={() => {
+        unlockMode = unlockMode === "password" ? "phrase" : "password";
+        unlockError = null;
+      }}
+      class="text-xs text-muted-foreground hover:text-foreground hover:cursor-pointer underline-offset-4 hover:underline focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+      disabled={isUnlockingVault}
+    >
+      {unlockMode === "password"
+        ? "Forgot your password? Use your recovery phrase instead."
+        : "Have your password? Use it instead."}
+    </button>
+
+    <div class="flex items-center justify-end gap-2 pt-2 border-t border-border">
+      <Button
+        type="button"
+        variant="ghost"
+        fullWidth={false}
+        onclick={closeUnlockModal}
+        disabled={isUnlockingVault}
+      >
+        Cancel
+      </Button>
+      <Button type="submit" fullWidth={false} disabled={!canSubmitUnlock}>
+        {#if isUnlockingVault}
+          <Spinner aria-hidden="true" />
+          Unlocking…
+        {:else}
+          Unlock and upload
+        {/if}
+      </Button>
+    </div>
+  </form>
+</Modal>

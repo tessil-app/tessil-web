@@ -67,6 +67,12 @@ export interface MeResponse {
      * minted via magic link, verify-code, or pre-migration rows are null.
      */
     currentAuthenticatorId: string | null;
+    /**
+     * ISO timestamp when the user completed vault setup (ADR-0004), or null
+     * if they haven't yet. The route guard on /dashboard/** bounces users
+     * with null here to /setup/vault.
+     */
+    vaultSetupCompletedAt: string | null;
   } | null;
 }
 
@@ -79,10 +85,10 @@ export interface OwnedTransferSummary {
   downloadCount: number;
   isCompleted: boolean;
   hasPassword: boolean;
-  // Vault wrap (Phase F). NULL on anonymous-at-creation and on
-  // signed-in-without-vault rows. See docs/audit/28 §4 + §5.
+  // Vault wrap (ADR-0004). NULL on anonymous-at-creation rows. K_transfer
+  // wrapped under the owner's K_vault — unwrap requires the password
+  // (or the recovery phrase) to derive K_vault first.
   wrappedKey: string | null;
-  wrapCredentialId: string | null;
 }
 
 export interface ListMyTransfersResponse {
@@ -115,21 +121,46 @@ export interface PasskeySummary {
   nickname: string | null;
   deviceType: "singleDevice" | "multiDevice";
   backedUp: boolean;
-  supportsPrf: boolean;
   transports: string[];
   createdAt: string;
   lastUsedAt: string | null;
 }
 
-export interface PrfSaltEntry {
-  // base64url-encoded raw credential id (matches WebAuthn `id` from the
-  // browser library's JSON shape).
-  credentialId: string;
-  // Stable, versioned purpose identifier (e.g. "jtransfer:vault:transfer-key:v1").
-  purpose: string;
-  // base64url-encoded 32 random bytes — the PRF input salt for this
-  // (credential, purpose) pair. Public bytes.
-  salt: string;
+// Vault wire-format payloads (ADR-0004). Salts/wraps are base64url-encoded
+// raw bytes — the server cannot read any of them. Layout:
+//   salt*  : 16 random bytes (Argon2id salt)
+//   wrap*  : 60 bytes = iv(12) || ciphertext(32) || tag(16)
+export type VaultStatus =
+  | { isSetup: false }
+  | {
+      isSetup: true;
+      kdfVersion: number;
+      saltPassword: string;
+      saltPhrase: string;
+      wrapPassword: string;
+      wrapPhrase: string;
+      passwordChangedAt: string | null;
+      phraseRegeneratedAt: string | null;
+    };
+
+export interface VaultSetupRequest {
+  kdfVersion: number;
+  saltPassword: string;
+  saltPhrase: string;
+  wrapPassword: string;
+  wrapPhrase: string;
+}
+
+export interface VaultPasswordChangeRequest {
+  kdfVersion: number;
+  saltPassword: string;
+  wrapPassword: string;
+}
+
+export interface VaultPhraseRegenerateRequest {
+  kdfVersion: number;
+  saltPhrase: string;
+  wrapPhrase: string;
 }
 
 class ApiClient {
@@ -254,16 +285,11 @@ class ApiClient {
 
   async completeTransfer(
     transferId: string,
-    vaultWrap?: { wrappedKey: string; wrapCredentialId: string },
+    vaultWrap?: { wrappedKey: string },
   ): Promise<{ success: boolean; shareUrl: string }> {
-    const body: {
-      transferId: string;
-      wrappedKey?: string;
-      wrapCredentialId?: string;
-    } = { transferId };
+    const body: { transferId: string; wrappedKey?: string } = { transferId };
     if (vaultWrap) {
       body.wrappedKey = vaultWrap.wrappedKey;
-      body.wrapCredentialId = vaultWrap.wrapCredentialId;
     }
     return this.request("/api/upload/complete", {
       method: "POST",
@@ -436,16 +462,6 @@ class ApiClient {
     return this.request("/api/auth/passkeys");
   }
 
-  async getPasskeyWrappedTransferCount(id: string): Promise<{ count: number }> {
-    return this.request(
-      `/api/auth/passkey/${encodeURIComponent(id)}/wrapped-transfer-count`,
-    );
-  }
-
-  async getPrfSalts(): Promise<{ salts: PrfSaltEntry[] }> {
-    return this.request("/api/auth/passkey/prf-salts");
-  }
-
   async renamePasskey(
     id: string,
     nickname: string | null,
@@ -459,6 +475,33 @@ class ApiClient {
   async deletePasskey(id: string): Promise<void> {
     await this.request<{ ok: true }>(`/api/auth/passkey/${encodeURIComponent(id)}`, {
       method: "DELETE",
+    });
+  }
+
+  // ── Vault (ADR-0004) ────────────────────────────────────────────────────
+
+  async getVault(): Promise<VaultStatus> {
+    return this.request("/api/me/vault");
+  }
+
+  async setupVault(body: VaultSetupRequest): Promise<{ ok: true }> {
+    return this.request("/api/me/vault/setup", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async changeVaultPassword(body: VaultPasswordChangeRequest): Promise<{ ok: true }> {
+    return this.request("/api/me/vault/password", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async regenerateVaultPhrase(body: VaultPhraseRegenerateRequest): Promise<{ ok: true }> {
+    return this.request("/api/me/vault/phrase", {
+      method: "POST",
+      body: JSON.stringify(body),
     });
   }
 

@@ -114,9 +114,24 @@
               <li>Your email address (for sign-in)</li>
               <li>Your tier (free or paid)</li>
               <li>A hashed session token for as long as you stay signed in</li>
-              <li>The IP address and browser at sign-in time, for security context in your sign-in email</li>
+              <li>The browser user-agent at sign-in time, for context in your sign-in email</li>
               <li>Authentication events (sign-in requests, successes, sign-outs) — kept for 90 days then automatically deleted</li>
             </ul>
+            <p class="text-muted-foreground">
+              <strong>We do not store IP addresses.</strong> For sign-in events
+              we record the country and the network operator (ASN) derived from
+              your IP at the moment of the request, plus a rotating
+              cryptographic identifier that lets us correlate suspicious
+              activity within a 24-hour window without retaining the underlying
+              address. The identifier is keyed against a secret we rotate on a
+              30-day schedule, after which prior events become permanently
+              uncorrelatable.
+            </p>
+            <p class="text-muted-foreground">
+              This applies to all auth-related events. We rely on MaxMind
+              GeoLite2 for offline country and ASN resolution; no per-request
+              data leaves our servers for this lookup.
+            </p>
             <p class="text-muted-foreground">
               We never store the magic-link token itself or your session cookie
               in plaintext — both are SHA-256 hashed before being written to
@@ -182,47 +197,38 @@
           </section>
 
           <section class="space-y-3">
-            <h2 class="text-lg font-semibold text-foreground">Vaulted filenames (optional)</h2>
+            <h2 class="text-lg font-semibold text-foreground">Vault for signed-in transfers</h2>
             <p class="text-muted-foreground">
-              If you have a passkey that supports the WebAuthn PRF extension,
-              you can opt in — at upload time — to save a transfer's filename
-              to your dashboard. When enabled, your browser derives a vault
-              key from your passkey and wraps the transfer's encryption key
-              under that vault key before sending the wrapped blob to us. The
-              vault key never touches our servers, and the wrap happens only
-              if you ticked the box for that upload.
+              When you upload while signed in, your browser wraps the
+              transfer's encryption key under a per-account vault key
+              (<em>K<sub>vault</sub></em>) before sending the wrapped blob
+              to us. The vault key itself never touches our servers — it
+              is derived in your browser from your vault password using
+              Argon2id, and we only store the resulting wrapped blob.
             </p>
             <p class="text-muted-foreground">
-              On your dashboard, unlocking the vault prompts your authenticator
-              once per session. After that, vaulted transfers show their
-              original filename and let you recover the full share link
-              (including the URL fragment) without re-uploading. Transfers
-              you uploaded without the vault toggle, or while signed out,
-              remain blind to the dashboard exactly as before.
+              On first sign-in you set a vault password and we generate a
+              12-word recovery phrase for you to save somewhere safe. Both
+              independently unwrap the vault key: the password is what you
+              type day to day, the phrase is your offline backup if you
+              forget the password. We never see either one in plaintext,
+              so neither can be recovered from us if you lose them.
             </p>
             <p class="text-muted-foreground">
-              <strong>Trade-off to be aware of:</strong> the vault moves part
-              of the threat boundary onto your authenticator. An attacker who
-              possesses both a signed-in JTransfer session and your
-              passkey-bearing device, and who can satisfy the user-verification
-              gesture (Touch ID, Face ID, PIN), can decrypt the filenames and
-              recover the share links of your vaulted transfers — the same
-              capability you have. The user-verification gesture is required
-              every time the vault is unlocked, which is why we lean on it
-              rather than caching the vault key across sessions. For transfers
-              where this matters, leave the toggle off; the dashboard will
-              still list those transfers, just without filenames or
-              recoverable links.
+              The vault unlocks once and stays unlocked on this device for
+              up to 24 hours, after which you'll be prompted to enter your
+              vault password again. You can also lock the vault manually
+              from the account menu, which drops the in-memory key
+              immediately.
             </p>
             <p class="text-muted-foreground">
-              Each passkey on your account gets its own independent vault key.
-              A transfer is wrapped under whichever passkey unlocked the
-              vault when you uploaded it. If you remove that specific
-              passkey from your account, the filenames and share links for
-              transfers wrapped under it stop being recoverable from the
-              dashboard — the underlying file payload is still downloadable
-              by anyone who has the full share link, because the link itself
-              already carries the encryption key in its fragment.
+              <strong>What this protects:</strong> the dashboard can show
+              filenames and rebuild share links for past transfers without
+              keeping any of that information on our servers. Anyone with
+              your account password (or your recovery phrase) gets that
+              same capability — the underlying file payload itself is
+              always end-to-end encrypted under a per-transfer key carried
+              in the share link's URL fragment, separate from the vault.
             </p>
           </section>
 
@@ -242,6 +248,20 @@
             <p class="text-sm text-muted-foreground">
               Include reproduction steps, affected URLs, and impact. We aim to
               acknowledge reports within 72 hours.
+            </p>
+          </section>
+
+          <section class="space-y-3">
+            <h2 class="text-lg font-semibold text-foreground">Attributions</h2>
+            <p class="text-sm text-muted-foreground">
+              Country and ASN lookups use GeoLite2 data created by MaxMind,
+              available from
+              <a
+                href="https://www.maxmind.com"
+                rel="noopener noreferrer"
+                class="text-primary hover:underline"
+              >maxmind.com</a>. The databases are loaded locally on our servers —
+              no per-request data is sent to MaxMind.
             </p>
           </section>
         </div>
