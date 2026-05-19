@@ -1,8 +1,10 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { ModeWatcher } from "mode-watcher";
   import { auth } from "$lib/stores/auth.svelte";
   import { lock as lockVault } from "$lib/vault/client";
+  import { cn } from "$lib/utils";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import DropdownMenuItem from "$lib/components/DropdownMenuItem.svelte";
   import IconGearRegular from "phosphor-icons-svelte/IconGearRegular.svelte";
@@ -10,6 +12,17 @@
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
   import "../app.css";
   let { children } = $props();
+
+  const navLinkBase =
+    "px-3 py-2 rounded-md focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  const navLinkInactive =
+    "text-muted-foreground hover:text-foreground hover:bg-accent";
+  const navLinkActive = "bg-accent text-foreground";
+
+  function isActive(path: string, exact = false) {
+    const current = $page.url.pathname;
+    return exact ? current === path : current === path || current.startsWith(`${path}/`);
+  }
 
   async function handleLogout() {
     await auth.logout();
@@ -48,7 +61,8 @@
             {@const email = auth.user.email}
             <a
               href="/dashboard"
-              class="px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              aria-current={isActive("/dashboard", true) ? "page" : undefined}
+              class={cn(navLinkBase, isActive("/dashboard", true) ? navLinkActive : navLinkInactive)}
             >
               Dashboard
             </a>
@@ -77,6 +91,7 @@
                 <DropdownMenuItem
                   href="/dashboard/settings"
                   onSelect={() => { goto("/dashboard/settings"); close(); }}
+                  class={isActive("/dashboard/settings") ? "bg-accent" : ""}
                 >
                   <IconGearRegular class="size-4 opacity-70" />
                   Settings
@@ -100,7 +115,8 @@
           {:else}
             <a
               href="/login"
-              class="px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              aria-current={isActive("/login", true) ? "page" : undefined}
+              class={cn(navLinkBase, isActive("/login", true) ? navLinkActive : navLinkInactive)}
             >
               Sign in
             </a>

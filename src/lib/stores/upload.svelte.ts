@@ -16,6 +16,7 @@ function createUploadStore() {
     password: "",
     passwordEnabled: false,
     maxDownloads: null,
+    title: "",
   });
 
   function calculateOverallProgress(): number {
@@ -54,6 +55,9 @@ function createUploadStore() {
     },
     get passwordEnabled() {
       return state.passwordEnabled;
+    },
+    get title() {
+      return state.title;
     },
 
     addFiles(newFiles: File[]) {
@@ -135,6 +139,10 @@ function createUploadStore() {
       }
     },
 
+    setTitle(title: string) {
+      state.title = title;
+    },
+
     reset() {
       state = {
         files: [],
@@ -147,6 +155,7 @@ function createUploadStore() {
         password: "",
         passwordEnabled: false,
         maxDownloads: null,
+        title: "",
       };
     },
   };

@@ -29,7 +29,7 @@
       http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
-        script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://storage.ko-fi.com;
+        script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval';
         style-src 'self' 'unsafe-inline';
         img-src 'self' data: blob: https:;
         font-src 'self' data:;
@@ -131,48 +131,4 @@
   >
     <div style="display: contents">%sveltekit.body%</div>
   </body>
-
-  <script>
-    (() => {
-      if (window.location.pathname !== "/") return;
-      let widgetLoaded = false;
-
-      const loadWidget = () => {
-        if (widgetLoaded) return;
-        widgetLoaded = true;
-
-        const script = document.createElement("script");
-        script.src = "https://storage.ko-fi.com/cdn/scripts/overlay-widget.js";
-        script.async = true;
-        script.onload = () => {
-          if (!window.kofiWidgetOverlay?.draw) return;
-          window.kofiWidgetOverlay.draw("jimmyjtransfer", {
-            type: "floating-chat",
-            "floating-chat.donateButton.text": "Support me",
-            "floating-chat.donateButton.background-color": "#e7000b",
-            "floating-chat.donateButton.text-color": "#fff",
-          });
-        };
-        document.body.appendChild(script);
-      };
-
-      const startLoad = () => {
-        if ("requestIdleCallback" in window) {
-          window.requestIdleCallback(loadWidget, { timeout: 2000 });
-        } else {
-          window.setTimeout(loadWidget, 200);
-        }
-      };
-
-      window.addEventListener("pointerdown", startLoad, {
-        once: true,
-        passive: true,
-      });
-      window.addEventListener("keydown", startLoad, { once: true });
-      window.addEventListener("scroll", startLoad, { once: true, passive: true });
-
-      // Fallback for passive users on the homepage.
-      window.setTimeout(startLoad, 8000);
-    })();
-  </script>
 </html>

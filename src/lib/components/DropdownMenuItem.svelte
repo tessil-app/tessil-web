@@ -22,11 +22,15 @@
 
   const base =
     "w-full inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors duration-150 ease-out hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none";
+  // `:focus` is intentionally NOT styled — the dropdown auto-focuses its
+  // first item on open, which would otherwise paint that item as
+  // permanently highlighted. `:focus-visible` keeps keyboard navigation
+  // visible without firing on programmatic focus.
   const variants = {
     default:
-      "text-foreground hover:bg-accent focus-visible:bg-accent focus:bg-accent",
+      "text-foreground hover:bg-accent focus-visible:bg-accent",
     destructive:
-      "text-destructive-foreground hover:bg-destructive/10 focus-visible:bg-destructive/10 focus:bg-destructive/10",
+      "text-destructive-foreground hover:bg-destructive/10 focus-visible:bg-destructive/10",
   } as const;
 
   function handleClick(e: MouseEvent) {

@@ -3,6 +3,12 @@
   // single per-user K_vault, so unlocking is one password prompt — no more
   // per-credential branching. Eager prompt on mount; "Skip" collapses to a
   // banner the user can re-tap.
+  //
+  // Layout is a 5-column table on ≥sm screens (name / size / created /
+  // expires / status) with a hover overlay on the desktop revealing
+  // "Copy link" and "Delete" inline. Tapping a row opens the
+  // TransferDetailDrawer, which handles per-transfer renaming, file
+  // metadata, share-link rebuild, and inline delete.
 
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
@@ -15,8 +21,11 @@
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
+  import TransferDetailDrawer, {
+    type VaultRowState,
+  } from "$lib/components/TransferDetailDrawer.svelte";
   import { api, type OwnedTransferSummary } from "$lib/api/client";
-  import { decryptFilename } from "$lib/crypto/decrypt";
+  import { decryptFilename, decryptString } from "$lib/crypto/decrypt";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
   import {
@@ -30,23 +39,19 @@
   } from "$lib/vault/client";
   import { onDestroy, onMount } from "svelte";
 
-  // Per-row decrypt state. Without per-credential wraps the only failure
-  // modes left are "vault locked" (recover by unlocking) and "tag failed"
-  // (genuine corruption / wrong vault — rare). We keep one error bucket.
-  type VaultRowState =
-    | { status: "locked" }
-    | { status: "unlocking" }
-    | { status: "unlocked"; names: string[] }
-    | { status: "blind-error" };
-
   let transfers = $state<OwnedTransferSummary[]>([]);
   let nextCursor = $state<string | null>(null);
   let isLoading = $state(false);
   let isLoadingMore = $state(false);
   let errorMessage = $state<string | null>(null);
-  let confirmingId = $state<string | null>(null);
-  let deletingId = $state<string | null>(null);
+  let inlineDeletingId = $state<string | null>(null);
+  let confirmDeleteId = $state<string | null>(null);
+  let copyingId = $state<string | null>(null);
+  let copiedId = $state<string | null>(null);
   let vaultStates = $state<Record<string, VaultRowState>>({});
+
+  // Drawer state — null means no drawer open.
+  let openTransferId = $state<string | null>(null);
 
   // Unlock modal state
   let vaultUnlocked = $state(false);
@@ -57,12 +62,6 @@
   let unlockPhrase = $state("");
   let isUnlocking = $state(false);
   let unlockError = $state<string | null>(null);
-
-  // "Get share link" reveal — same as before, just sourced from K_vault.
-  let recoveredShareUrl = $state<Record<string, string>>({});
-  let recoveringId = $state<string | null>(null);
-  let recoverError = $state<string | null>(null);
-  let copiedShareId = $state<string | null>(null);
 
   let hasAttemptedLoad = $state(false);
 
@@ -173,7 +172,16 @@
           decryptFilename(f.encryptedName, f.encryptedNameIv, transferKey),
         ),
       );
-      vaultStates[t.id] = { status: "unlocked", names };
+      let title: string | null = null;
+      if (t.encryptedTitle && t.encryptedTitleIv) {
+        try {
+          title = await decryptString(t.encryptedTitle, t.encryptedTitleIv, transferKey);
+        } catch {
+          // Title fails-soft: treat as no title so the rest of the row keeps working.
+          title = null;
+        }
+      }
+      vaultStates[t.id] = { status: "unlocked", names, title };
     } catch {
       vaultStates[t.id] = { status: "blind-error" };
     }
@@ -210,9 +218,6 @@
         unlockError = unlockErrorMessage(result.reason);
         return;
       }
-      // Successful unlock — flip every locked row to "unlocking" and
-      // resolve them in parallel. `subscribeToVaultState` already updated
-      // `vaultUnlocked` for us.
       const targets = transfers.filter(
         (t) => t.wrappedKey && vaultStates[t.id]?.status !== "unlocked",
       );
@@ -243,86 +248,94 @@
     }
   }
 
-  async function recoverShareLink(t: OwnedTransferSummary) {
+  // Quick "copy link" on a row — same recovery as the drawer's reveal,
+  // just without showing the URL. Useful when the user just wants to paste
+  // it somewhere.
+  async function copyRowLink(t: OwnedTransferSummary, e: Event) {
+    e.stopPropagation();
     if (!t.wrappedKey || !auth.user) return;
-    if (recoveringId === t.id) return;
-    recoveringId = t.id;
-    recoverError = null;
+    if (copyingId === t.id) return;
+    copyingId = t.id;
     try {
       const raw = await unwrapTransferKey(auth.user.id, t.wrappedKey);
       if (!raw) {
-        recoverError =
-          "Couldn't rebuild the share link — the vault couldn't decrypt this transfer.";
+        errorMessage =
+          "Couldn't rebuild the share link — unlock the vault and try again.";
         return;
       }
       const fragment = transferKeyToFragment(raw);
-      recoveredShareUrl[t.id] = `${window.location.origin}/d/${t.id}#${fragment}`;
+      const url = `${window.location.origin}/d/${t.id}#${fragment}`;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        const input = document.createElement("input");
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+      copiedId = t.id;
+      setTimeout(() => {
+        if (copiedId === t.id) copiedId = null;
+      }, 2000);
     } catch {
-      recoverError = "Couldn't rebuild the share link.";
+      errorMessage = "Couldn't copy the share link.";
     } finally {
-      recoveringId = null;
+      copyingId = null;
     }
   }
 
-  function hideShareLink(id: string) {
-    delete recoveredShareUrl[id];
-    if (copiedShareId === id) copiedShareId = null;
+  function requestInlineDelete(t: OwnedTransferSummary, e: Event) {
+    e.stopPropagation();
+    if (inlineDeletingId) return;
+    // Open the custom confirm modal. The drawer's Danger zone uses an
+    // inline two-step instead; the row overlay is too small to host that
+    // pattern, so it routes through a centred modal.
+    confirmDeleteId = t.id;
   }
 
-  async function copyShareLink(id: string) {
-    const url = recoveredShareUrl[id];
-    if (!url) return;
+  async function performInlineDelete() {
+    if (!confirmDeleteId || inlineDeletingId) return;
+    const id = confirmDeleteId;
+    inlineDeletingId = id;
     try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      const input = document.createElement("input");
-      input.value = url;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      document.body.removeChild(input);
+      await api.deleteMyTransfer(id);
+      transfers = transfers.filter((row) => row.id !== id);
+      delete vaultStates[id];
+      if (openTransferId === id) openTransferId = null;
+      confirmDeleteId = null;
+    } catch (err) {
+      errorMessage =
+        err instanceof Error ? err.message : "Couldn't delete that transfer.";
+      if (errorMessage === "Transfer not found.") {
+        transfers = transfers.filter((row) => row.id !== id);
+        confirmDeleteId = null;
+      }
+    } finally {
+      inlineDeletingId = null;
     }
-    copiedShareId = id;
-    setTimeout(() => {
-      if (copiedShareId === id) copiedShareId = null;
-    }, 2000);
   }
 
-  function nameSummary(names: string[]): string {
+  function rowDisplayName(t: OwnedTransferSummary): string {
+    const vs = vaultStates[t.id];
+    if (vs?.status === "unlocked") {
+      if (vs.title && vs.title.length > 0) return vs.title;
+      if (vs.names.length > 0) return summariseNames(vs.names);
+    }
+    return `${t.fileCount} ${t.fileCount === 1 ? "file" : "files"}`;
+  }
+
+  function summariseNames(names: string[]): string {
     if (names.length === 0) return "(no files)";
-    if (names.length <= 2) return names.join(", ");
-    return `${names[0]}, ${names[1]} + ${names.length - 2} more`;
+    if (names.length === 1) return names[0];
+    return `${names[0]} + ${names.length - 1} more`;
   }
 
   const lockedVaultedCount = $derived(
     transfers.filter((t) => t.wrappedKey && vaultStates[t.id]?.status === "locked")
       .length,
   );
-
-  async function confirmDelete(id: string) {
-    if (deletingId) return;
-    deletingId = id;
-    try {
-      await api.deleteMyTransfer(id);
-      transfers = transfers.filter((t) => t.id !== id);
-      delete recoveredShareUrl[id];
-      delete vaultStates[id];
-      confirmingId = null;
-    } catch (err) {
-      errorMessage =
-        err instanceof Error ? err.message : "Couldn't delete that transfer.";
-      if (errorMessage === "Transfer not found.") {
-        transfers = transfers.filter((t) => t.id !== id);
-        confirmingId = null;
-      }
-    } finally {
-      deletingId = null;
-    }
-  }
-
-  function cancelConfirm() {
-    confirmingId = null;
-  }
 
   function statusOf(t: OwnedTransferSummary): {
     label: string;
@@ -338,11 +351,9 @@
     year: "numeric",
     month: "short",
     day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 
-  function formatDate(iso: string) {
+  function shortDate(iso: string) {
     return dateFmt.format(new Date(iso));
   }
 
@@ -361,6 +372,42 @@
     !isUnlocking &&
       (unlockMode === "password" ? unlockPassword.length > 0 : unlockPhrase.trim().length > 0),
   );
+
+  // Drawer ↔ list bridges. Callbacks rather than two-way bindings so the
+  // dashboard stays the source of truth for the list state.
+  function handleTitleSaved(
+    id: string,
+    decryptedTitle: string | null,
+    encryptedTitle: string | null,
+    encryptedTitleIv: string | null,
+  ) {
+    transfers = transfers.map((t) =>
+      t.id === id
+        ? { ...t, encryptedTitle, encryptedTitleIv }
+        : t,
+    );
+    const vs = vaultStates[id];
+    if (vs?.status === "unlocked") {
+      vaultStates[id] = { ...vs, title: decryptedTitle };
+    }
+  }
+
+  function handleDrawerDelete(id: string) {
+    transfers = transfers.filter((t) => t.id !== id);
+    delete vaultStates[id];
+  }
+
+  const openTransfer = $derived(
+    openTransferId ? transfers.find((t) => t.id === openTransferId) ?? null : null,
+  );
+  const openVaultState = $derived(
+    openTransferId ? vaultStates[openTransferId] : undefined,
+  );
+  const confirmDeleteTransfer = $derived(
+    confirmDeleteId
+      ? transfers.find((t) => t.id === confirmDeleteId) ?? null
+      : null,
+  );
 </script>
 
 <svelte:head>
@@ -368,7 +415,7 @@
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
-<PageLayout>
+<PageLayout width="5xl">
   {#if !auth.loaded}
     <div
       role="status"
@@ -392,17 +439,13 @@
         <Alert tone="destructive">{errorMessage}</Alert>
       {/if}
 
-      {#if recoverError}
-        <Alert tone="warning">{recoverError}</Alert>
-      {/if}
-
       {#if !vaultUnlocked && lockedVaultedCount > 0 && skipped}
         <div
           class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-border bg-card p-4"
         >
           <p class="text-sm text-muted-foreground">
             Vault is locked. {lockedVaultedCount}
-            {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted filenames waiting.
+            {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted names waiting.
           </p>
           <div class="sm:shrink-0">
             <Button variant="secondary" fullWidth={false} onclick={openUnlockPrompt}>
@@ -437,143 +480,129 @@
           </Frame.Panel>
         </Frame.Root>
       {:else}
-        <ul class="space-y-3">
-          {#each transfers as t (t.id)}
-            {@const status = statusOf(t)}
-            {@const vaultState = vaultStates[t.id]}
-            {@const canRecover = vaultState?.status === "unlocked"}
-            {@const shareUrl = recoveredShareUrl[t.id]}
-            <li class="bg-card border border-border rounded-2xl p-4 sm:p-5 space-y-3">
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div class="space-y-1 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    {#if vaultState?.status === "unlocked"}
-                      <span
-                        class="text-sm font-medium text-foreground truncate"
-                        title={vaultState.names.join("\n")}
-                      >
-                        {nameSummary(vaultState.names)}
-                      </span>
-                    {:else}
-                      <span class="text-sm font-medium text-foreground">
-                        {t.fileCount} {t.fileCount === 1 ? "file" : "files"}
-                      </span>
-                    {/if}
-                    <span class="text-sm text-muted-foreground">·</span>
-                    <span class="text-sm text-muted-foreground">{formatSize(t.totalBytes)}</span>
-                    {#if t.hasPassword}
-                      <span class="text-sm text-muted-foreground">·</span>
-                      <span class="text-xs text-muted-foreground">password-protected</span>
-                    {/if}
-                    <Badge tone={status.tone}>{status.label}</Badge>
-                  </div>
-                  <p class="text-xs text-muted-foreground">
-                    Created {formatDate(t.createdAt)} · Expires {relativeExpiry(t.expiresAt)}
-                    · {t.downloadCount} {t.downloadCount === 1 ? "download" : "downloads"}
-                  </p>
-                  {#if vaultState?.status === "locked"}
-                    <p class="text-xs text-muted-foreground">
-                      Filenames saved — unlock the vault to view.
-                    </p>
-                  {:else if vaultState?.status === "unlocking"}
-                    <p class="text-xs text-muted-foreground">Unlocking filenames…</p>
-                  {:else if vaultState?.status === "blind-error"}
-                    <p class="text-xs text-muted-foreground">
-                      Couldn't read saved filenames for this transfer. The files
-                      themselves stay downloadable to anyone with the share link.
-                    </p>
-                  {/if}
-                </div>
-                <div class="flex items-center gap-2 sm:shrink-0">
-                  {#if confirmingId === t.id}
-                    <span class="text-sm text-muted-foreground" aria-live="polite">
-                      Delete?
-                    </span>
-                    <Button
-                      variant="destructive"
-                      fullWidth={false}
-                      onclick={() => confirmDelete(t.id)}
-                      disabled={deletingId === t.id}
-                    >
-                      {#if deletingId === t.id}
-                        <Spinner aria-hidden="true" />
-                        Deleting…
-                      {:else}
-                        Confirm
+        <!-- Desktop list (sm+). Single rounded container with the column
+             header on top and rows divided by hairlines. Keeps the
+             dashboard reading as one table rather than disconnected cards. -->
+        <div class="hidden sm:block overflow-hidden rounded-2xl bg-card">
+          <div
+            class="grid grid-cols-[minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-4 px-4 py-2 bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            <div>Name</div>
+            <div>Size</div>
+            <div>Created</div>
+            <div>Expires</div>
+            <div>Status</div>
+          </div>
+          <ul class="divide-y divide-border">
+            {#each transfers as t (t.id)}
+              {@const status = statusOf(t)}
+              {@const vs = vaultStates[t.id]}
+              {@const isVaulted = !!t.wrappedKey}
+              {@const canRowAction = isVaulted && vs?.status === "unlocked"}
+              <li class="relative group">
+                <button
+                  type="button"
+                  onclick={() => (openTransferId = t.id)}
+                  class="grid grid-cols-[minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-4 items-center w-full px-4 py-3 text-left text-sm transition-colors duration-150 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <div class="min-w-0">
+                    <div class="text-foreground font-medium truncate" title={rowDisplayName(t)}>
+                      {rowDisplayName(t)}
+                    </div>
+                    <div class="text-xs text-muted-foreground truncate">
+                      {t.fileCount} {t.fileCount === 1 ? "file" : "files"}
+                      {#if t.hasPassword}
+                        · password-protected
                       {/if}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      fullWidth={false}
-                      onclick={cancelConfirm}
-                      disabled={deletingId === t.id}
-                    >
-                      Cancel
-                    </Button>
-                  {:else}
-                    {#if canRecover && !shareUrl}
-                      <Button
-                        variant="ghost"
-                        fullWidth={false}
-                        onclick={() => recoverShareLink(t)}
-                        disabled={recoveringId === t.id}
-                      >
-                        {#if recoveringId === t.id}
-                          <Spinner aria-hidden="true" />
-                          Rebuilding…
-                        {:else}
-                          Get share link
-                        {/if}
-                      </Button>
-                    {/if}
-                    <Button
-                      variant="ghost"
-                      fullWidth={false}
-                      onclick={() => (confirmingId = t.id)}
-                    >
-                      Delete
-                    </Button>
-                  {/if}
-                </div>
-              </div>
-
-              {#if shareUrl}
-                <div class="space-y-2 border-t border-border pt-3">
-                  <p class="text-xs text-muted-foreground">
-                    Anyone with this link can download the files. The key
-                    after the <code class="font-mono">#</code> never reaches our servers.
-                  </p>
-                  <div class="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="text"
-                      readonly
-                      value={shareUrl}
-                      class="flex-1 min-w-0 rounded-md border border-input bg-background px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
-                    />
-                    <div class="flex gap-2 sm:shrink-0">
-                      <Button
-                        variant="secondary"
-                        fullWidth={false}
-                        onclick={() => copyShareLink(t.id)}
-                      >
-                        {#if copiedShareId === t.id}
-                          Copied!
-                        {:else}
-                          Copy
-                        {/if}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        fullWidth={false}
-                        onclick={() => hideShareLink(t.id)}
-                      >
-                        Hide
-                      </Button>
+                      {#if vs?.status === "locked"}
+                        · vault locked
+                      {:else if vs?.status === "unlocking"}
+                        · decrypting…
+                      {:else if vs?.status === "blind-error"}
+                        · couldn't decrypt
+                      {/if}
                     </div>
                   </div>
+                  <div class="text-muted-foreground">{formatSize(t.totalBytes)}</div>
+                  <div class="text-muted-foreground">{shortDate(t.createdAt)}</div>
+                  <div class="text-muted-foreground">
+                    {shortDate(t.expiresAt)}
+                    <span class="text-xs">({relativeExpiry(t.expiresAt)})</span>
+                  </div>
+                  <div>
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                  </div>
+                </button>
+
+                <!-- Hover overlay (desktop only, hover-capable input). Anchored
+                     to the right; lives outside the button so its own clicks
+                     don't bubble up and open the drawer. -->
+                <div
+                  class="pointer-events-none absolute inset-y-0 right-3 hidden items-center gap-2 opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:hover)]:flex"
+                >
+                  <div class="pointer-events-auto flex items-center gap-2 bg-card rounded-[calc(var(--radius-2xl)-1px)] p-1 shadow-sm border border-border">
+                    <button
+                      type="button"
+                      onclick={(e) => copyRowLink(t, e)}
+                      disabled={!canRowAction || copyingId === t.id}
+                      class="text-xs font-medium px-2 py-1 rounded-[calc(var(--radius-2xl)-5px)] text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {#if copyingId === t.id}
+                        Copying…
+                      {:else if copiedId === t.id}
+                        Copied!
+                      {:else}
+                        Copy link
+                      {/if}
+                    </button>
+                    <button
+                      type="button"
+                      onclick={(e) => requestInlineDelete(t, e)}
+                      disabled={inlineDeletingId === t.id}
+                      class="text-xs font-medium px-2 py-1 rounded-[calc(var(--radius-2xl)-5px)] text-destructive-foreground hover:bg-destructive/10 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {inlineDeletingId === t.id ? "Deleting…" : "Delete"}
+                    </button>
+                  </div>
                 </div>
-              {/if}
+              </li>
+            {/each}
+          </ul>
+        </div>
+
+        <!-- Mobile stack (<sm). No hover overlay — every action lives in the drawer. -->
+        <ul class="space-y-3 sm:hidden">
+          {#each transfers as t (t.id)}
+            {@const status = statusOf(t)}
+            {@const vs = vaultStates[t.id]}
+            <li>
+              <button
+                type="button"
+                onclick={() => (openTransferId = t.id)}
+                class="block w-full text-left bg-card rounded-2xl p-4 space-y-2 transition-colors duration-150 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-foreground truncate">
+                      {rowDisplayName(t)}
+                    </p>
+                    <p class="text-xs text-muted-foreground">
+                      {t.fileCount} {t.fileCount === 1 ? "file" : "files"} · {formatSize(t.totalBytes)}
+                    </p>
+                  </div>
+                  <Badge tone={status.tone}>{status.label}</Badge>
+                </div>
+                <p class="text-xs text-muted-foreground">
+                  Created {shortDate(t.createdAt)} · Expires {relativeExpiry(t.expiresAt)}
+                </p>
+                {#if vs?.status === "locked"}
+                  <p class="text-xs text-muted-foreground">Vault locked — unlock to see name.</p>
+                {:else if vs?.status === "unlocking"}
+                  <p class="text-xs text-muted-foreground">Decrypting…</p>
+                {:else if vs?.status === "blind-error"}
+                  <p class="text-xs text-muted-foreground">Couldn't decrypt metadata.</p>
+                {/if}
+              </button>
             </li>
           {/each}
         </ul>
@@ -599,6 +628,16 @@
     </div>
   {/if}
 </PageLayout>
+
+<TransferDetailDrawer
+  open={openTransferId !== null}
+  userId={auth.user?.id ?? null}
+  transfer={openTransfer}
+  vaultState={openVaultState}
+  onClose={() => (openTransferId = null)}
+  onDeleted={handleDrawerDelete}
+  onTitleSaved={handleTitleSaved}
+/>
 
 <Modal
   open={promptOpen}
@@ -672,4 +711,49 @@
       {@render footerActions()}
     </div>
   </form>
+</Modal>
+
+<Modal
+  open={confirmDeleteId !== null}
+  title="Delete this transfer?"
+  description="The encrypted files are removed and the share link stops working. This can't be undone."
+  class="bg-background border-0 shadow-md"
+  onClose={() => {
+    if (!inlineDeletingId) confirmDeleteId = null;
+  }}
+>
+  {#if confirmDeleteTransfer}
+    <p class="text-sm text-muted-foreground">
+      <span class="font-medium text-foreground">{rowDisplayName(confirmDeleteTransfer)}</span>
+      · {confirmDeleteTransfer.fileCount}
+      {confirmDeleteTransfer.fileCount === 1 ? "file" : "files"}
+      · {formatSize(confirmDeleteTransfer.totalBytes)}
+    </p>
+  {/if}
+
+  {#snippet footer()}
+    <Button
+      type="button"
+      variant="ghost"
+      fullWidth={false}
+      onclick={() => (confirmDeleteId = null)}
+      disabled={!!inlineDeletingId}
+    >
+      Cancel
+    </Button>
+    <Button
+      type="button"
+      variant="destructive"
+      fullWidth={false}
+      onclick={performInlineDelete}
+      disabled={!!inlineDeletingId}
+    >
+      {#if inlineDeletingId}
+        <Spinner aria-hidden="true" />
+        Deleting…
+      {:else}
+        Delete transfer
+      {/if}
+    </Button>
+  {/snippet}
 </Modal>

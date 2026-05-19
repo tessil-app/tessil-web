@@ -10,7 +10,7 @@
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
-  import { decryptFile, decryptFilename } from "$lib/crypto/decrypt";
+  import { decryptFile, decryptFilename, decryptString } from "$lib/crypto/decrypt";
   import { importKey, isWrappedKey, unwrapKey } from "$lib/crypto/key";
   import { formatSize } from "$lib/utils";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
@@ -40,6 +40,9 @@
   let key = $state<CryptoKey | null>(null);
   let accessToken = $state<string | null>(null);
   let downloadAllInProgress = $state(false);
+  // Decrypted transfer title (ADR-0005). Surfaced as the page H1 once the
+  // fragment key has decrypted it; never sent to or seen by the server.
+  let decryptedTitle = $state<string | null>(null);
 
   let password = $state("");
   let passwordError = $state<string | null>(null);
@@ -132,6 +135,22 @@
       });
     }
     files = decryptedFiles;
+
+    // Best-effort title decrypt. A failure here is non-fatal — we keep the
+    // generic H1 and let the recipient continue.
+    if (meta.encryptedTitle && meta.encryptedTitleIv) {
+      try {
+        const t = await decryptString(
+          meta.encryptedTitle,
+          meta.encryptedTitleIv,
+          cryptoKey,
+        );
+        if (t.length > 0) decryptedTitle = t;
+      } catch {
+        decryptedTitle = null;
+      }
+    }
+
     pageStatus = "ready";
   }
 
@@ -242,6 +261,21 @@
       ? `Download ${files[0].name}`
       : `Download all (${files.length})`
   );
+
+  // Page H1: prefer the decrypted title once the recipient has unlocked
+  // (or for unprotected transfers, decrypted) the fragment key. Otherwise
+  // fall back to the standing security tagline. The marketing copy moves
+  // to the tagline slot so the trust signal is still visible.
+  const pageH1 = $derived(
+    pageStatus === "ready" && decryptedTitle
+      ? decryptedTitle
+      : "Encrypted in your browser."
+  );
+  const pageTagline = $derived(
+    pageStatus === "ready" && decryptedTitle
+      ? "Files are decrypted in your browser — we never saw the contents."
+      : "Your files are scrambled before they leave your device — we never see the contents."
+  );
 </script>
 
 <svelte:head>
@@ -251,8 +285,8 @@
 
 <PageLayout>
   <PageHeader
-    title="Encrypted in your browser."
-    tagline="Your files are scrambled before they leave your device — we never see the contents."
+    title={pageH1}
+    tagline={pageTagline}
     wordmarkHref={null}
   />
 

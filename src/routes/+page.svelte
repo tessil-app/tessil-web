@@ -22,7 +22,7 @@
   import Textarea from "$lib/components/Textarea.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
-  import { encryptFile, encryptFilename } from "$lib/crypto/encrypt";
+  import { encryptFile, encryptFilename, encryptString } from "$lib/crypto/encrypt";
   import { exportKey, generateKey, wrapKey } from "$lib/crypto/key";
   import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
@@ -75,6 +75,7 @@
 
   const MIN_PASSWORD_LENGTH = 8;
   const MAX_FILENAME_BYTES = 255;
+  const TITLE_MAX = 200;
 
   const EXPIRES_OPTIONS = [
     { value: 1, label: "1h" },
@@ -286,10 +287,24 @@
         uploadStore.password.length >= MIN_PASSWORD_LENGTH
           ? uploadStore.password
           : undefined;
+
+      // Encrypt the optional transfer title under K_transfer. Over-limit
+      // titles are dropped silently here — the form already surfaces a
+      // warning, and we'd rather ship a nameless transfer than block.
+      const trimmedTitle = uploadStore.title.trim();
+      let encryptedTitlePayload:
+        | { encryptedTitle: string; encryptedTitleIv: string }
+        | null = null;
+      if (trimmedTitle.length > 0 && trimmedTitle.length <= TITLE_MAX) {
+        const { ciphertext, iv } = await encryptString(trimmedTitle, key);
+        encryptedTitlePayload = { encryptedTitle: ciphertext, encryptedTitleIv: iv };
+      }
+
       const transfer = await api.createTransfer(
         uploadStore.expiresInHours,
         password,
         uploadStore.maxDownloads,
+        encryptedTitlePayload,
       );
 
       const keyString = password
@@ -586,6 +601,32 @@
               isProcessing && "opacity-60 pointer-events-none",
             ]}
           >
+            <div class="space-y-1">
+              <TextInput
+                id="transfer-title"
+                label="Transfer name (optional)"
+                placeholder="e.g. Q3 designs"
+                value={uploadStore.title}
+                oninput={(e) =>
+                  uploadStore.setTitle(
+                    (e.currentTarget as HTMLInputElement).value,
+                  )}
+                maxlength={TITLE_MAX + 32}
+                disabled={isProcessing}
+              />
+              <p class="text-xs text-muted-foreground">
+                Encrypted in your browser with the same key as the files. Anyone
+                with the share link sees the name; the server only stores
+                ciphertext.
+              </p>
+              {#if uploadStore.title.length > TITLE_MAX}
+                <p class="text-xs text-warning-foreground">
+                  {uploadStore.title.length} / {TITLE_MAX} — too long. We'll
+                  ship this transfer without a name unless you trim it.
+                </p>
+              {/if}
+            </div>
+
             <SegmentedControl
               label="Expires in"
               options={EXPIRES_OPTIONS}

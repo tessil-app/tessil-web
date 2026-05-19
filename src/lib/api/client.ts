@@ -42,6 +42,10 @@ export interface TransferMetadata {
   // Must be presented as `X-Transfer-Token` on subsequent /file/:id/url calls.
   accessToken?: string;
   accessTokenExpiresAt?: string;
+  // Optional title encrypted under the URL-fragment K_transfer (ADR-0005).
+  // Decrypted in the browser; the server only ever sees ciphertext.
+  encryptedTitle?: string | null;
+  encryptedTitleIv?: string | null;
 }
 
 export interface DownloadUrlResponse {
@@ -89,6 +93,11 @@ export interface OwnedTransferSummary {
   // wrapped under the owner's K_vault — unwrap requires the password
   // (or the recovery phrase) to derive K_vault first.
   wrappedKey: string | null;
+  // Optional title encrypted under K_transfer (ADR-0005). Both fields set
+  // together or both null. Decrypted client-side after the row's K_transfer
+  // is unwrapped.
+  encryptedTitle: string | null;
+  encryptedTitleIv: string | null;
 }
 
 export interface ListMyTransfersResponse {
@@ -225,9 +234,16 @@ class ApiClient {
   async createTransfer(
     expiresInHours: number,
     password?: string,
-    maxDownloads?: number | null
+    maxDownloads?: number | null,
+    encryptedTitle?: { encryptedTitle: string; encryptedTitleIv: string } | null,
   ): Promise<CreateTransferResponse> {
-    const body: { expiresInHours: number; password?: string; maxDownloads?: number } = {
+    const body: {
+      expiresInHours: number;
+      password?: string;
+      maxDownloads?: number;
+      encryptedTitle?: string;
+      encryptedTitleIv?: string;
+    } = {
       expiresInHours,
     };
     if (password) {
@@ -235,6 +251,10 @@ class ApiClient {
     }
     if (maxDownloads != null) {
       body.maxDownloads = maxDownloads;
+    }
+    if (encryptedTitle) {
+      body.encryptedTitle = encryptedTitle.encryptedTitle;
+      body.encryptedTitleIv = encryptedTitle.encryptedTitleIv;
     }
     return this.request("/api/upload/create-transfer", {
       method: "POST",
@@ -379,6 +399,27 @@ class ApiClient {
     id: string,
   ): Promise<{ files: OwnedTransferFileMetadata[] }> {
     return this.request(`/api/me/transfers/${encodeURIComponent(id)}/files`);
+  }
+
+  // Rewrite (or clear) the encrypted title on an owned transfer. Pass null
+  // for both fields to clear. Server treats not-found / not-owned / soft-
+  // deleted the same: 404.
+  async setMyTransferTitle(
+    id: string,
+    encryptedTitle: string | null,
+    encryptedTitleIv: string | null,
+  ): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/me/transfers/${encodeURIComponent(id)}/title`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ encryptedTitle, encryptedTitleIv }),
+    });
+    if (!response.ok) {
+      if (response.status === 404) throw new Error("Transfer not found.");
+      if (response.status === 429) throw new Error("Too many title changes. Try again in a minute.");
+      throw new Error(`Request failed: ${response.status}`);
+    }
   }
 
   async deleteMyTransfer(id: string): Promise<void> {

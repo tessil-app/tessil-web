@@ -1,12 +1,16 @@
 import { base64ToIv } from './key';
 
-export async function decryptFilename(
-  encryptedName: string,
+// Decrypts an AES-GCM ciphertext produced by `encryptString` back to a
+// UTF-8 string. Strips the right-padding zero bytes that hide length
+// metadata in the ciphertext. Used for filenames and the optional
+// per-transfer title (ADR-0005).
+export async function decryptString(
+  ciphertext: string,
   ivBase64: string,
   key: CryptoKey
 ): Promise<string> {
   const iv = base64ToIv(ivBase64);
-  const encrypted = Uint8Array.from(atob(encryptedName), c => c.charCodeAt(0));
+  const encrypted = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
 
   const decrypted = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
@@ -15,8 +19,15 @@ export async function decryptFilename(
   );
 
   const decoder = new TextDecoder();
-  // Strip null-byte padding added during encryption
   return decoder.decode(decrypted).replace(/\0+$/, '');
+}
+
+export async function decryptFilename(
+  encryptedName: string,
+  ivBase64: string,
+  key: CryptoKey
+): Promise<string> {
+  return decryptString(encryptedName, ivBase64, key);
 }
 
 export async function decryptFile(

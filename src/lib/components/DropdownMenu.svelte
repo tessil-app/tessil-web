@@ -134,7 +134,7 @@
       tabindex="-1"
       onkeydown={handleMenuKey}
       class={cn(
-        "absolute z-50 mt-2 min-w-[12rem] origin-top rounded-[calc(var(--radius-2xl)-1px)] border border-border bg-card shadow-lg p-1",
+        "absolute z-50 mt-2 min-w-[12rem] origin-top rounded-[calc(var(--radius-2xl)-1px)] border border-border bg-card shadow-lg p-1 space-y-0.5",
         align === "end" ? "right-0" : "left-0",
         menuClass,
       )}

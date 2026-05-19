@@ -68,7 +68,7 @@
   oncancel={handleCancel}
   onclick={handleBackdrop}
   class={cn(
-    "fixed inset-0 m-auto max-w-lg w-[calc(100vw-2rem)] p-0 bg-transparent backdrop:bg-foreground/40 backdrop:backdrop-blur-sm",
+    "fixed inset-0 m-auto max-w-lg w-[calc(100vw-2rem)] p-0 bg-transparent backdrop:bg-foreground/15",
     "open:animate-in open:fade-in",
   )}
 >

@@ -7,23 +7,31 @@ export interface EncryptResult {
   iv: string; // base64 encoded IV used for the file
 }
 
+export interface EncryptedString {
+  ciphertext: string; // base64 AES-GCM output (no url-safe; no padding stripped)
+  iv: string; // base64 12-byte IV (no padding)
+}
+
 export interface EncryptedFilename {
   encryptedName: string;
   iv: string;
 }
 
-const FILENAME_PAD_MULTIPLE = 32;
+const STRING_PAD_MULTIPLE = 32;
 
-export async function encryptFilename(
-  filename: string,
+// Encrypts a UTF-8 string under an AES-GCM key, padding the plaintext to
+// a 32-byte boundary so length metadata can't be inferred from the
+// ciphertext byte count. Used for filenames (every file) and the
+// optional per-transfer title (ADR-0005).
+export async function encryptString(
+  plaintext: string,
   key: CryptoKey
-): Promise<EncryptedFilename> {
+): Promise<EncryptedString> {
   const iv = generateIv();
   const encoder = new TextEncoder();
-  const raw = encoder.encode(filename);
+  const raw = encoder.encode(plaintext);
 
-  // Pad filename to next multiple of FILENAME_PAD_MULTIPLE to hide length metadata
-  const paddedLength = Math.ceil(Math.max(raw.length, 1) / FILENAME_PAD_MULTIPLE) * FILENAME_PAD_MULTIPLE;
+  const paddedLength = Math.ceil(Math.max(raw.length, 1) / STRING_PAD_MULTIPLE) * STRING_PAD_MULTIPLE;
   const data = new Uint8Array(paddedLength);
   data.set(raw);
 
@@ -34,9 +42,17 @@ export async function encryptFilename(
   );
 
   return {
-    encryptedName: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+    ciphertext: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
     iv: ivToBase64(iv)
   };
+}
+
+export async function encryptFilename(
+  filename: string,
+  key: CryptoKey
+): Promise<EncryptedFilename> {
+  const { ciphertext, iv } = await encryptString(filename, key);
+  return { encryptedName: ciphertext, iv };
 }
 
 export async function encryptFile(

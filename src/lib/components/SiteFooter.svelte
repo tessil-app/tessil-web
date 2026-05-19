@@ -55,12 +55,19 @@
       {:else}
         <a href={link.href} class={linkClass}>{link.label}</a>
       {/if}
-      {#if i < links.length - 1 || github}
-        <span aria-hidden="true">·</span>
-      {/if}
+      <span aria-hidden="true">·</span>
     {/each}
     {#if github}
       <a href="https://github.com/VerburgtJimmy" class={linkClass}>GitHub</a>
+      <span aria-hidden="true">·</span>
     {/if}
+    <a
+      href="https://ko-fi.com/jimmyjtransfer"
+      target="_blank"
+      rel="noopener noreferrer"
+      class={linkClass}
+    >
+      Support
+    </a>
   </div>
 </footer>

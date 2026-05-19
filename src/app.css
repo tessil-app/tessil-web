@@ -43,25 +43,27 @@
 }
 
 :root {
+  /* Light palette tuned to a flat Unifi-style surface stack:
+     - background is a near-white page plane so raised cards register
+     - card is pure white, one step above background
+     - accent matches the page tint so hovering on white cards reveals
+       a subtle wash without competing with the foreground
+     Text contrast: headers dark slate, body text mid-slate. */
   --radius: 0.625rem;
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-800);
-  --card: var(--color-white);
-  --card-foreground: var(--color-neutral-800);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
+  --background: #f9fafa;
+  --foreground: #212327;
+  --card: #ffffff;
+  --card-foreground: #212327;
+  --popover: #ffffff;
+  --popover-foreground: #212327;
   --primary: var(--color-red-600);
   --primary-foreground: var(--color-white);
   --secondary: --alpha(var(--color-black) / 4%);
-  --secondary-foreground: var(--color-neutral-800);
+  --secondary-foreground: #212327;
   --muted: --alpha(var(--color-black) / 4%);
-  --muted-foreground: color-mix(
-    in srgb,
-    var(--color-neutral-500) 90%,
-    var(--color-black)
-  );
-  --accent: --alpha(var(--color-black) / 4%);
-  --accent-foreground: var(--color-neutral-800);
+  --muted-foreground: #50565e;
+  --accent: #f9fafa;
+  --accent-foreground: #212327;
   --destructive: var(--color-red-500);
   --destructive-foreground: var(--color-red-700);
   --info: var(--color-blue-500);
@@ -88,28 +90,25 @@
 }
 
 .dark {
-  --background: color-mix(
-    in srgb,
-    var(--color-neutral-950) 95%,
-    var(--color-white)
-  );
-  --foreground: var(--color-neutral-100);
-  --card: color-mix(in srgb, var(--background) 98%, var(--color-white));
-  --card-foreground: var(--color-neutral-100);
-  --popover: color-mix(in srgb, var(--background) 98%, var(--color-white));
-  --popover-foreground: var(--color-neutral-100);
+  /* Dark palette tuned to a flat Unifi-style surface stack:
+     - background is the darkest plane (page, drawer body)
+     - card sits one step up so framed surfaces feel raised
+     - accent is a third step for hover/highlight tints
+     Text contrast: headers full white, body text near-white. */
+  --background: #131416;
+  --foreground: #f9fafa;
+  --card: #1c1e21;
+  --card-foreground: #f9fafa;
+  --popover: #1c1e21;
+  --popover-foreground: #f9fafa;
   --primary: var(--color-red-600);
   --primary-foreground: var(--color-white);
   --secondary: --alpha(var(--color-white) / 4%);
-  --secondary-foreground: var(--color-neutral-100);
+  --secondary-foreground: #f9fafa;
   --muted: --alpha(var(--color-white) / 4%);
-  --muted-foreground: color-mix(
-    in srgb,
-    var(--color-neutral-500) 90%,
-    var(--color-white)
-  );
-  --accent: --alpha(var(--color-white) / 4%);
-  --accent-foreground: var(--color-neutral-100);
+  --muted-foreground: #dee0e3;
+  --accent: #282b2f;
+  --accent-foreground: #f9fafa;
   --destructive: color-mix(
     in srgb,
     var(--color-red-500) 90%,
@@ -153,32 +152,4 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-/* Ko-fi widget dark mode overrides */
-.dark .floating-chat-kofi-popup-iframe,
-.dark .floating-chat-kofi-popup-iframe-mobi {
-  background-color: #1a1a2e !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 12px !important;
-}
-
-.dark .floating-chat-kofi-popup-iframe-closer,
-.dark .floating-chat-kofi-popup-iframe-closer-mobi {
-  background-color: #1a1a2e !important;
-}
-
-.dark .floating-chat-kofi-popup-iframe-closer span svg line,
-.dark .floating-chat-kofi-popup-iframe-closer-mobi span svg line {
-  stroke: #fff !important;
-}
-
-.dark .floating-chat-kofi-popup-iframe-notice,
-.dark .floating-chat-kofi-popup-iframe-notice-mobi {
-  background-color: #1a1a2e !important;
-}
-
-.dark .floating-chat-kofi-popup-iframe-notice a,
-.dark .floating-chat-kofi-popup-iframe-notice-mobi a {
-  color: #a0a0b8 !important;
 }

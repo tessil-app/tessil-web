@@ -42,7 +42,7 @@
           <section class="space-y-3">
             <h2 class="text-lg font-semibold text-foreground">Encryption Model</h2>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Files and filenames are encrypted in your browser with AES-256-GCM before upload</li>
+              <li>Files, filenames, and the optional transfer name are encrypted in your browser with AES-256-GCM before upload</li>
               <li>The encryption key is generated client-side and lives in the URL fragment (after <code>#</code>)</li>
               <li>The fragment is not transmitted to our servers; it stays in your browser</li>
               <li>An optional transfer password adds server-side access control independent of the encryption key</li>
@@ -73,7 +73,7 @@
           <section class="space-y-3">
             <h2 class="text-lg font-semibold text-foreground">What We Can Access</h2>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Encrypted file blobs and encrypted filenames</li>
+              <li>Encrypted file blobs, encrypted filenames, and the encrypted transfer name (when set)</li>
               <li>Transfer metadata (size, expiration, timestamps)</li>
               <li>Operational metadata needed for abuse handling and rate limiting</li>
             </ul>
@@ -84,6 +84,7 @@
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>Unencrypted file contents</li>
               <li>Original filenames</li>
+              <li>The plaintext transfer name</li>
               <li>Your decryption key</li>
             </ul>
           </section>
