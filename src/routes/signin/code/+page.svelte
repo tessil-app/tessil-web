@@ -1,8 +1,8 @@
 <script lang="ts">
   // Cross-device sign-in code display. Reached by redirect from
-  // /api/auth/verify when the magic-link click happens on a device that does
-  // NOT carry the pending-login cookie (audit doc 21, smart-detection variant).
-  // The code arrives in the URL fragment and is never sent to the server.
+  // /api/auth/verify when the magic-link click happens on a device
+  // that does NOT carry the pending-login cookie. The code arrives
+  // in the URL fragment and is never sent to the server.
 
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";

@@ -1,14 +1,10 @@
-// Multipart upload orchestrator per ADR-0009.
+// Multipart upload orchestrator.
 //
-// Slices the encrypted Blob into 8 MB Parts, uploads 4 Parts in
-// parallel directly to R2 via the presigned URLs returned by
-// `/api/upload/init-multipart`, retries each Part up to 3 times with
-// exponential-jittered backoff on transient failures, and fires
-// `/api/upload/abort-multipart` if any Part exhausts retries.
-//
-// The orchestrator is stateless across uploads — each call to
-// `uploadEncryptedBlobMultipart` runs one File's upload to completion
-// or terminal failure. Callers (`+page.svelte`) own the per-File loop.
+// Slices the encrypted Blob into Parts (size dictated by the server),
+// uploads them in parallel directly to R2 via the presigned URLs
+// returned by `/api/upload/init-multipart`, retries each Part on
+// transient failure, and fires `/api/upload/abort-multipart` if any
+// Part exhausts retries.
 
 import {
   api,
@@ -17,11 +13,8 @@ import {
 } from "$lib/api/client";
 
 const MAX_PART_RETRIES = 3;
-// Parallelism: 6 concurrent Parts. Bumped from V1's 4 after the speed
-// audit — saturates fast connections that 4 didn't max out (~10-25%
-// throughput win above 20 MB/s) and sits at the browser's per-origin
-// connection cap so any retries-during-failure queue briefly rather
-// than fail outright. See ADR-0009.
+// 6 sits at the browser's per-origin connection cap; any retries
+// during failure queue briefly behind in-flight Parts.
 const PARALLELISM = 6;
 
 interface PartTask {
@@ -68,9 +61,8 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-// Retryable transport conditions per ADR-0009: any network error
-// (no HTTP response — represented here as `status: 0` when fetch
-// rejects with a TypeError) and 408 / 425 / 429 / 5xx.
+// Retryable: any network error (no HTTP response — represented as
+// status 0 when fetch rejects) and 408 / 425 / 429 / 5xx.
 function isRetryableStatus(status: number): boolean {
   if (status === 0) return true; // network error
   if (status === 408 || status === 425 || status === 429) return true;

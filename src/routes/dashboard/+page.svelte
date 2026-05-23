@@ -1,14 +1,14 @@
 <script lang="ts">
-  // Dashboard list. Post-ADR-0004 every owned transfer is wrapped under a
-  // single per-user K_vault, so unlocking is one password prompt — no more
-  // per-credential branching. Eager prompt on mount; "Skip" collapses to a
-  // banner the user can re-tap.
+  // Dashboard list. Every owned transfer is wrapped under a single
+  // per-user vault key — unlocking is one password prompt and then
+  // every per-transfer key can be unwrapped client-side. Eager
+  // prompt on mount; "Skip" collapses to a banner the user can
+  // re-tap.
   //
-  // Layout is a 5-column table on ≥sm screens (name / size / created /
-  // expires / status) with a hover overlay on the desktop revealing
-  // "Copy link" and "Delete" inline. Tapping a row opens the
-  // TransferDetailDrawer, which handles per-transfer renaming, file
-  // metadata, share-link rebuild, and inline delete.
+  // Layout is a 5-column table on ≥sm screens (name / size /
+  // created / expires / status) with a desktop hover overlay
+  // revealing "Copy link" and "Delete" inline. Tapping a row opens
+  // the detail drawer.
 
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";

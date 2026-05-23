@@ -67,7 +67,7 @@ export interface TransferMetadata {
   // Must be presented as `X-Transfer-Token` on subsequent /file/:id/url calls.
   accessToken?: string;
   accessTokenExpiresAt?: string;
-  // Optional title encrypted under the URL-fragment K_transfer (ADR-0005).
+  // Optional title encrypted under the URL-fragment transfer key.
   // Decrypted in the browser; the server only ever sees ciphertext.
   encryptedTitle?: string | null;
   encryptedTitleIv?: string | null;
@@ -97,9 +97,9 @@ export interface MeResponse {
      */
     currentAuthenticatorId: string | null;
     /**
-     * ISO timestamp when the user completed vault setup (ADR-0004), or null
-     * if they haven't yet. The route guard on /dashboard/** bounces users
-     * with null here to /setup/vault.
+     * ISO timestamp when the user completed vault setup, or null if
+     * they haven't yet. The dashboard route guard bounces users with
+     * null here to /setup/vault.
      */
     vaultSetupCompletedAt: string | null;
   } | null;
@@ -114,13 +114,13 @@ export interface OwnedTransferSummary {
   downloadCount: number;
   isCompleted: boolean;
   hasPassword: boolean;
-  // Vault wrap (ADR-0004). NULL on anonymous-at-creation rows. K_transfer
-  // wrapped under the owner's K_vault — unwrap requires the password
-  // (or the recovery phrase) to derive K_vault first.
+  // K_transfer wrapped under the owner's vault key. NULL on
+  // anonymous-at-creation rows. Unwrap requires the vault to be
+  // unlocked first.
   wrappedKey: string | null;
-  // Optional title encrypted under K_transfer (ADR-0005). Both fields set
-  // together or both null. Decrypted client-side after the row's K_transfer
-  // is unwrapped.
+  // Optional title encrypted under K_transfer. Both fields set
+  // together or both null. Decrypted client-side once the row's
+  // K_transfer is unwrapped.
   encryptedTitle: string | null;
   encryptedTitleIv: string | null;
 }
@@ -130,9 +130,10 @@ export interface ListMyTransfersResponse {
   nextCursor: string | null;
 }
 
-// Returned by GET /api/me/transfers/:id/files for a transfer the caller
-// owns. encryptedName + encryptedNameIv are decrypted client-side under
-// K_transfer (unwrapped from the row's wrappedKey blob, per doc 28 §3).
+// Returned by GET /api/me/transfers/:id/files for a transfer the
+// caller owns. encryptedName + encryptedNameIv are decrypted
+// client-side under K_transfer (unwrapped from the row's
+// wrappedKey blob).
 export interface OwnedTransferFileMetadata {
   id: string;
   encryptedName: string;
@@ -160,8 +161,8 @@ export interface PasskeySummary {
   lastUsedAt: string | null;
 }
 
-// Vault wire-format payloads (ADR-0004). Salts/wraps are base64url-encoded
-// raw bytes — the server cannot read any of them. Layout:
+// Vault wire-format payloads. Salts/wraps are base64url-encoded raw
+// bytes — the server cannot read any of them. Layout:
 //   salt*  : 16 random bytes (Argon2id salt)
 //   wrap*  : 60 bytes = iv(12) || ciphertext(32) || tag(16)
 export type VaultStatus =
@@ -226,10 +227,9 @@ export interface VaultPhraseRegenerateRequest {
   wrapPhrase: string;
 }
 
-// Thrown by `ApiClient.request` for any non-2xx response. Carries the
-// optional upgrade hints (`code`, `upgradeUrl`) the API attaches to
-// limit-hit errors so UI can render an upgrade-aware message — see
-// ADR-0006 for the contract.
+// Thrown by `ApiClient.request` for any non-2xx response. Carries
+// the optional upgrade hints (`code`, `upgradeUrl`) the API attaches
+// to limit-hit errors so UI can render an upgrade-aware message.
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -345,11 +345,11 @@ class ApiClient {
     });
   }
 
-  // ─── Multipart upload (ADR-0009) ──────────────────────────────────
-  // Three round-trips per File: init (returns all Part URLs) → upload
-  // each Part directly to R2 → complete (or abort on failure). The
-  // orchestration lives in `$lib/upload/multipart.ts` — these
-  // methods are thin wrappers around the API.
+  // ─── Multipart upload ─────────────────────────────────────────────
+  // Three round-trips per File: init (returns all Part URLs) →
+  // upload each Part directly to R2 → complete (or abort on
+  // failure). Orchestration lives in `$lib/upload/multipart.ts` —
+  // these methods are thin wrappers around the API.
 
   async initMultipartUpload(
     data: InitMultipartUploadRequest,
@@ -501,7 +501,7 @@ class ApiClient {
       credentials: "include",
     });
     if (!response.ok) {
-      // 404 covers both "not found" and "not yours" by design (audit doc 20 §4).
+      // 404 covers both "not found" and "not yours" by design.
       if (response.status === 404) {
         throw new Error("Transfer not found.");
       }
@@ -592,7 +592,7 @@ class ApiClient {
     });
   }
 
-  // ── Vault (ADR-0004) ────────────────────────────────────────────────────
+  // ── Vault ───────────────────────────────────────────────────────────────
 
   async getVault(): Promise<VaultStatus> {
     return this.request("/api/me/vault");
@@ -619,8 +619,8 @@ class ApiClient {
     });
   }
 
-  // ─── Billing (Polar — ADR-0007) ───────────────────────────────────
-  // Drives the Subscription card on /dashboard/settings/account and
+  // ─── Billing (Polar) ──────────────────────────────────────────────
+  // Drives the subscription panel on /dashboard/settings/account and
   // the Pro upgrade flow. Checkout + portal redirect the user to
   // Polar-hosted pages — we don't render any billing UI ourselves.
 

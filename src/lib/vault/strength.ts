@@ -1,6 +1,7 @@
-// zxcvbn-ts wrapper. The wordlists are ~600 KB unminified, so we lazy-load
-// them the first time the user types a password. ADR-0004: minimum length
-// 14 chars AND zxcvbn score >= 3. No composition rules, no HIBP.
+// zxcvbn-ts wrapper. The wordlists are ~600 KB unminified, so they
+// lazy-load the first time the user types a password. Acceptance
+// gate: length >= 14 AND zxcvbn score >= 3. No composition rules,
+// no HIBP.
 
 import type { ZxcvbnResult } from "@zxcvbn-ts/core";
 
@@ -30,7 +31,7 @@ export function getZxcvbn(): Promise<(input: string) => ZxcvbnResult> {
 
 export interface PasswordStrength {
   score: 0 | 1 | 2 | 3 | 4;
-  /** Combined gate from ADR-0004 — both length and score must pass. */
+  /** Combined gate: both length and score must pass. */
   acceptable: boolean;
   /** Localised feedback from zxcvbn — surfaced inline under the input. */
   warning: string;

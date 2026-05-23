@@ -1,9 +1,8 @@
 <script lang="ts">
-  // /pricing — public, robots-indexable. The pitch is "support the
-  // platform"; the limit table is the tangible kicker (ADR-0006).
-  // Authenticated users get a checkout CTA that round-trips through
-  // Polar; anonymous visitors get nudged to sign in first so we can
-  // bind the resulting Polar Customer to a JTransfer User row.
+  // Public pricing page. Authenticated users get a checkout CTA that
+  // round-trips through Polar; anonymous visitors are nudged to sign
+  // in first so we can bind the resulting Polar customer to a user
+  // row.
 
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
@@ -55,17 +54,17 @@
     "1 GiB per file",
     "1 GiB per transfer",
     "2 GB monthly upload volume",
-    "Up to 72-hour expiry",
+    "Expiry up to 72 hours",
     "End-to-end encryption",
-    "Optional account + dashboard",
+    "Dashboard for the transfers you've sent",
   ];
 
   const proBullets = [
-    "10 GiB per file",
-    "10 GiB per transfer",
-    "100 GB monthly upload volume",
-    "Up to 30-day expiry",
-    "Same end-to-end encryption",
+    "2 GiB per file",
+    "2 GiB per transfer",
+    "50× the monthly upload volume (100 GB)",
+    "Expiry up to 30 days",
+    "Per-account caps — fair on shared networks",
     "Supports the project directly",
   ];
 </script>
@@ -74,7 +73,7 @@
   <title>Pricing — JTransfer</title>
   <meta
     name="description"
-    content="JTransfer is built and run by one person. Pro keeps the project alive — and gives you more headroom on every limit."
+    content="JTransfer is built and run by one person. Pro keeps the project alive — and removes the limits routine users hit."
   />
   <meta name="robots" content="index, follow" />
   <meta property="og:title" content="Pricing — JTransfer" />
@@ -87,7 +86,7 @@
 <PageLayout width="3xl">
   <PageHeader
     title="Support the project"
-    tagline="JTransfer is built and run by one person. Pro keeps the lights on — and gives you more headroom."
+    tagline="JTransfer is built and run by one person. Pro keeps the lights on — and removes the limits routine users hit."
   />
 
   <div class="space-y-6">
@@ -116,7 +115,8 @@
               {/if}
             </div>
             <p class="text-sm text-muted-foreground">
-              For everyone. Anonymous use is welcome and always will be.
+              For routine use. Sign in to get the full Free tier — anonymous
+              use is welcome too, with a smaller bucket.
             </p>
             <div class="flex items-baseline gap-2">
               <span class="text-3xl font-semibold text-foreground">€0</span>

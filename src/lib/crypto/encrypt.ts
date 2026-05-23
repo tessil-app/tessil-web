@@ -19,10 +19,10 @@ export interface EncryptedFilename {
 
 const STRING_PAD_MULTIPLE = 32;
 
-// Encrypts a UTF-8 string under an AES-GCM key, padding the plaintext to
-// a 32-byte boundary so length metadata can't be inferred from the
-// ciphertext byte count. Used for filenames (every file) and the
-// optional per-transfer title (ADR-0005).
+// Encrypts a UTF-8 string under an AES-GCM key, padding the
+// plaintext to a 32-byte boundary so length metadata can't be
+// inferred from the ciphertext byte count. Used for filenames
+// (every file) and the optional per-transfer title.
 export async function encryptString(
   plaintext: string,
   key: CryptoKey

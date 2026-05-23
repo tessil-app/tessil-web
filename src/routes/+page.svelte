@@ -78,13 +78,37 @@
   const MAX_FILENAME_BYTES = 255;
   const TITLE_MAX = 200;
 
-  const EXPIRES_OPTIONS = [
-    { value: 1, label: "1h" },
-    { value: 6, label: "6h" },
-    { value: 12, label: "12h" },
-    { value: 24, label: "1d" },
-    { value: 72, label: "3d" },
-  ];
+  // Tier-aware expiry options. Anonymous tops out at 1d (24h);
+  // authenticated Free gets +72h; Pro adds 7d/14d/30d. Server-side
+  // enforcement is in `src/config/tiers.ts` — this list just gates
+  // what the UI offers.
+  const EXPIRES_OPTIONS = $derived.by(() => {
+    const base = [
+      { value: 1, label: "1h" },
+      { value: 6, label: "6h" },
+      { value: 12, label: "12h" },
+      { value: 24, label: "1d" },
+    ];
+    if (!auth.user) return base;
+    const free = [...base, { value: 72, label: "3d" }];
+    if (auth.user.tier !== "pro") return free;
+    return [
+      ...free,
+      { value: 168, label: "7d" },
+      { value: 336, label: "14d" },
+      { value: 720, label: "30d" },
+    ];
+  });
+
+  // Keep `expiresInHours` valid as auth state changes — if a user
+  // signs out mid-upload and the selected value isn't in the new
+  // (smaller) option set, snap to the closest legal value.
+  $effect(() => {
+    if (!EXPIRES_OPTIONS.some((o) => o.value === uploadStore.expiresInHours)) {
+      const legal = EXPIRES_OPTIONS[EXPIRES_OPTIONS.length - 1]!.value;
+      uploadStore.setExpiresInHours(legal);
+    }
+  });
 
   const DOWNLOADS_OPTIONS: { value: number | null; label: string }[] = [
     { value: null, label: "Unlimited" },
@@ -338,10 +362,10 @@
           uploadStore.setFileStatus(i, "encrypting", 50);
           uploadStore.setFileStatus(i, "uploading", 50);
 
-          // Init the multipart upload — returns all 8 MB Part URLs in
-          // one batch (ADR-0009). The orchestrator handles slicing,
-          // 4-parallel Part uploads, per-Part retry with backoff, and
-          // calls /abort-multipart on terminal failure.
+          // Init the multipart upload — returns all Part URLs in one
+          // batch. The orchestrator handles slicing, parallel
+          // uploads, per-Part retry with backoff, and abort on
+          // terminal failure.
           const initResponse = await api.initMultipartUpload({
             transferId: transfer.transferId,
             contentType: file.type || "application/octet-stream",
@@ -429,6 +453,32 @@
   );
 
   const hasFiles = $derived(uploadStore.files.length > 0);
+
+  // Per-browser memory advisory. The current non-chunked encryption
+  // holds plaintext + ciphertext in JS heap simultaneously (~2× file
+  // size at peak). Safari and mobile browsers cap their JS heap lower
+  // than desktop Chrome — surface a warning so users know up-front
+  // rather than discovering it via OOM mid-upload.
+  const browserMemoryWarning = $derived.by((): string | null => {
+    if (totalSize <= 0) return null;
+    if (typeof navigator === "undefined") return null;
+    const ua = navigator.userAgent;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+    // Practical JS-heap ceilings by browser family.
+    const ceilingBytes = isMobile
+      ? 400 * 1024 * 1024
+      : isSafari
+        ? 750 * 1024 * 1024
+        : 1.5 * 1024 * 1024 * 1024;
+    if (totalSize < ceilingBytes * 0.66) return null;
+    const human = isMobile
+      ? "mobile browsers (~400 MB)"
+      : isSafari
+        ? "Safari (~750 MB)"
+        : "your browser (~1.5 GiB)";
+    return `Files this size can OOM on ${human}. If the upload fails partway, try a smaller file or use Chrome / Firefox on desktop.`;
+  });
 
   const headerCount = $derived(
     `${uploadStore.files.length} file${uploadStore.files.length !== 1 ? "s" : ""} · ${formatSize(totalSize)}`,
@@ -555,6 +605,12 @@
             maxTotalSize={MAX_TOTAL_UPLOAD_SIZE}
             compact
           />
+
+          {#if browserMemoryWarning}
+            <Alert tone="warning">
+              {browserMemoryWarning}
+            </Alert>
+          {/if}
 
           {#if uploadStore.status === "error" && uploadStore.error}
             <Alert tone="destructive" title="Upload failed">

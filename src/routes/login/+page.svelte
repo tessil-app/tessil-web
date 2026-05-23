@@ -23,16 +23,16 @@
   let submitted = $state(false);
   let errorMessage = $state<string | null>(null);
 
-  // Cross-device code entry — visible after the magic link has been sent. The
-  // user only fills this in when they opened the link on a different device
-  // and got back here with the 6-digit code. See audit doc 21.
+  // Cross-device code entry — visible after the magic link has been
+  // sent. The user only fills this in when they opened the link on
+  // a different device and got back here with the 6-digit code.
   let code = $state("");
   let isVerifyingCode = $state(false);
   let codeError = $state<string | null>(null);
 
-  // Passkey path (audit doc 27). Visible on browsers that support
-  // WebAuthn; conditional UI fires silently in parallel with the email
-  // input when the platform supports it.
+  // Passkey path — visible on browsers that support WebAuthn.
+  // Conditional UI fires silently in parallel with the email input
+  // when the platform supports it.
   let passkeySupported = $state(false);
   let isPasskeySigningIn = $state(false);
   let passkeyError = $state<string | null>(null);

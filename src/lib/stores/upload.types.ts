@@ -28,7 +28,7 @@ export interface UploadState {
   password: string;
   passwordEnabled: boolean;
   maxDownloads: number | null;
-  /** Optional human-readable name for the transfer; encrypted under K_transfer
-   *  before reaching the server (ADR-0005). 200 chars soft cap. */
+  /** Optional human-readable name for the transfer; encrypted under
+   *  K_transfer before reaching the server. 200 chars soft cap. */
   title: string;
 }

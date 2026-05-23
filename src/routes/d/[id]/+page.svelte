@@ -40,8 +40,9 @@
   let key = $state<CryptoKey | null>(null);
   let accessToken = $state<string | null>(null);
   let downloadAllInProgress = $state(false);
-  // Decrypted transfer title (ADR-0005). Surfaced as the page H1 once the
-  // fragment key has decrypted it; never sent to or seen by the server.
+  // Decrypted transfer title. Surfaced as the page H1 once the
+  // fragment key has decrypted it; never sent to or seen by the
+  // server.
   let decryptedTitle = $state<string | null>(null);
 
   let password = $state("");

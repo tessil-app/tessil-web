@@ -11,9 +11,9 @@ class AuthState {
   loaded = $state(false);
 
   isAuthenticated = $derived(this.user !== null);
-  // Per ADR-0004: a signed-in user without a vault must complete /setup/vault
-  // before reaching the dashboard. Reading this $derived from the layout
-  // guard keeps the redirect logic in one place.
+  // A signed-in user without a vault must complete /setup/vault
+  // before reaching the dashboard. The layout guard reads this to
+  // keep the redirect logic in one place.
   needsVaultSetup = $derived(
     this.user !== null && this.user.vaultSetupCompletedAt === null,
   );
@@ -45,8 +45,9 @@ class AuthState {
     try {
       await api.logout();
     } finally {
-      // Sign-out must drop the vault key from memory (D-116) — otherwise
-      // the next signed-in user on the same tab inherits the prior K_vault.
+      // Sign-out must drop the vault key from memory — otherwise
+      // the next signed-in user on the same tab inherits the prior
+      // K_vault.
       clearVaultCache();
       this.user = null;
     }

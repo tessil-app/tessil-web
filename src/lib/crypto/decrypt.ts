@@ -1,9 +1,9 @@
 import { base64ToIv } from './key';
 
-// Decrypts an AES-GCM ciphertext produced by `encryptString` back to a
-// UTF-8 string. Strips the right-padding zero bytes that hide length
-// metadata in the ciphertext. Used for filenames and the optional
-// per-transfer title (ADR-0005).
+// Decrypts an AES-GCM ciphertext produced by `encryptString` back to
+// a UTF-8 string. Strips the right-padding zero bytes that hide
+// length metadata in the ciphertext. Used for filenames and the
+// optional per-transfer title.
 export async function decryptString(
   ciphertext: string,
   ivBase64: string,

@@ -1,8 +1,7 @@
 <script lang="ts">
-  // /dashboard/settings/usage — read-only view of the user's current
-  // consumption against their tier caps (ADR-0006). Data comes from
-  // `GET /api/me/usage`, which reads the rate-limit counters without
-  // incrementing (`peekRateLimit` / `peekVolumeLimit`).
+  // Read-only view of the user's current consumption against their
+  // tier caps. Data comes from /api/me/usage, which reads the
+  // rate-limit counters without consuming a slot.
 
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";

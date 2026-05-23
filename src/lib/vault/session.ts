@@ -1,18 +1,19 @@
 // IndexedDB-backed K_vault session cache.
 //
-// ADR-0004 calls for a non-extractable CryptoKey cached across page loads
-// with a 24h TTL and a manual lock action. We store the CryptoKey directly
-// in IDB (browsers persist non-extractable AES-GCM keys losslessly) so the
-// dashboard can decrypt filenames on reload without prompting for the
-// password again. The auth session lifetime is independent and longer —
-// when the K_vault entry expires, the user is prompted to unlock.
+// A non-extractable CryptoKey is cached across page loads with a
+// 24h TTL and a manual lock action. We store the CryptoKey directly
+// in IDB (browsers persist non-extractable AES-GCM keys losslessly)
+// so the dashboard can decrypt filenames on reload without
+// prompting for the password again. The auth session lifetime is
+// independent and longer — when the K_vault entry expires, the
+// user is prompted to unlock.
 
 const DB_NAME = "jtransfer-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "keys";
 const KEY_ID = "kvault";
 
-const TTL_MS = 24 * 60 * 60 * 1000; // 24h per ADR-0004
+const TTL_MS = 24 * 60 * 60 * 1000;
 
 interface StoredVaultKey {
   key: CryptoKey;
@@ -75,9 +76,9 @@ export function subscribeToVaultState(listener: Listener): () => void {
 }
 
 /**
- * Persist a freshly-unwrapped K_vault for `userId`. The CryptoKey must be
- * non-extractable so the browser cannot serialise raw bytes out of IDB.
- * TTL is 24h from now per ADR-0004.
+ * Persist a freshly-unwrapped K_vault for `userId`. The CryptoKey
+ * must be non-extractable so the browser cannot serialise raw bytes
+ * out of IDB. TTL is 24h from now.
  */
 export async function storeVaultKey(userId: string, key: CryptoKey): Promise<void> {
   const entry: StoredVaultKey = {

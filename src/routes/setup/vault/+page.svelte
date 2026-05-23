@@ -1,11 +1,13 @@
 <script lang="ts">
-  // First-time vault setup wizard (ADR-0004). Two steps:
-  //   1. Pick password (length >= 14 AND zxcvbn score >= 3).
-  //   2. Show 12-word recovery phrase + Copy / Download .txt, then a
-  //      blocking confirmation modal before we let the user leave.
+  // First-time vault setup wizard. Two steps:
+  //   1. Pick a password (length >= 14 AND zxcvbn score >= 3).
+  //   2. Show the 12-word recovery phrase with Copy / Download .txt,
+  //      then a blocking confirmation modal before we let the user
+  //      leave.
   //
-  // Setup is one-shot — once the API records `vault_setup_completed_at` the
-  // user has to use change-password / regenerate-phrase from settings instead.
+  // Setup is one-shot — once the API records
+  // `vault_setup_completed_at` the user has to use change-password
+  // / regenerate-phrase from settings instead.
 
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
