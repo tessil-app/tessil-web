@@ -17,7 +17,12 @@ import {
 } from "$lib/api/client";
 
 const MAX_PART_RETRIES = 3;
-const PARALLELISM = 4;
+// Parallelism: 6 concurrent Parts. Bumped from V1's 4 after the speed
+// audit — saturates fast connections that 4 didn't max out (~10-25%
+// throughput win above 20 MB/s) and sits at the browser's per-origin
+// connection cap so any retries-during-failure queue briefly rather
+// than fail outright. See ADR-0009.
+const PARALLELISM = 6;
 
 interface PartTask {
   partNumber: number;
