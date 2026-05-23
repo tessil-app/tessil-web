@@ -18,6 +18,10 @@ export interface UploadState {
   status: UploadStatus;
   overallProgress: number;
   error: string | null;
+  /** When the error response carries an `upgradeUrl` (limit-hit on a
+   *  Free tier cap), surface an "Upgrade to Pro" CTA alongside the
+   *  generic Try Again button. Set together with `error`. */
+  errorUpgradeUrl: string | null;
   shareUrl: string | null;
   expiresInHours: number;
   currentFileIndex: number;

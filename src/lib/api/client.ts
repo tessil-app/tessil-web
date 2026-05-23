@@ -166,10 +166,61 @@ export interface VaultPasswordChangeRequest {
   wrapPassword: string;
 }
 
+export interface BillingStatusResponse {
+  tier: string;
+  subscription: {
+    status: string; // 'active' | 'past_due' | 'canceled' | 'trialing' | 'incomplete'
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    canceledAt: string | null;
+  } | null;
+}
+
+export interface UsageResponse {
+  tier: string;
+  monthlyVolume: {
+    usedBytes: number;
+    capBytes: number;
+    resetAt: string;
+  };
+  dailyTransfers: {
+    used: number;
+    cap: number;
+    resetAt: string;
+  };
+  caps: {
+    maxFileSize: number;
+    maxTransferSize: number;
+    allowedExpiryHours: number[];
+  };
+}
+
 export interface VaultPhraseRegenerateRequest {
   kdfVersion: number;
   saltPhrase: string;
   wrapPhrase: string;
+}
+
+// Thrown by `ApiClient.request` for any non-2xx response. Carries the
+// optional upgrade hints (`code`, `upgradeUrl`) the API attaches to
+// limit-hit errors so UI can render an upgrade-aware message — see
+// ADR-0006 for the contract.
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  upgradeUrl?: string;
+
+  constructor(
+    message: string,
+    status: number,
+    extras: { code?: string; upgradeUrl?: string } = {},
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = extras.code;
+    this.upgradeUrl = extras.upgradeUrl;
+  }
 }
 
 class ApiClient {
@@ -214,11 +265,18 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      const errorMessage =
-        typeof data === "object" && data !== null && "error" in data
-          ? String((data as { error: unknown }).error)
-          : `Request failed: ${response.status}`;
-      throw new Error(errorMessage);
+      const body =
+        typeof data === "object" && data !== null
+          ? (data as { error?: unknown; code?: unknown; upgradeUrl?: unknown })
+          : {};
+      const errorMessage = body.error
+        ? String(body.error)
+        : `Request failed: ${response.status}`;
+      throw new ApiError(errorMessage, response.status, {
+        code: typeof body.code === "string" ? body.code : undefined,
+        upgradeUrl:
+          typeof body.upgradeUrl === "string" ? body.upgradeUrl : undefined,
+      });
     }
 
     return data as T;
@@ -544,6 +602,30 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(body),
     });
+  }
+
+  // ─── Billing (Polar — ADR-0007) ───────────────────────────────────
+  // Drives the Subscription card on /dashboard/settings/account and
+  // the Pro upgrade flow. Checkout + portal redirect the user to
+  // Polar-hosted pages — we don't render any billing UI ourselves.
+
+  async getBillingStatus(): Promise<BillingStatusResponse> {
+    return this.request("/api/billing/status");
+  }
+
+  async createBillingCheckout(cycle: "monthly" | "annual"): Promise<{ url: string }> {
+    return this.request("/api/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify({ cycle }),
+    });
+  }
+
+  async openBillingPortal(): Promise<{ url: string }> {
+    return this.request("/api/billing/portal", { method: "POST" });
+  }
+
+  async getMyUsage(): Promise<UsageResponse> {
+    return this.request("/api/me/usage");
   }
 
   async deleteMyAccount(confirmEmail: string): Promise<void> {

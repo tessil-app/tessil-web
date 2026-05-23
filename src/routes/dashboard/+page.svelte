@@ -24,10 +24,11 @@
   import TransferDetailDrawer, {
     type VaultRowState,
   } from "$lib/components/TransferDetailDrawer.svelte";
-  import { api, type OwnedTransferSummary } from "$lib/api/client";
+  import { api, type OwnedTransferSummary, type UsageResponse } from "$lib/api/client";
   import { decryptFilename, decryptString } from "$lib/crypto/decrypt";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
+  import UsageBanner from "$lib/components/UsageBanner.svelte";
   import {
     importTransferKey,
     isUnlocked,
@@ -65,6 +66,11 @@
 
   let hasAttemptedLoad = $state(false);
 
+  // Usage payload for the in-dashboard "you're close to a cap" banner.
+  // Failures are silent — the banner just doesn't render. The dashboard
+  // still works without it.
+  let usage = $state<UsageResponse | null>(null);
+
   // Subscribe to vault lock/unlock notifications. When the cached K_vault
   // expires (24h TTL) or the user manually locks, we flip every "unlocked"
   // row back to "locked" so the UI matches reality.
@@ -82,6 +88,13 @@
   onMount(async () => {
     if (auth.user) {
       vaultUnlocked = await isUnlocked(auth.user.id);
+      // Fire-and-forget — the banner is a nice-to-have, not load-bearing.
+      api.getMyUsage().then(
+        (u) => (usage = u),
+        () => {
+          /* silent fail */
+        },
+      );
     }
   });
 
@@ -427,6 +440,8 @@
     </div>
   {:else if auth.user}
     <PageHeader title="Your transfers" align="left" />
+
+    <UsageBanner {usage} />
 
     <div class="space-y-6">
       <p class="text-sm text-muted-foreground">

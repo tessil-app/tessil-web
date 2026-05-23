@@ -19,6 +19,7 @@
     { href: "/dashboard/settings/account", label: "Account" },
     { href: "/dashboard/settings/security", label: "Security" },
     { href: "/dashboard/settings/vault", label: "Vault" },
+    { href: "/dashboard/settings/usage", label: "Usage" },
   ];
 
   const currentPath = $derived(page.url.pathname);

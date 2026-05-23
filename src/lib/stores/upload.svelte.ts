@@ -10,6 +10,7 @@ function createUploadStore() {
     status: "idle",
     overallProgress: 0,
     error: null,
+    errorUpgradeUrl: null,
     shareUrl: null,
     expiresInHours: 24,
     currentFileIndex: 0,
@@ -37,6 +38,9 @@ function createUploadStore() {
     },
     get error() {
       return state.error;
+    },
+    get errorUpgradeUrl() {
+      return state.errorUpgradeUrl;
     },
     get shareUrl() {
       return state.shareUrl;
@@ -110,8 +114,9 @@ function createUploadStore() {
       state.overallProgress = progress;
     },
 
-    setError(error: string) {
+    setError(error: string, upgradeUrl?: string | null) {
       state.error = error;
+      state.errorUpgradeUrl = upgradeUrl ?? null;
       state.status = "error";
     },
 
@@ -149,6 +154,7 @@ function createUploadStore() {
         status: "idle",
         overallProgress: 0,
         error: null,
+        errorUpgradeUrl: null,
         shareUrl: null,
         expiresInHours: 24,
         currentFileIndex: 0,

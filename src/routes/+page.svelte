@@ -4,7 +4,7 @@
   // prompt for the password mid-flow when the vault is locked.
 
   import { goto } from "$app/navigation";
-  import { api } from "$lib/api/client";
+  import { api, ApiError } from "$lib/api/client";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import Checkbox from "$lib/components/Checkbox.svelte";
@@ -414,9 +414,10 @@
       uploadStore.setShareUrl(shareUrl);
     } catch (error) {
       if (uploadStore.status !== "error") {
-        uploadStore.setError(
-          error instanceof Error ? error.message : "Upload failed",
-        );
+        const message = error instanceof Error ? error.message : "Upload failed";
+        const upgradeUrl =
+          error instanceof ApiError ? error.upgradeUrl : undefined;
+        uploadStore.setError(message, upgradeUrl);
       }
     }
   }
@@ -563,6 +564,14 @@
             <Alert tone="destructive" title="Upload failed">
               {uploadStore.error}
               {#snippet action()}
+                {#if uploadStore.errorUpgradeUrl}
+                  <Button
+                    fullWidth={false}
+                    onclick={() => goto(uploadStore.errorUpgradeUrl!)}
+                  >
+                    Upgrade to Pro
+                  </Button>
+                {/if}
                 <Button variant="secondary" fullWidth={false} onclick={clearError}>
                   Try again
                 </Button>
@@ -708,6 +717,14 @@
             <Alert tone="destructive" title="Couldn't add files">
               {uploadStore.error}
               {#snippet action()}
+                {#if uploadStore.errorUpgradeUrl}
+                  <Button
+                    fullWidth={false}
+                    onclick={() => goto(uploadStore.errorUpgradeUrl!)}
+                  >
+                    Upgrade to Pro
+                  </Button>
+                {/if}
                 <Button variant="secondary" fullWidth={false} onclick={clearError}>
                   Dismiss
                 </Button>

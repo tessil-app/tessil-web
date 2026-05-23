@@ -89,8 +89,8 @@
                   <p class="text-sm text-foreground truncate" title={email}>{email}</p>
                 </div>
                 <DropdownMenuItem
-                  href="/dashboard/settings"
-                  onSelect={() => { goto("/dashboard/settings"); close(); }}
+                  href="/dashboard/settings/account"
+                  onSelect={() => { goto("/dashboard/settings/account"); close(); }}
                   class={isActive("/dashboard/settings") ? "bg-accent" : ""}
                 >
                   <IconGearRegular class="size-4 opacity-70" />
