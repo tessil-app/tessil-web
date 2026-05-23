@@ -5,6 +5,7 @@
 
   import { goto } from "$app/navigation";
   import { api, ApiError } from "$lib/api/client";
+  import { uploadEncryptedBlobMultipart } from "$lib/upload/multipart";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import Checkbox from "$lib/components/Checkbox.svelte";
@@ -337,7 +338,11 @@
           uploadStore.setFileStatus(i, "encrypting", 50);
           uploadStore.setFileStatus(i, "uploading", 50);
 
-          const { uploadUrl } = await api.requestUploadUrl({
+          // Init the multipart upload — returns all 8 MB Part URLs in
+          // one batch (ADR-0009). The orchestrator handles slicing,
+          // 4-parallel Part uploads, per-Part retry with backoff, and
+          // calls /abort-multipart on terminal failure.
+          const initResponse = await api.initMultipartUpload({
             transferId: transfer.transferId,
             contentType: file.type || "application/octet-stream",
             encryptedName,
@@ -346,26 +351,17 @@
             size: encryptedBlob.size,
           });
 
-          const MAX_ATTEMPTS = 3;
-          let lastUploadError: unknown;
-          for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-            try {
-              uploadStore.setFileStatus(i, "uploading", 50);
-              await api.uploadToR2(uploadUrl, encryptedBlob, (p) => {
-                uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5);
-              });
-              lastUploadError = undefined;
-              break;
-            } catch (err) {
-              lastUploadError = err;
-              if (attempt < MAX_ATTEMPTS - 1) {
-                await new Promise((resolve) =>
-                  setTimeout(resolve, 500 * (attempt + 1)),
-                );
-              }
-            }
-          }
-          if (lastUploadError) throw lastUploadError;
+          await uploadEncryptedBlobMultipart({
+            uploadId: initResponse.uploadId,
+            fileId: initResponse.fileId,
+            transferId: transfer.transferId,
+            r2Key: initResponse.r2Key,
+            encryptedBlob,
+            partUrls: initResponse.partUrls,
+            onProgress: (p) => {
+              uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5);
+            },
+          });
 
           uploadStore.setFileStatus(i, "complete", 100);
         } catch (err) {

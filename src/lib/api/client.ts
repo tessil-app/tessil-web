@@ -8,7 +8,7 @@ export interface CreateTransferResponse {
   expiresAt: string;
 }
 
-export interface RequestUploadUrlRequest {
+export interface InitMultipartUploadRequest {
   transferId: string;
   contentType: string;
   encryptedName: string;
@@ -17,10 +17,35 @@ export interface RequestUploadUrlRequest {
   size: number;
 }
 
-export interface RequestUploadUrlResponse {
+export interface InitMultipartUploadPart {
+  partNumber: number;
+  url: string;
+  contentLength: number;
+}
+
+export interface InitMultipartUploadResponse {
   fileId: string;
-  uploadUrl: string;
-  expiresAt: string;
+  r2Key: string;
+  uploadId: string;
+  partUrls: InitMultipartUploadPart[];
+}
+
+export interface CompleteMultipartUploadPart {
+  partNumber: number;
+  etag: string;
+}
+
+export interface CompleteMultipartUploadRequest {
+  transferId: string;
+  fileId: string;
+  uploadId: string;
+  parts: CompleteMultipartUploadPart[];
+}
+
+export interface AbortMultipartUploadRequest {
+  transferId: string;
+  fileId: string;
+  uploadId: string;
 }
 
 export interface FileInfo {
@@ -320,44 +345,34 @@ class ApiClient {
     });
   }
 
-  async requestUploadUrl(
-    data: RequestUploadUrlRequest
-  ): Promise<RequestUploadUrlResponse> {
-    return this.request("/api/upload/request-upload-url", {
+  // ─── Multipart upload (ADR-0009) ──────────────────────────────────
+  // Three round-trips per File: init (returns all Part URLs) → upload
+  // each Part directly to R2 → complete (or abort on failure). The
+  // orchestration lives in `$lib/upload/multipart.ts` — these
+  // methods are thin wrappers around the API.
+
+  async initMultipartUpload(
+    data: InitMultipartUploadRequest,
+  ): Promise<InitMultipartUploadResponse> {
+    return this.request("/api/upload/init-multipart", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async uploadToR2(
-    uploadUrl: string,
-    fileBlob: Blob,
-    onProgress?: (progress: number) => void
-  ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
+  async completeMultipartUpload(
+    data: CompleteMultipartUploadRequest,
+  ): Promise<{ fileId: string; size: number }> {
+    return this.request("/api/upload/complete-multipart", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
 
-      xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable && onProgress) {
-          onProgress((e.loaded / e.total) * 100);
-        }
-      });
-
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve();
-        } else {
-          reject(new Error(`Upload failed: ${xhr.status}`));
-        }
-      });
-
-      xhr.addEventListener("error", () => {
-        reject(new Error("Upload failed"));
-      });
-
-      xhr.open("PUT", uploadUrl);
-      xhr.setRequestHeader("Content-Type", "application/octet-stream");
-      xhr.send(fileBlob);
+  async abortMultipartUpload(data: AbortMultipartUploadRequest): Promise<void> {
+    await this.request("/api/upload/abort-multipart", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   }
 
