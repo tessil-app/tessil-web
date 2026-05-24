@@ -43,103 +43,90 @@
 }
 
 :root {
-  /* Light palette tuned to a flat Unifi-style surface stack:
-     - background is a near-white page plane so raised cards register
-     - card is pure white, one step above background
-     - accent matches the page tint so hovering on white cards reveals
-       a subtle wash without competing with the foreground
-     Text contrast: headers dark slate, body text mid-slate. */
+  /* Light palette — vibrant cobalt primary on warm-neutral surfaces.
+     The brand colour pops against the restrained palette: warm
+     off-white background, pure-white cards one step above. */
   --radius: 0.625rem;
-  --background: #f9fafa;
-  --foreground: #212327;
+  --background: #fafaf7;
+  --foreground: #1a1a1a;
   --card: #ffffff;
-  --card-foreground: #212327;
+  --card-foreground: #1a1a1a;
   --popover: #ffffff;
-  --popover-foreground: #212327;
-  --primary: var(--color-red-600);
-  --primary-foreground: var(--color-white);
+  --popover-foreground: #1a1a1a;
+  --primary: #1b4dff;
+  --primary-foreground: #ffffff;
   --secondary: --alpha(var(--color-black) / 4%);
-  --secondary-foreground: #212327;
+  --secondary-foreground: #1a1a1a;
   --muted: --alpha(var(--color-black) / 4%);
-  --muted-foreground: #50565e;
-  --accent: #f9fafa;
-  --accent-foreground: #212327;
-  --destructive: var(--color-red-500);
-  --destructive-foreground: var(--color-red-700);
-  --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-700);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-700);
-  --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-700);
+  --muted-foreground: #5a6364;
+  --accent: #fafaf7;
+  --accent-foreground: #1a1a1a;
+  --destructive: #a03634;
+  --destructive-foreground: #7f2a28;
+  --info: #1b4dff;
+  --info-foreground: #0d2f99;
+  --success: #0f5132;
+  --success-foreground: #0a3a23;
+  --warning: #b8843c;
+  --warning-foreground: #8b5e1f;
   --border: --alpha(var(--color-black) / 8%);
   --input: --alpha(var(--color-black) / 10%);
-  --ring: var(--color-red-500);
-  --sidebar: var(--color-neutral-50);
+  --ring: #1b4dff;
+  --sidebar: #f5f3ed;
   --sidebar-foreground: color-mix(
     in srgb,
     var(--color-neutral-800) 64%,
     var(--sidebar)
   );
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-neutral-50);
+  --sidebar-primary: #1b4dff;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: --alpha(var(--color-black) / 4%);
-  --sidebar-accent-foreground: var(--color-neutral-800);
+  --sidebar-accent-foreground: #1a1a1a;
   --sidebar-border: --alpha(var(--color-black) / 6%);
-  --sidebar-ring: var(--color-neutral-400);
+  --sidebar-ring: #1b4dff;
 }
 
 .dark {
-  /* Dark palette tuned to a flat Unifi-style surface stack:
-     - background is the darkest plane (page, drawer body)
-     - card sits one step up so framed surfaces feel raised
-     - accent is a third step for hover/highlight tints
-     Text contrast: headers full white, body text near-white. */
-  --background: #131416;
-  --foreground: #f9fafa;
-  --card: #1c1e21;
-  --card-foreground: #f9fafa;
-  --popover: #1c1e21;
-  --popover-foreground: #f9fafa;
-  --primary: var(--color-red-600);
-  --primary-foreground: var(--color-white);
+  /* Dark palette — neutral cool near-black so the cobalt primary
+     feels at home rather than colour-clashing. Background → card →
+     accent forms the three-step elevation. */
+  --background: #0e0f12;
+  --foreground: #f2f3f5;
+  --card: #16181d;
+  --card-foreground: #f2f3f5;
+  --popover: #16181d;
+  --popover-foreground: #f2f3f5;
+  --primary: #1b4dff;
+  --primary-foreground: #ffffff;
   --secondary: --alpha(var(--color-white) / 4%);
-  --secondary-foreground: #f9fafa;
+  --secondary-foreground: #f2f3f5;
   --muted: --alpha(var(--color-white) / 4%);
-  --muted-foreground: #dee0e3;
-  --accent: #282b2f;
-  --accent-foreground: #f9fafa;
-  --destructive: color-mix(
-    in srgb,
-    var(--color-red-500) 90%,
-    var(--color-white)
-  );
-  --destructive-foreground: var(--color-red-400);
-  --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-400);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-400);
-  --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-400);
+  --muted-foreground: #c0c4cc;
+  --accent: #1e2129;
+  --accent-foreground: #f2f3f5;
+  --destructive: #c46663;
+  --destructive-foreground: #e8a8a6;
+  --info: #4a72ff;
+  --info-foreground: #8da7ff;
+  --success: #10b981;
+  --success-foreground: #34d399;
+  --warning: #d4a05c;
+  --warning-foreground: #e8c389;
   --border: --alpha(var(--color-white) / 6%);
   --input: --alpha(var(--color-white) / 8%);
-  --ring: var(--color-red-500);
-  --sidebar: color-mix(
-    in srgb,
-    var(--color-neutral-950) 97%,
-    var(--color-white)
-  );
+  --ring: #1b4dff;
+  --sidebar: #0a0b0e;
   --sidebar-foreground: color-mix(
     in srgb,
-    var(--color-neutral-100) 64%,
+    #f2f3f5 64%,
     var(--sidebar)
   );
-  --sidebar-primary: var(--color-neutral-100);
-  --sidebar-primary-foreground: var(--color-neutral-800);
+  --sidebar-primary: #1b4dff;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: --alpha(var(--color-white) / 4%);
-  --sidebar-accent-foreground: var(--color-neutral-100);
+  --sidebar-accent-foreground: #f2f3f5;
   --sidebar-border: --alpha(var(--color-white) / 5%);
-  --sidebar-ring: var(--color-neutral-400);
+  --sidebar-ring: #1b4dff;
 }
 
 /* Respect prefers-reduced-motion: kill non-essential transitions and animations. */

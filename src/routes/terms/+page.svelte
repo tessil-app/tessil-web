@@ -3,15 +3,13 @@
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
-  import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
-  import { formatSize } from "$lib/utils";
 </script>
 
 <svelte:head>
   <title>Terms of Service - JTransfer</title>
   <meta
     name="description"
-    content="Review JTransfer terms of service, usage limits, legal compliance, and acceptable use for end-to-end encrypted file transfer."
+    content="JTransfer terms of service: usage, limits, acceptable use, legal compliance. End-to-end encrypted file transfer."
   />
   <meta name="robots" content="index, follow" />
   <meta property="og:title" content="Terms of Service - JTransfer" />
@@ -35,21 +33,24 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
             <p class="text-muted-foreground">
-              By accessing or using JTransfer ("the Service"), you agree to be bound by these Terms of Service.
-              If you do not agree to these terms, please do not use the Service.
+              By using JTransfer ("the Service"), you agree to these terms. If you
+              don't agree, don't use the Service.
             </p>
           </section>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">2. Description of Service</h2>
             <p class="text-muted-foreground">
-              JTransfer is a free, privacy-focused web service for end-to-end encrypted file
-              transfer with temporary share links.
+              JTransfer is an end-to-end encrypted file transfer service with
+              temporary share links.
             </p>
             <p class="text-muted-foreground">
-              The Service is provided free of charge. Optional donations via Ko-fi are welcomed but do not
-              grant any additional rights, features, or guarantees. Donations are non-refundable and processed
-              entirely by Ko-fi under their own terms and privacy policy.
+              A free tier is available without an account. JTransfer Pro is an
+              optional paid subscription with higher per-file and per-month limits,
+              billed monthly through Polar.sh (our Merchant of Record). Polar
+              handles the full checkout, billing, and tax compliance. See the
+              <a href="/pricing" class="text-primary hover:underline">pricing page</a>
+              for current Pro features and cost.
             </p>
           </section>
 
@@ -85,22 +86,22 @@
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">5. Service Limitations</h2>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Maximum file size: 1 GB per file</li>
-              <li>Maximum total upload: {formatSize(MAX_TOTAL_UPLOAD_SIZE)} across all files per transfer</li>
-              <li>File retention: 1, 6, 12, 24, or 72 hours (automatically deleted)</li>
-              <li>Fair usage limits apply to prevent abuse</li>
-            </ul>
             <p class="text-muted-foreground">
-              We reserve the right to modify these limits at any time to ensure service availability.
+              Per-file size, monthly volume, and expiry length vary by account tier.
+              Current caps for each tier are listed on the
+              <a href="/pricing" class="text-primary hover:underline">pricing page</a>.
+              Fair-usage limits apply across all tiers to prevent abuse.
+            </p>
+            <p class="text-muted-foreground">
+              We may modify these limits when needed to keep the service available.
             </p>
           </section>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">6. Privacy & Encryption</h2>
             <p class="text-muted-foreground">
-              JTransfer uses end-to-end encryption. Files are encrypted in your browser before upload,
-              and we do not have access to the encryption keys. This means:
+              JTransfer uses end-to-end encryption. Files are encrypted in your
+              browser before upload. We don't have the encryption keys:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>We cannot view, access, or recover your files</li>
@@ -119,8 +120,8 @@
               abuse material (CSAM), terrorism-related content, or any content that violates applicable laws.
             </p>
             <p class="text-muted-foreground">
-              While our end-to-end encryption prevents us from viewing file contents, we provide
-              mechanisms to act on reported content:
+              End-to-end encryption stops us from viewing file contents. We can
+              still act on reports:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>Anyone can report abuse via our <a href="/abuse" class="text-primary hover:underline">abuse reporting page</a></li>
@@ -224,10 +225,10 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">15. Contact</h2>
             <p class="text-muted-foreground">
-              If you have any questions about these Terms, please contact us at:
+              Questions about these Terms:
             </p>
             <p class="text-muted-foreground">
-              Email: <a href="mailto:legal@jimmyverburgt.com" class="text-primary hover:underline">legal@jimmyverburgt.com</a>
+              <a href="mailto:legal@jimmyverburgt.com" class="text-primary hover:underline">legal@jimmyverburgt.com</a>
             </p>
           </section>
         </div>

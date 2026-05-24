@@ -9,7 +9,7 @@
   <title>Privacy Policy - JTransfer</title>
   <meta
     name="description"
-    content="Read how JTransfer handles data, encryption, retention, and GDPR rights for end-to-end encrypted file transfer."
+    content="What data JTransfer handles, how long, and your GDPR rights. End-to-end encrypted file transfer."
   />
   <meta name="robots" content="index, follow" />
   <meta property="og:title" content="Privacy Policy - JTransfer" />
@@ -33,19 +33,19 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Introduction</h2>
             <p class="text-muted-foreground">
-              JTransfer ("we", "our", or "us") is a privacy-focused, end-to-end encrypted
-              file transfer service. This Privacy Policy explains how we handle information
-              when you use the service at jtransfer.jimmyverburgt.com.
+              JTransfer ("we", "our", "us") is an end-to-end encrypted file transfer
+              service. This page explains what data we handle when you use the
+              service at jtransfer.jimmyverburgt.com.
             </p>
             <p class="text-muted-foreground">
-              The service is designed so the contents of your files remain unreadable to us:
-              files are encrypted in your browser before upload, and the decryption key is
-              embedded in the share link — it never reaches our servers.
+              Your files are unreadable to us by design. They're encrypted in your
+              browser before upload, and the decryption key lives in the share
+              link's URL fragment — the fragment never reaches our servers.
             </p>
             <p class="text-muted-foreground">
-              You can use JTransfer either anonymously (just upload and share the link) or
-              with an account. Creating an account is optional and only adds management
-              features for your own transfers — it does not change how files are encrypted.
+              You can use JTransfer anonymously or with an account. An account adds
+              management features for the transfers you create — it doesn't change
+              how files are encrypted.
             </p>
           </section>
 
@@ -64,8 +64,9 @@
               <li>Download counter and optional password hash (if you set one)</li>
             </ul>
             <p class="text-muted-foreground">
-              <strong>Important:</strong> The encryption key is generated in your browser and included in the share link.
-              We never receive or store the encryption key, making it technically impossible for us to access your files.
+              The encryption key is generated in your browser and lives only in the
+              share link's URL fragment. We never receive or store the key. We
+              cannot decrypt your files.
             </p>
 
             <h3 class="text-lg font-medium text-foreground">2.2 Account Data (Only If You Sign In)</h3>
@@ -91,8 +92,8 @@
               </li>
             </ul>
             <p class="text-muted-foreground">
-              Signing in does not change how files are encrypted — your encryption key still never reaches our
-              servers, regardless of whether you are signed in or not.
+              Signing in doesn't change how files are encrypted. Your encryption key
+              never reaches our servers — signed in or not.
             </p>
 
             <h3 class="text-lg font-medium text-foreground">2.3 Security and Audit Data</h3>
@@ -114,16 +115,16 @@
 
             <h3 class="text-lg font-medium text-foreground">2.4 Data We Do NOT Collect</h3>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>We do not collect any email address unless you choose to create an account</li>
-              <li>We do not use tracking cookies, analytics scripts, or marketing pixels</li>
-              <li>We do not sell or share data with third parties for advertising</li>
-              <li>We do not have any access to the contents or names of your files</li>
+              <li>We don't collect your email address unless you create an account</li>
+              <li>We don't use tracking cookies, analytics scripts, or marketing pixels</li>
+              <li>We don't sell or share data with third parties for advertising</li>
+              <li>We have no access to the contents or names of your files</li>
             </ul>
           </section>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">3. How We Use Your Data</h2>
-            <p class="text-muted-foreground">We use the collected data solely to:</p>
+            <p class="text-muted-foreground">We use this data to:</p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>Provide the file transfer service</li>
               <li>Send one-time sign-in links and account-related notifications (e.g. confirming an account deletion)</li>
@@ -141,9 +142,9 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">4. Data Storage & Security</h2>
             <p class="text-muted-foreground">
-              Your encrypted files are stored on Cloudflare R2 infrastructure within the European Union.
-              Account metadata and audit records are stored in a PostgreSQL database hosted within the European Union.
-              We implement the following security measures:
+              Encrypted files are stored on Cloudflare R2 within the European Union.
+              Account metadata and audit records are stored in a PostgreSQL database
+              within the European Union. Security measures:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>End-to-end encryption (AES-256-GCM) for all file contents and filenames</li>
@@ -230,9 +231,14 @@
                 account-related notifications. Receives your email address and the message contents. EU-based
                 processor; used for transactional mail only — never marketing.
               </li>
-              <li><strong>Ko-fi:</strong> Optional donation processing. If you choose to donate, your payment is processed
-                entirely by Ko-fi. We do not receive or store any payment information. Ko-fi's own privacy policy applies to
-                those transactions.</li>
+              <li>
+                <strong>Polar.sh:</strong> Merchant of Record for JTransfer Pro
+                subscriptions. Receives your email, payment details, billing
+                address, and transaction history when you subscribe.
+                US-incorporated; EU data residency under the EU-US Data Privacy
+                Framework. We never see your card number — Polar handles the full
+                checkout and sends us only the subscription status.
+              </li>
             </ul>
             <p class="text-muted-foreground">
               These services may process personal data as part of their normal operations.
@@ -243,18 +249,18 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">8. Changes to This Policy</h2>
             <p class="text-muted-foreground">
-              We may update this Privacy Policy from time to time. We will notify users of any material changes
-              by updating the "Last updated" date at the top of this page.
+              We may update this policy. Material changes are reflected in the
+              "Last updated" date at the top of this page.
             </p>
           </section>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">9. Contact</h2>
             <p class="text-muted-foreground">
-              If you have any questions about this Privacy Policy or our data practices, please contact us at:
+              Questions about this policy or our data practices:
             </p>
             <p class="text-muted-foreground">
-              Email: <a href="mailto:privacy@jimmyverburgt.com" class="text-primary hover:underline">privacy@jimmyverburgt.com</a>
+              <a href="mailto:privacy@jimmyverburgt.com" class="text-primary hover:underline">privacy@jimmyverburgt.com</a>
             </p>
           </section>
         </div>

@@ -41,20 +41,20 @@
   <title>Report Abuse - JTransfer</title>
   <meta
     name="description"
-    content="Report illegal or abusive content on JTransfer quickly. Submit transfer links for review and action."
+    content="Report illegal or abusive transfers on JTransfer. Submit a link for review."
   />
   <meta name="robots" content="index, follow" />
   <meta property="og:title" content="Report Abuse - JTransfer" />
   <meta
     property="og:description"
-    content="Abuse reporting page for JTransfer secure file sharing."
+    content="Report illegal or abusive transfers on JTransfer. End-to-end encrypted file transfer."
   />
 </svelte:head>
 
 <PageLayout width="3xl">
   <PageHeader
     title="Report Abuse"
-    tagline="For JTransfer transfers and related misuse reports."
+    tagline="Report a transfer or related misuse on JTransfer."
   />
 
   <Frame.Root>
@@ -68,12 +68,11 @@
           </span>
           <h2 class="text-xl font-semibold text-foreground">Report submitted</h2>
           <p class="text-muted-foreground max-w-md text-balance">
-            Thank you for your report. We will review it and take appropriate
-            action as quickly as possible.
+            Thanks for the report. We review every report and act on valid ones
+            under applicable law.
           </p>
           <p class="text-sm text-muted-foreground max-w-md text-balance">
-            If your email client did not open, please send your report directly
-            to
+            If your email client didn't open, send the report to
             <a
               href="mailto:abuse@jimmyverburgt.com"
               class="text-primary hover:underline"
@@ -85,15 +84,14 @@
         <div class="space-y-6">
           <div class="space-y-3 text-muted-foreground">
             <p>
-              If you believe a transfer on JTransfer contains illegal or
-              abusive content, please report it below. We take all reports
-              seriously and will act in accordance with applicable law.
+              If a transfer on JTransfer contains illegal or abusive content,
+              report it below. Every report is reviewed; valid ones get acted
+              on under applicable law.
             </p>
             <p>
-              Due to our end-to-end encryption, we cannot view file contents.
-              However, upon receiving a valid report, we can delete the
-              transfer and associated data, and cooperate with law enforcement
-              authorities.
+              End-to-end encryption stops us from viewing file contents. We can
+              still delete the transfer, scrub associated metadata, and
+              cooperate with law enforcement under lawful orders.
             </p>
           </div>
 
@@ -141,13 +139,14 @@
           </form>
 
           <p class="text-sm text-muted-foreground">
-            You can also contact us directly at
+            Or email
             <a
               href="mailto:abuse@jimmyverburgt.com"
               class="text-primary hover:underline"
               >abuse@jimmyverburgt.com</a
-            >. For urgent matters involving child safety, please also contact
-            your local law enforcement.
+            >
+            directly. For child-safety emergencies, also contact local law
+            enforcement.
           </p>
         </div>
       {/if}
