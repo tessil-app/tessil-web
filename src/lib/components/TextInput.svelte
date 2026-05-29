@@ -28,7 +28,7 @@
   const errorId = $derived(id ? `${id}-error` : undefined);
 
   const fieldClass =
-    "w-full py-2.5 px-3 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
+    "w-full py-2.5 px-3 bg-card border border-input rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
 
   const monoClass = "font-mono text-[0.8125rem]";
 </script>

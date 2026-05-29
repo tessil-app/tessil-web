@@ -1,15 +1,4 @@
 <script lang="ts">
-  // Dashboard list. Every owned transfer is wrapped under a single
-  // per-user vault key — unlocking is one password prompt and then
-  // every per-transfer key can be unwrapped client-side. Eager
-  // prompt on mount; "Skip" collapses to a banner the user can
-  // re-tap.
-  //
-  // Layout is a 5-column table on ≥sm screens (name / size /
-  // created / expires / status) with a desktop hover overlay
-  // revealing "Copy link" and "Delete" inline. Tapping a row opens
-  // the detail drawer.
-
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
@@ -51,10 +40,8 @@
   let copiedId = $state<string | null>(null);
   let vaultStates = $state<Record<string, VaultRowState>>({});
 
-  // Drawer state — null means no drawer open.
   let openTransferId = $state<string | null>(null);
 
-  // Unlock modal state
   let vaultUnlocked = $state(false);
   let promptOpen = $state(false);
   let skipped = $state(false);
@@ -66,14 +53,9 @@
 
   let hasAttemptedLoad = $state(false);
 
-  // Usage payload for the in-dashboard "you're close to a cap" banner.
-  // Failures are silent — the banner just doesn't render. The dashboard
-  // still works without it.
   let usage = $state<UsageResponse | null>(null);
 
-  // Subscribe to vault lock/unlock notifications. When the cached K_vault
-  // expires (24h TTL) or the user manually locks, we flip every "unlocked"
-  // row back to "locked" so the UI matches reality.
+  // Re-lock every cached row when K_vault expires or the user locks manually.
   const unsubscribeVault = subscribeToVaultState(({ unlocked }) => {
     vaultUnlocked = unlocked;
     if (!unlocked) {
@@ -88,12 +70,9 @@
   onMount(async () => {
     if (auth.user) {
       vaultUnlocked = await isUnlocked(auth.user.id);
-      // Fire-and-forget — the banner is a nice-to-have, not load-bearing.
       api.getMyUsage().then(
         (u) => (usage = u),
-        () => {
-          /* silent fail */
-        },
+        () => {},
       );
     }
   });
@@ -112,9 +91,7 @@
     }
   });
 
-  // Eager prompt: as soon as we know the user is signed in and the vault
-  // is locked, surface the modal. Don't prompt again after Skip — the
-  // banner takes over for the rest of the visit.
+  // Prompt once on first load; "Skip" hands off to the banner for the rest of the visit.
   $effect(() => {
     if (!auth.loaded || !auth.isAuthenticated) return;
     if (skipped || vaultUnlocked || promptOpen) return;
@@ -190,7 +167,7 @@
         try {
           title = await decryptString(t.encryptedTitle, t.encryptedTitleIv, transferKey);
         } catch {
-          // Title fails-soft: treat as no title so the rest of the row keeps working.
+          // Title fails-soft so the row still renders.
           title = null;
         }
       }
@@ -261,9 +238,6 @@
     }
   }
 
-  // Quick "copy link" on a row — same recovery as the drawer's reveal,
-  // just without showing the URL. Useful when the user just wants to paste
-  // it somewhere.
   async function copyRowLink(t: OwnedTransferSummary, e: Event) {
     e.stopPropagation();
     if (!t.wrappedKey || !auth.user) return;
@@ -302,9 +276,6 @@
   function requestInlineDelete(t: OwnedTransferSummary, e: Event) {
     e.stopPropagation();
     if (inlineDeletingId) return;
-    // Open the custom confirm modal. The drawer's Danger zone uses an
-    // inline two-step instead; the row overlay is too small to host that
-    // pattern, so it routes through a centred modal.
     confirmDeleteId = t.id;
   }
 
@@ -386,8 +357,6 @@
       (unlockMode === "password" ? unlockPassword.length > 0 : unlockPhrase.trim().length > 0),
   );
 
-  // Drawer ↔ list bridges. Callbacks rather than two-way bindings so the
-  // dashboard stays the source of truth for the list state.
   function handleTitleSaved(
     id: string,
     decryptedTitle: string | null,
@@ -424,7 +393,7 @@
 </script>
 
 <svelte:head>
-  <title>Dashboard — JTransfer</title>
+  <title>Dashboard — Tessil</title>
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
@@ -439,15 +408,18 @@
       <p class="text-muted-foreground">Loading…</p>
     </div>
   {:else if auth.user}
-    <PageHeader title="Your transfers" align="left" />
+    <PageHeader
+      title="Your transfers"
+      tagline="Everything you've sent while signed in."
+      align="left"
+    />
 
     <UsageBanner {usage} />
 
     <div class="space-y-6">
       <p class="text-sm text-muted-foreground">
-        Transfers you create while signed in appear here. File contents stay
-        end-to-end encrypted — only the original share link (with its key)
-        can decrypt them.
+        Transfers you create while signed in appear here. File contents are
+        end-to-end encrypted; only the original share link can decrypt them.
       </p>
 
       {#if errorMessage}
@@ -456,7 +428,7 @@
 
       {#if !vaultUnlocked && lockedVaultedCount > 0 && skipped}
         <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-border bg-card p-4"
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
         >
           <p class="text-sm text-muted-foreground">
             Vault is locked. {lockedVaultedCount}
@@ -485,20 +457,17 @@
             <div class="text-center space-y-3">
               <h2 class="text-lg font-medium text-foreground">No transfers yet</h2>
               <p class="text-sm text-muted-foreground">
-                When you upload a file while signed in, it'll show up here so
-                you can manage it.
+                Anything you upload while signed in appears here.
               </p>
               <div class="flex justify-center pt-2">
-                <Button href="/" fullWidth={false}>Create a transfer</Button>
+                <Button href="/" fullWidth={false}>Create your first transfer</Button>
               </div>
             </div>
           </Frame.Panel>
         </Frame.Root>
       {:else}
-        <!-- Desktop list (sm+). Single rounded container with the column
-             header on top and rows divided by hairlines. Keeps the
-             dashboard reading as one table rather than disconnected cards. -->
-        <div class="hidden sm:block overflow-hidden rounded-2xl bg-card">
+        <!-- Desktop table (sm+) -->
+        <div class="hidden sm:block overflow-hidden rounded-lg bg-card">
           <div
             class="grid grid-cols-[minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-4 px-4 py-2 bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide"
           >
@@ -549,18 +518,16 @@
                   </div>
                 </button>
 
-                <!-- Hover overlay (desktop only, hover-capable input). Anchored
-                     to the right; lives outside the button so its own clicks
-                     don't bubble up and open the drawer. -->
+                <!-- Sibling of the button so its clicks don't bubble through and open the drawer. -->
                 <div
                   class="pointer-events-none absolute inset-y-0 right-3 hidden items-center gap-2 opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:hover)]:flex"
                 >
-                  <div class="pointer-events-auto flex items-center gap-2 bg-card rounded-[calc(var(--radius-2xl)-1px)] p-1 shadow-sm border border-border">
+                  <div class="pointer-events-auto flex items-center gap-2 bg-card rounded-md p-1 shadow-sm border border-border">
                     <button
                       type="button"
                       onclick={(e) => copyRowLink(t, e)}
                       disabled={!canRowAction || copyingId === t.id}
-                      class="text-xs font-medium px-2 py-1 rounded-[calc(var(--radius-2xl)-5px)] text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      class="text-xs font-medium px-2 py-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                       {#if copyingId === t.id}
                         Copying…
@@ -574,7 +541,7 @@
                       type="button"
                       onclick={(e) => requestInlineDelete(t, e)}
                       disabled={inlineDeletingId === t.id}
-                      class="text-xs font-medium px-2 py-1 rounded-[calc(var(--radius-2xl)-5px)] text-destructive-foreground hover:bg-destructive/10 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      class="text-xs font-medium px-2 py-1 rounded text-destructive-foreground hover:bg-destructive/10 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                       {inlineDeletingId === t.id ? "Deleting…" : "Delete"}
                     </button>
@@ -585,7 +552,7 @@
           </ul>
         </div>
 
-        <!-- Mobile stack (<sm). No hover overlay — every action lives in the drawer. -->
+        <!-- Mobile stack (<sm) — actions live in the drawer instead of an overlay. -->
         <ul class="space-y-3 sm:hidden">
           {#each transfers as t (t.id)}
             {@const status = statusOf(t)}
@@ -594,7 +561,7 @@
               <button
                 type="button"
                 onclick={() => (openTransferId = t.id)}
-                class="block w-full text-left bg-card rounded-2xl p-4 space-y-2 transition-colors duration-150 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                class="block w-full text-left bg-card rounded-lg p-4 space-y-2 transition-colors duration-150 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
@@ -732,7 +699,6 @@
   open={confirmDeleteId !== null}
   title="Delete this transfer?"
   description="The encrypted files are removed and the share link stops working. This can't be undone."
-  class="bg-background border-0 shadow-md"
   onClose={() => {
     if (!inlineDeletingId) confirmDeleteId = null;
   }}

@@ -350,7 +350,7 @@
   {#if showFooter}
     <Frame.Footer>
       {#if isAdding}
-        <div class="rounded-[calc(var(--radius-2xl)-1px)] bg-muted p-3.5 flex flex-col gap-3">
+        <div class="rounded-md bg-muted p-3.5 flex flex-col gap-3">
           {#if enrollError}
             <Alert tone="destructive">{enrollError}</Alert>
           {/if}

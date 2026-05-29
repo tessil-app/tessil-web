@@ -13,7 +13,10 @@
 <div
   bind:this={ref}
   data-slot="frame"
-  class={cn("relative flex flex-col rounded-2xl bg-muted p-1", className)}
+  class={cn(
+    "relative flex flex-col rounded-lg bg-card border border-border overflow-hidden",
+    className,
+  )}
   {...restProps}
 >
   {@render children?.()}

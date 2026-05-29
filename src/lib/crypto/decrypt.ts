@@ -1,9 +1,6 @@
 import { base64ToIv } from './key';
 
-// Decrypts an AES-GCM ciphertext produced by `encryptString` back to
-// a UTF-8 string. Strips the right-padding zero bytes that hide
-// length metadata in the ciphertext. Used for filenames and the
-// optional per-transfer title.
+/** Strips right-padding zero bytes added by encryptString. */
 export async function decryptString(
   ciphertext: string,
   ivBase64: string,
@@ -61,7 +58,6 @@ export async function downloadAndDecrypt(
   key: CryptoKey,
   onProgress?: (progress: number) => void
 ): Promise<Blob> {
-  // Fetch the encrypted file
   const response = await fetch(downloadUrl);
 
   if (!response.ok) {
@@ -88,12 +84,10 @@ export async function downloadAndDecrypt(
     received += value.length;
 
     if (onProgress && total > 0) {
-      // Download is 0-80% of progress
-      onProgress((received / total) * 80);
+      onProgress((received / total) * 80); // 0-80%: download
     }
   }
 
-  // Combine chunks
   const encryptedData = new Uint8Array(received);
   let offset = 0;
   for (const chunk of chunks) {
@@ -105,11 +99,9 @@ export async function downloadAndDecrypt(
     onProgress(80);
   }
 
-  // Decrypt
   return decryptFile(encryptedData.buffer as ArrayBuffer, ivBase64, key, (p) => {
     if (onProgress) {
-      // Decryption is 80-100% of progress
-      onProgress(80 + (p * 0.2));
+      onProgress(80 + (p * 0.2)); // 80-100%: decrypt
     }
   });
 }

@@ -1,9 +1,4 @@
 <script lang="ts">
-  // Public pricing page. Authenticated users get a checkout CTA that
-  // round-trips through Polar; anonymous visitors are nudged to sign
-  // in first so we can bind the resulting Polar customer to a user
-  // row.
-
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
@@ -29,10 +24,7 @@
   async function upgrade() {
     if (isRedirecting) return;
     if (!auth.user) {
-      // Anonymous: send them to sign in, then bounce back here so the
-      // CTA picks up the now-authed state. Pricing isn't a private
-      // route, just the checkout step needs a User row to bind the
-      // Polar Customer to.
+      // Anonymous: sign in first so we can bind the Polar customer to a user row.
       await goto(`/login?redirect=${encodeURIComponent("/pricing")}`);
       return;
     }
@@ -65,18 +57,18 @@
     "50× the monthly upload volume (100 GB)",
     "Expiry up to 30 days",
     "Per-account caps — fair on shared networks",
-    "Supports the project directly",
+    "Backs the project directly",
   ];
 </script>
 
 <svelte:head>
-  <title>Pricing — JTransfer</title>
+  <title>Pricing — Tessil</title>
   <meta
     name="description"
-    content="JTransfer is built and run by one person. Pro keeps the project alive — and removes the limits routine users hit."
+    content="Tessil pricing — Free for routine encrypted file transfer, Pro for higher limits. Built and run by one person."
   />
   <meta name="robots" content="index, follow" />
-  <meta property="og:title" content="Pricing — JTransfer" />
+  <meta property="og:title" content="Pricing — Tessil" />
   <meta
     property="og:description"
     content="Free is generous. Pro keeps the project alive."
@@ -85,8 +77,8 @@
 
 <PageLayout width="3xl">
   <PageHeader
-    title="Support the project"
-    tagline="JTransfer is built and run by one person. Pro keeps the lights on — and removes the limits routine users hit."
+    title="Pricing"
+    tagline="Two tiers. Same encryption. Pro lifts the limits routine users hit."
   />
 
   <div class="space-y-6">
@@ -115,8 +107,8 @@
               {/if}
             </div>
             <p class="text-sm text-muted-foreground">
-              For routine use. Sign in to get the full Free tier — anonymous
-              use is welcome too, with a smaller bucket.
+              For routine sharing. Sign in for the full Free bucket; anonymous
+              use is welcome with a smaller one.
             </p>
             <div class="flex items-baseline gap-2">
               <span class="text-3xl font-semibold text-foreground">€0</span>
@@ -145,8 +137,8 @@
               {/if}
             </div>
             <p class="text-sm text-muted-foreground">
-              50× the monthly volume, longer retention, and a way to back
-              what JTransfer stands for.
+              50× the monthly volume. Longer retention. A way to back the
+              project.
             </p>
             <div class="flex items-baseline gap-2">
               {#if cycle === "monthly"}
@@ -197,19 +189,20 @@
         <div class="space-y-3 text-sm text-muted-foreground">
           <p class="text-foreground font-medium">A few things worth knowing</p>
           <p>
-            Payments are processed by
             <a
               href="https://polar.sh"
               class="text-foreground underline underline-offset-2 hover:no-underline"
               rel="noopener"
             >Polar</a>
-            as our Merchant of Record — they handle VAT and invoicing under
-            their own entity. We never see your card details.
+            is our Merchant of Record — they handle VAT and invoicing under
+            their own entity. Polar processes the payment end-to-end; we never
+            see your card.
           </p>
           <p>
-            Pro is opt-out at any time. Cancellation keeps your subscription
-            active until the end of the period you already paid for, then
-            quietly returns you to Free. No refunds, no surprise charges.
+            <span class="text-foreground font-medium">No tricks on cancellation.</span>
+            Cancel any time. Pro stays active until the end of the period you
+            already paid for, then quietly returns you to Free. No refunds, no
+            surprise charges.
           </p>
           <p>
             Privacy and security features stay on Free — passkeys,

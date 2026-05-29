@@ -3,29 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>JTransfer - End-to-end encrypted file transfer</title>
+    <title>Tessil — Send anything. We see nothing.</title>
     <meta
       name="description"
-      content="JTransfer sends files with end-to-end encryption in your browser. We never see your files or encryption keys."
+      content="End-to-end encrypted file transfer. Your browser encrypts before upload — we never see your files or the key."
     />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fafaf7" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0f12" />
     <meta name="referrer" content="no-referrer" />
-    <meta property="og:site_name" content="JTransfer" />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/Switzer-Variable.woff2" crossorigin />
+    <meta property="og:site_name" content="Tessil" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="JTransfer - End-to-end encrypted file transfer" />
+    <meta property="og:title" content="Tessil — Send anything. We see nothing." />
     <meta
       property="og:description"
-      content="JTransfer sends files with end-to-end encryption in your browser. We never see your files or encryption keys."
+      content="End-to-end encrypted file transfer. Your browser encrypts before upload — we never see your files or the key."
     />
-    <meta property="og:url" content="https://jtransfer.jimmyverburgt.com/" />
+    <meta property="og:image" content="https://tessil.app/og-image.png" />
+    <meta property="og:url" content="https://tessil.app/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="JTransfer - End-to-end encrypted file transfer" />
+    <meta name="twitter:title" content="Tessil — Send anything. We see nothing." />
     <meta
       name="twitter:description"
-      content="JTransfer sends files with end-to-end encryption in your browser. We never see your files or encryption keys."
+      content="End-to-end encrypted file transfer. Your browser encrypts before upload — we never see your files or the key."
     />
+    <meta name="twitter:image" content="https://tessil.app/og-image.png" />
     <meta
       http-equiv="Content-Security-Policy"
       content="
@@ -42,14 +45,13 @@
         form-action 'self';
       "
     />
-    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <script>
       (() => {
-        const siteUrl = "https://jtransfer.jimmyverburgt.com";
+        const siteUrl = "https://tessil.app";
         const path = window.location.pathname === "/"
           ? "/"
           : window.location.pathname.replace(/\/+$/, "");
@@ -57,34 +59,34 @@
 
         const pageMeta = {
           "/": {
-            title: "JTransfer - End-to-end encrypted file transfer",
+            title: "Tessil — Send anything. We see nothing.",
             description:
-              "JTransfer sends files with end-to-end encryption in your browser. We never see your files or encryption keys.",
+              "End-to-end encrypted file transfer. Your browser encrypts before upload — we never see your files or the key.",
           },
           "/privacy": {
-            title: "Privacy Policy - JTransfer",
+            title: "Privacy Policy — Tessil",
             description:
-              "Read how JTransfer handles data, encryption, retention, and GDPR rights for end-to-end encrypted file transfer.",
+              "What data Tessil handles, how long, and your GDPR rights. End-to-end encrypted file transfer.",
           },
           "/terms": {
-            title: "Terms of Service - JTransfer",
+            title: "Terms of Service — Tessil",
             description:
-              "Review JTransfer terms of service, usage limits, legal compliance, and acceptable use for end-to-end encrypted file transfer.",
+              "Tessil terms of service: usage, limits, acceptable use, legal compliance. End-to-end encrypted file transfer.",
           },
           "/abuse": {
-            title: "Report Abuse - JTransfer",
+            title: "Report Abuse — Tessil",
             description:
-              "Report illegal or abusive content on JTransfer quickly. Submit transfer links for review and action.",
+              "Report illegal or abusive transfers on Tessil. Submit a link for review.",
           },
           "/security": {
-            title: "Security Overview - JTransfer",
+            title: "Security Overview — Tessil",
             description:
-              "Security overview for JTransfer end-to-end encrypted file transfer, including threat boundaries and disclosure process.",
+              "How Tessil's encryption works, what we can and cannot see, and how to report vulnerabilities.",
           },
           "/pricing": {
-            title: "Pricing — JTransfer",
+            title: "Pricing — Tessil",
             description:
-              "JTransfer is built and run by one person. Pro keeps the project alive — and gives you more headroom on every limit.",
+              "Tessil pricing — Free for routine encrypted file transfer, Pro for higher limits. Built and run by one person.",
           },
         };
 

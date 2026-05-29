@@ -52,7 +52,7 @@
       bind:value
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? errorId : undefined}
-      class="w-full py-2.5 px-3 pr-12 bg-card border border-input rounded-[calc(var(--radius-2xl)-1px)] text-foreground placeholder-muted-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+      class="w-full py-2.5 px-3 pr-12 bg-card border border-input rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
       {...rest}
     />
     <button

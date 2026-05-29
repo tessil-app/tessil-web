@@ -1,21 +1,4 @@
 <script lang="ts">
-  // Lightweight dropdown menu primitive.
-  //
-  // The trigger snippet is rendered inside a button; the menu opens below it
-  // and closes on outside click, Escape, blur, and on demand via the `close`
-  // argument passed to the children snippet. Focus moves to the first menu
-  // item on open and returns to the trigger on close.
-  //
-  // Usage:
-  //   <DropdownMenu align="end">
-  //     {#snippet trigger()}<Avatar/>{/snippet}
-  //     {#snippet children(close)}
-  //       <button role="menuitem" class={dropdownItemClass} onclick={() => { …; close(); }}>
-  //         Sign out
-  //       </button>
-  //     {/snippet}
-  //   </DropdownMenu>
-
   import { cn } from "$lib/utils";
   import type { Snippet } from "svelte";
 
@@ -134,7 +117,7 @@
       tabindex="-1"
       onkeydown={handleMenuKey}
       class={cn(
-        "absolute z-50 mt-2 min-w-[12rem] origin-top rounded-[calc(var(--radius-2xl)-1px)] border border-border bg-card shadow-lg p-1 space-y-0.5",
+        "absolute z-50 mt-2 min-w-[12rem] origin-top rounded-md border border-border bg-card p-1 space-y-0.5",
         align === "end" ? "right-0" : "left-0",
         menuClass,
       )}

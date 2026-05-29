@@ -1,14 +1,4 @@
 <script lang="ts">
-  // First-time vault setup wizard. Two steps:
-  //   1. Pick a password (length >= 14 AND zxcvbn score >= 3).
-  //   2. Show the 12-word recovery phrase with Copy / Download .txt,
-  //      then a blocking confirmation modal before we let the user
-  //      leave.
-  //
-  // Setup is one-shot — once the API records
-  // `vault_setup_completed_at` the user has to use change-password
-  // / regenerate-phrase from settings instead.
-
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -37,7 +27,6 @@
 
   let step = $state<Step>("password");
 
-  // Step 1 state
   let password = $state("");
   let passwordConfirm = $state("");
   let strength = $state<PasswordStrength>({
@@ -50,16 +39,12 @@
   let setupError = $state<string | null>(null);
   let isSubmittingSetup = $state(false);
 
-  // Step 2 state
   let recoveryPhrase = $state<string | null>(null);
   let phraseRevealed = $state(false);
   let phraseCopied = $state(false);
   let confirmOpen = $state(false);
   let confirmChecked = $state(false);
 
-  // Drive zxcvbn (lazy-loaded). Only one in-flight evaluation at a time —
-  // each new keystroke replaces the pending result, no debounce needed
-  // because evaluatePassword resolves in <10ms once dictionaries are warm.
   $effect(() => {
     const value = password;
     isEvaluating = true;
@@ -81,8 +66,7 @@
     };
   });
 
-  // Auth + already-set-up guard. Don't redirect away while the auth state
-  // is still loading or we'll bounce real users back to /login on refresh.
+  // Wait for auth.loaded; otherwise we'd bounce real users to /login on refresh.
   $effect(() => {
     if (!auth.loaded) return;
     if (!auth.isAuthenticated) {
@@ -109,9 +93,7 @@
     try {
       const { recoveryPhrase: phrase } = await setupVault(auth.user.id, password);
       recoveryPhrase = phrase;
-      // Hold the local "setup complete" flip until finishSetup() — otherwise
-      // the guard $effect sees vaultSetupCompletedAt go truthy and redirects
-      // to /dashboard before the phrase view ever paints.
+      // Defer auth refresh to finishSetup() so the phrase view actually paints before the guard redirects.
       step = "phrase";
     } catch (err) {
       setupError =
@@ -128,15 +110,14 @@
       phraseCopied = true;
       setTimeout(() => (phraseCopied = false), 2000);
     } catch {
-      // Clipboard API can fail in insecure contexts; user can still copy
-      // manually from the revealed words.
+      // Clipboard API can fail in insecure contexts; user can copy manually from the revealed words.
     }
   }
 
   function downloadPhrase() {
     if (!recoveryPhrase) return;
     const body =
-      "JTransfer recovery phrase\n" +
+      "Tessil recovery phrase\n" +
       "Keep this somewhere safe. If you forget your vault password, this\n" +
       "is the only way to recover access to your files.\n\n" +
       recoveryPhrase +
@@ -145,7 +126,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "jtransfer-recovery-phrase.txt";
+    a.download = "tessil-recovery-phrase.txt";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -170,7 +151,7 @@
 </script>
 
 <svelte:head>
-  <title>Set up your vault — JTransfer</title>
+  <title>Set up your vault — Tessil</title>
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
@@ -243,7 +224,7 @@
             <Alert tone="destructive" title="Setup failed">{setupError}</Alert>
           {/if}
 
-          <div class="rounded-[calc(var(--radius-2xl)-1px)] border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-1">
+          <div class="rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-1">
             <p class="font-medium text-foreground">Pick wisely — there's no reset link.</p>
             <p>
               Your password never leaves this browser. We can't email you a
@@ -268,7 +249,7 @@
             vault — keep them somewhere only you can reach.
           </Alert>
 
-          <div class="rounded-[calc(var(--radius-2xl)-1px)] border border-border bg-muted/30 p-4 relative">
+          <div class="rounded-md border border-border bg-muted/30 p-4 relative">
             {#if !phraseRevealed}
               <div class="flex items-center justify-between">
                 <p class="text-sm text-muted-foreground">
@@ -347,7 +328,7 @@
     />
     <span class="text-sm text-foreground leading-relaxed">
       I've written down or stored my 12-word recovery phrase somewhere I can
-      get back to. I understand JTransfer can't recover it for me.
+      get back to. I understand Tessil can't recover it for me.
     </span>
   </label>
 

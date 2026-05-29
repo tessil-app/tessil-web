@@ -1,6 +1,4 @@
-// Relative by default — same-origin in prod (reverse proxy), and dev uses the
-// Vite /api proxy (see vite.config.ts). VITE_API_URL is an explicit override
-// for environments that prefer cross-origin (must set up CORS + credentials).
+// Relative by default — same-origin in prod, /api proxy in dev. VITE_API_URL overrides for cross-origin setups.
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 export interface CreateTransferResponse {
@@ -63,12 +61,9 @@ export interface TransferMetadata {
   passwordRequired: boolean;
   fileCount?: number;
   files?: FileInfo[];
-  // Issued by /transfer/:id/verify when the transfer is password-protected.
-  // Must be presented as `X-Transfer-Token` on subsequent /file/:id/url calls.
+  /** Issued by /transfer/:id/verify; presented as X-Transfer-Token on later /file calls. */
   accessToken?: string;
   accessTokenExpiresAt?: string;
-  // Optional title encrypted under the URL-fragment transfer key.
-  // Decrypted in the browser; the server only ever sees ciphertext.
   encryptedTitle?: string | null;
   encryptedTitleIv?: string | null;
 }
@@ -114,13 +109,8 @@ export interface OwnedTransferSummary {
   downloadCount: number;
   isCompleted: boolean;
   hasPassword: boolean;
-  // K_transfer wrapped under the owner's vault key. NULL on
-  // anonymous-at-creation rows. Unwrap requires the vault to be
-  // unlocked first.
+  /** K_transfer wrapped under the owner's vault key. Null on anonymous-at-creation rows. */
   wrappedKey: string | null;
-  // Optional title encrypted under K_transfer. Both fields set
-  // together or both null. Decrypted client-side once the row's
-  // K_transfer is unwrapped.
   encryptedTitle: string | null;
   encryptedTitleIv: string | null;
 }
@@ -130,10 +120,6 @@ export interface ListMyTransfersResponse {
   nextCursor: string | null;
 }
 
-// Returned by GET /api/me/transfers/:id/files for a transfer the
-// caller owns. encryptedName + encryptedNameIv are decrypted
-// client-side under K_transfer (unwrapped from the row's
-// wrappedKey blob).
 export interface OwnedTransferFileMetadata {
   id: string;
   encryptedName: string;
@@ -161,10 +147,7 @@ export interface PasskeySummary {
   lastUsedAt: string | null;
 }
 
-// Vault wire-format payloads. Salts/wraps are base64url-encoded raw
-// bytes — the server cannot read any of them. Layout:
-//   salt*  : 16 random bytes (Argon2id salt)
-//   wrap*  : 60 bytes = iv(12) || ciphertext(32) || tag(16)
+// Vault wire format: salt* = 16-byte Argon2id salt, wrap* = iv(12)||ct(32)||tag(16), base64url-encoded.
 export type VaultStatus =
   | { isSetup: false }
   | {
@@ -227,9 +210,6 @@ export interface VaultPhraseRegenerateRequest {
   wrapPhrase: string;
 }
 
-// Thrown by `ApiClient.request` for any non-2xx response. Carries
-// the optional upgrade hints (`code`, `upgradeUrl`) the API attaches
-// to limit-hit errors so UI can render an upgrade-aware message.
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -346,10 +326,7 @@ class ApiClient {
   }
 
   // ─── Multipart upload ─────────────────────────────────────────────
-  // Three round-trips per File: init (returns all Part URLs) →
-  // upload each Part directly to R2 → complete (or abort on
-  // failure). Orchestration lives in `$lib/upload/multipart.ts` —
-  // these methods are thin wrappers around the API.
+  // Orchestration lives in $lib/upload/multipart.ts; these are thin API wrappers.
 
   async initMultipartUpload(
     data: InitMultipartUploadRequest,
@@ -418,10 +395,7 @@ class ApiClient {
   }
 
   async downloadFile(fileId: string, accessToken?: string): Promise<ArrayBuffer> {
-    // Get presigned download URL from API
     const { downloadUrl } = await this.getDownloadUrl(fileId, accessToken);
-
-    // Download directly from R2
     const response = await fetch(downloadUrl);
 
     if (!response.ok) {
@@ -474,9 +448,7 @@ class ApiClient {
     return this.request(`/api/me/transfers/${encodeURIComponent(id)}/files`);
   }
 
-  // Rewrite (or clear) the encrypted title on an owned transfer. Pass null
-  // for both fields to clear. Server treats not-found / not-owned / soft-
-  // deleted the same: 404.
+  /** Pass null for both fields to clear. */
   async setMyTransferTitle(
     id: string,
     encryptedTitle: string | null,
@@ -501,7 +473,6 @@ class ApiClient {
       credentials: "include",
     });
     if (!response.ok) {
-      // 404 covers both "not found" and "not yours" by design.
       if (response.status === 404) {
         throw new Error("Transfer not found.");
       }
@@ -531,11 +502,10 @@ class ApiClient {
       throw new Error(`Request failed: ${response.status}`);
     }
 
-    // Prefer the filename the server suggested via Content-Disposition.
     const disposition = response.headers.get("content-disposition") ?? "";
     const match = disposition.match(/filename="([^"]+)"/);
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = match?.[1] ?? `jtransfer-export-${stamp}.json`;
+    const filename = match?.[1] ?? `tessil-export-${stamp}.json`;
 
     const blob = await response.blob();
     return { blob, filename };
@@ -620,9 +590,6 @@ class ApiClient {
   }
 
   // ─── Billing (Polar) ──────────────────────────────────────────────
-  // Drives the subscription panel on /dashboard/settings/account and
-  // the Pro upgrade flow. Checkout + portal redirect the user to
-  // Polar-hosted pages — we don't render any billing UI ourselves.
 
   async getBillingStatus(): Promise<BillingStatusResponse> {
     return this.request("/api/billing/status");
@@ -652,7 +619,6 @@ class ApiClient {
     });
     if (response.ok) return;
 
-    // The error body is small JSON — parse but tolerate non-JSON.
     let message: string | null = null;
     try {
       const data = await response.json();

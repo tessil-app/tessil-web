@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://jtransfer.jimmyverburgt.com/</loc>
+    <loc>https://tessil.app/</loc>
     <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://jtransfer.jimmyverburgt.com/privacy</loc>
+    <loc>https://tessil.app/privacy</loc>
     <lastmod>2026-05-06</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://jtransfer.jimmyverburgt.com/terms</loc>
+    <loc>https://tessil.app/terms</loc>
     <lastmod>2026-05-06</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://jtransfer.jimmyverburgt.com/abuse</loc>
+    <loc>https://tessil.app/abuse</loc>
     <lastmod>2026-05-06</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://jtransfer.jimmyverburgt.com/security</loc>
+    <loc>https://tessil.app/security</loc>
     <lastmod>2026-05-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://jtransfer.jimmyverburgt.com/pricing</loc>
+    <loc>https://tessil.app/pricing</loc>
     <lastmod>2026-05-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

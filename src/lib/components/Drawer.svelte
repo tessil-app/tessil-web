@@ -1,20 +1,5 @@
 <script lang="ts">
-  // Right-docked side panel. Native <dialog> in the top-layer so the
-  // browser handles focus trapping, inert background, and Escape for us;
-  // we just call .showModal() / .close() in an effect. Slides in from the
-  // right with @starting-style on the [open] attribute — see the inline
-  // styles below.
-  //
-  // Outside-click DOES NOT close — by design. The drawer wraps editable
-  // form state, and an accidental backdrop tap should never discard it.
-  // Closure is explicit: Escape or the header X button.
-  //
-  // Usage:
-  //   <Drawer open={state} onClose={() => (state = false)} title="Transfer">
-  //     <!-- body -->
-  //     {#snippet footer()}<Button …/>{/snippet}
-  //   </Drawer>
-
+  // Outside-click does NOT close — drawer wraps editable form state. Explicit close only.
   import { cn } from "$lib/utils";
   import IconXRegular from "phosphor-icons-svelte/IconXRegular.svelte";
   import type { Snippet } from "svelte";
@@ -54,8 +39,7 @@
   });
 
   function handleCancel(e: Event) {
-    // Native <dialog> fires 'cancel' on Escape. Convert to onClose so the
-    // parent's `open` state stays the single source of truth.
+    // Native <dialog> fires 'cancel' on Escape; route through onClose so parent state stays canonical.
     e.preventDefault();
     onClose?.();
   }
@@ -114,10 +98,7 @@
 </dialog>
 
 <style>
-  /* Slide-in from the right via @starting-style. Browsers that don't
-     support it (older Safari/Firefox) just show the panel instantly,
-     which is still acceptable — the design rule is "motion is feedback,
-     not flourish" (design-system.md §4). */
+  /* @starting-style slide-in; unsupported browsers show the panel instantly. */
   dialog.jt-drawer {
     transform: translateX(100%);
     transition:
@@ -133,15 +114,7 @@
       transform: translateX(100%);
     }
   }
-  /* No backdrop tint — Unifi-style. The page stays visible behind the
-     drawer; modality is enforced by the native <dialog> inertness. */
-
-  /* Drawer shadow. Two layers: a soft cast to the left for depth, plus
-     a 1px outline that replaces the previous border so the edge reads
-     on either page tint. Applied to the <dialog> itself (not the inner
-     panel) because the UA stylesheet sets `overflow: auto` on dialogs,
-     which would clip a shadow rendered from the panel. Tones tuned to
-     Unifi values. */
+  /* Shadow on the dialog itself, since UA stylesheet sets overflow:auto on dialogs and clips inner shadows. */
   dialog.jt-drawer {
     box-shadow:
       -4px 0 48px 0 rgba(33, 35, 39, 0.12),

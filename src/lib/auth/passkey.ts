@@ -1,10 +1,4 @@
-// Passkey ceremony orchestration. Thin wrappers around
-// `@simplewebauthn/browser` plus our API client. Audit doc 27.
-//
-// The browser library handles the WebAuthn JSON <-> binary conversion;
-// our job is to plumb its output to the server unchanged. The only
-// extra responsibility here is normalising user-facing error messages
-// (cancellation vs. real failure vs. browser unsupported).
+// Thin wrappers around @simplewebauthn/browser + API. Normalises ceremony errors for the UI.
 
 import {
   browserSupportsWebAuthn,
@@ -36,11 +30,6 @@ export function isPasskeySupported(): boolean {
   return browserSupportsWebAuthn();
 }
 
-/**
- * Enroll a new passkey for the signed-in user. Caller is responsible for
- * being authenticated (the API gate is server-side; this helper does not
- * check). Returns the new authenticator summary on success.
- */
 export async function enrollPasskey(nickname: string | null) {
   if (!isPasskeySupported()) {
     throw new PasskeyError(
@@ -77,16 +66,7 @@ export async function enrollPasskey(nickname: string | null) {
     });
 }
 
-/**
- * Sign in with a passkey. Returns when the server has set the session
- * cookie; caller should refresh local auth state.
- *
- * `mediation` controls the browser UI:
- *  - `"required"` (default) is the explicit "Sign in with passkey" button.
- *  - `"conditional"` is autofill UI on the email input; this call resolves
- *    only when the user picks a credential from the autofill list, and
- *    silently no-ops if the browser can't fulfil it.
- */
+/** `conditional` is autofill UI; `required` is the explicit button. */
 export async function signInWithPasskey(
   mediation: "required" | "conditional" = "required",
 ) {
@@ -124,15 +104,8 @@ export async function signInWithPasskey(
   });
 }
 
-/**
- * Probe whether the browser supports conditional UI (autofill). Returns
- * `false` on browsers without WebAuthn entirely.
- */
 export async function conditionalUiAvailable(): Promise<boolean> {
   if (!isPasskeySupported()) return false;
-  // `isConditionalMediationAvailable` is a static method on
-  // PublicKeyCredential in browsers that support it. Older browsers won't
-  // have it — surface as false.
   const PK = (globalThis as { PublicKeyCredential?: { isConditionalMediationAvailable?: () => Promise<boolean> } })
     .PublicKeyCredential;
   if (!PK?.isConditionalMediationAvailable) return false;
@@ -144,10 +117,7 @@ export async function conditionalUiAvailable(): Promise<boolean> {
 }
 
 function mapCeremonyError(err: unknown): PasskeyError {
-  // The browser library normalises some failures into DOMException-style
-  // names. NotAllowedError covers both user cancel and origin mismatch;
-  // we lean toward "cancelled" as the friendliest default, since origin
-  // mismatch would be a deploy bug.
+  // NotAllowedError ambiguously covers cancel and origin mismatch; favour cancel UX.
   const name =
     typeof err === "object" && err !== null && "name" in err
       ? String((err as { name: unknown }).name)

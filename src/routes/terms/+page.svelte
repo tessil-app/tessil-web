@@ -6,16 +6,16 @@
 </script>
 
 <svelte:head>
-  <title>Terms of Service - JTransfer</title>
+  <title>Terms of Service - Tessil</title>
   <meta
     name="description"
-    content="JTransfer terms of service: usage, limits, acceptable use, legal compliance. End-to-end encrypted file transfer."
+    content="Tessil terms of service: usage, limits, acceptable use, legal compliance. End-to-end encrypted file transfer."
   />
   <meta name="robots" content="index, follow" />
-  <meta property="og:title" content="Terms of Service - JTransfer" />
+  <meta property="og:title" content="Terms of Service - Tessil" />
   <meta
     property="og:description"
-    content="Terms of service for using JTransfer end-to-end encrypted file transfer."
+    content="Terms of service for using Tessil end-to-end encrypted file transfer."
   />
 </svelte:head>
 
@@ -33,7 +33,7 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
             <p class="text-muted-foreground">
-              By using JTransfer ("the Service"), you agree to these terms. If you
+              By using Tessil ("the Service"), you agree to these terms. If you
               don't agree, don't use the Service.
             </p>
           </section>
@@ -41,11 +41,11 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">2. Description of Service</h2>
             <p class="text-muted-foreground">
-              JTransfer is an end-to-end encrypted file transfer service with
+              Tessil is an end-to-end encrypted file transfer service with
               temporary share links.
             </p>
             <p class="text-muted-foreground">
-              A free tier is available without an account. JTransfer Pro is an
+              A free tier is available without an account. Tessil Pro is an
               optional paid subscription with higher per-file and per-month limits,
               billed monthly through Polar.sh (our Merchant of Record). Polar
               handles the full checkout, billing, and tax compliance. See the
@@ -100,7 +100,7 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">6. Privacy & Encryption</h2>
             <p class="text-muted-foreground">
-              JTransfer uses end-to-end encryption. Files are encrypted in your
+              Tessil uses end-to-end encryption. Files are encrypted in your
               browser before upload. We don't have the encryption keys:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
@@ -116,7 +116,7 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">7. Illegal Content & Abuse Reporting</h2>
             <p class="text-muted-foreground">
-              JTransfer has zero tolerance for illegal content, including but not limited to child sexual
+              Tessil has zero tolerance for illegal content, including but not limited to child sexual
               abuse material (CSAM), terrorism-related content, or any content that violates applicable laws.
             </p>
             <p class="text-muted-foreground">
@@ -132,7 +132,7 @@
             <p class="text-muted-foreground">
               For urgent matters involving child safety, please contact your local law enforcement
               immediately in addition to reporting to us at
-              <a href="mailto:abuse@jimmyverburgt.com" class="text-primary hover:underline">abuse@jimmyverburgt.com</a>.
+              <a href="mailto:abuse@tessil.app" class="text-primary hover:underline">abuse@tessil.app</a>.
             </p>
           </section>
 
@@ -173,7 +173,7 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">10. Limitation of Liability</h2>
             <p class="text-muted-foreground">
-              TO THE MAXIMUM EXTENT PERMITTED BY LAW, JTRANSFER AND ITS OPERATORS SHALL NOT BE LIABLE FOR:
+              TO THE MAXIMUM EXTENT PERMITTED BY LAW, TESSIL AND ITS OPERATORS SHALL NOT BE LIABLE FOR:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>Any indirect, incidental, special, consequential, or punitive damages</li>
@@ -190,7 +190,7 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">11. Indemnification</h2>
             <p class="text-muted-foreground">
-              You agree to indemnify and hold harmless JTransfer, its operators, and affiliates from any claims,
+              You agree to indemnify and hold harmless Tessil, its operators, and affiliates from any claims,
               damages, losses, or expenses (including legal fees) arising from your use of the Service or
               violation of these Terms.
             </p>
@@ -228,7 +228,7 @@
               Questions about these Terms:
             </p>
             <p class="text-muted-foreground">
-              <a href="mailto:legal@jimmyverburgt.com" class="text-primary hover:underline">legal@jimmyverburgt.com</a>
+              <a href="mailto:legal@tessil.app" class="text-primary hover:underline">legal@tessil.app</a>
             </p>
           </section>
         </div>

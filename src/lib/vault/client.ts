@@ -1,20 +1,5 @@
-// High-level vault client. See docs/adr/0004-vault-redesign-password-and-recovery-phrase.md.
-//
-// Flow at first sign-in:
-//   1. setupVault(password) — generates K_vault + recovery phrase, wraps
-//      K_vault under Argon2id(password) and Argon2id(phrase), POSTs the
-//      blobs to /api/me/vault/setup, caches K_vault in IDB. Returns the
-//      phrase for the UI to display once.
-//
-// Flow on every subsequent visit:
-//   - If the IDB cache has a non-expired entry for the current user,
-//     `isUnlocked()` is true and `getKVault()` returns the cached key.
-//   - Otherwise the UI must prompt for the password or recovery phrase
-//     and call `unlockWithPassword(...)` or `unlockWithPhrase(...)`.
-//
-// All wrap blobs are 60 bytes (iv|ct|tag) and round-trip the server as
-// base64url. The server is blind — every KDF and AES-GCM call happens
-// in the browser.
+// High-level vault client. Server is blind: all KDF + AES-GCM happens in-browser.
+// Wrap blobs are 60 bytes (iv|ct|tag), base64url over the wire.
 
 import { api, type VaultStatus } from "$lib/api/client";
 import {
@@ -41,11 +26,7 @@ import {
   subscribeToVaultState,
 } from "./session";
 
-// ─── shared state ───────────────────────────────────────────────────────────
-
-// Cached server-side vault status so multiple consumers (dashboard, upload
-// page, settings) don't re-fetch on every navigation. Invalidated after any
-// write that changes salts/wraps.
+// Cached so dashboard/upload/settings don't re-fetch on every navigation.
 let statusCache: VaultStatus | null = null;
 let statusInflight: Promise<VaultStatus> | null = null;
 
@@ -68,12 +49,7 @@ export async function getVaultStatus(force = false): Promise<VaultStatus> {
 
 // ─── unlock state ───────────────────────────────────────────────────────────
 
-/**
- * Resolve the cached K_vault for the signed-in user, or null when the
- * session has expired / never been unlocked. Reads IDB; the result lives
- * in a non-extractable CryptoKey so callers can wrap/unwrap but not export
- * the raw bytes.
- */
+/** Cached K_vault for the signed-in user, or null when unlocked session expired. */
 export async function getKVault(userId: string): Promise<CryptoKey | null> {
   return readVaultKey(userId);
 }
@@ -95,17 +71,7 @@ export interface VaultSetupResult {
   recoveryPhrase: string;
 }
 
-/**
- * One-shot vault setup. Generates a fresh K_vault and recovery phrase,
- * wraps K_vault under both KEKs, persists the blobs server-side, and
- * caches K_vault locally. The returned phrase MUST be shown to the user
- * exactly once — the server never sees the plaintext, so it cannot be
- * recovered afterwards.
- *
- * Idempotency: re-running setup against an already-initialised vault is
- * rejected server-side (409). Callers should branch on `getVaultStatus()`
- * before calling.
- */
+/** One-shot setup. Returned phrase MUST be shown to the user exactly once. */
 export async function setupVault(
   userId: string,
   password: string,
@@ -140,9 +106,7 @@ export async function setupVault(
   const kVaultKey = await importKVault(kVault);
   await storeVaultKey(userId, kVaultKey);
 
-  // Zero the raw KEK + K_vault bytes once the AES-GCM CryptoKeys exist.
-  // WebCrypto holds its own copy; the original Uint8Arrays are now redundant
-  // and could survive in GC memory longer than needed.
+  // Zero raw KEK + K_vault bytes; WebCrypto already holds its own copies.
   kekPassword.fill(0);
   kekPhrase.fill(0);
   kVault.fill(0);
@@ -218,11 +182,7 @@ export type ChangePasswordResult =
   | { ok: true }
   | { ok: false; reason: "not_setup" | "wrong_password" | "malformed" };
 
-/**
- * Change the vault password. The recovery phrase wrap is untouched, so
- * phrase recovery continues to work afterwards. Server-side this updates
- * only the password salt + wrap.
- */
+/** Phrase wrap is untouched, so phrase recovery still works after a password change. */
 export async function changePassword(
   userId: string,
   currentPassword: string,
@@ -253,7 +213,7 @@ export async function changePassword(
     wrapPassword: bytesToBase64Url(newWrap),
   });
 
-  // Re-prime IDB so the user stays unlocked through the password change.
+  // Stay unlocked across the password change.
   const kVaultKey = await importKVault(kVaultBytes);
   await storeVaultKey(userId, kVaultKey);
   kVaultBytes.fill(0);
@@ -266,12 +226,7 @@ export type RegeneratePhraseResult =
   | { ok: true; recoveryPhrase: string }
   | { ok: false; reason: "not_setup" | "wrong_password" | "malformed" };
 
-/**
- * Generate a fresh recovery phrase and rewrap K_vault under it. Requires
- * the current password — the old phrase becomes invalid the moment this
- * succeeds, so we never accept the old phrase as authorisation. Returns
- * the new phrase for one-time display.
- */
+/** Requires current password (the old phrase is about to become invalid). */
 export async function regeneratePhrase(
   userId: string,
   currentPassword: string,
@@ -302,8 +257,7 @@ export async function regeneratePhrase(
     wrapPhrase: bytesToBase64Url(newWrap),
   });
 
-  // Re-prime IDB. The K_vault itself did not change but the unlock state
-  // should persist through the regen UI.
+  // K_vault unchanged; stay unlocked through the regen UI.
   const kVaultKey = await importKVault(kVaultBytes);
   await storeVaultKey(userId, kVaultKey);
   kVaultBytes.fill(0);
@@ -316,11 +270,7 @@ export async function regeneratePhrase(
 
 const K_TRANSFER_BYTES = 32;
 
-/**
- * Wrap a raw 32-byte K_transfer under the cached K_vault. Throws when the
- * vault is locked — callers must call `unlockWith*` first. Returns the
- * 60-byte wire format as base64url, suitable for the upload-complete body.
- */
+/** Wraps a raw 32-byte K_transfer under K_vault; throws when locked. */
 export async function wrapTransferKey(
   userId: string,
   rawTransferKey: ArrayBuffer,
@@ -335,13 +285,7 @@ export async function wrapTransferKey(
   return bytesToBase64Url(wrap);
 }
 
-/**
- * Unwrap a base64url-encoded `wrappedKey` into raw K_transfer bytes. Returns
- * null when the vault is locked or the blob fails authentication (typically
- * "different K_vault than the one that wrapped this transfer"). The
- * dashboard treats null as "filename unavailable" and falls back to
- * showing the row in blind mode.
- */
+/** Returns null when the vault is locked or auth fails (caller falls back to blind mode). */
 export async function unwrapTransferKey(
   userId: string,
   wrappedKeyB64Url: string,
@@ -360,12 +304,7 @@ export async function unwrapTransferKey(
   return pt.buffer.slice(pt.byteOffset, pt.byteOffset + pt.byteLength) as ArrayBuffer;
 }
 
-/**
- * Import raw K_transfer bytes as an extractable AES-GCM CryptoKey suitable
- * for decrypting filenames and file payloads. Extractable so the dashboard
- * can hand the raw bytes back as a URL-fragment in the "Get share link"
- * recovery flow.
- */
+/** Extractable so the dashboard can re-emit raw bytes as a URL fragment for share-link recovery. */
 export async function importTransferKey(rawKey: ArrayBuffer): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",

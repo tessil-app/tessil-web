@@ -34,11 +34,18 @@
   }: Props = $props();
 
   const base =
-    "inline-flex items-center justify-center gap-2 font-medium rounded-[calc(var(--radius-2xl)-1px)] transition-[background-color,color,border-color] duration-200 ease-out hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+    "inline-flex items-center justify-center gap-2 font-medium transition-[background-color,color,border-color] duration-200 ease-out hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+
+  const radiusFor: Record<Variant, string> = {
+    primary: "rounded-md",
+    secondary: "rounded-md",
+    ghost: "rounded-md",
+    destructive: "rounded-md",
+  };
 
   const variants: Record<Variant, string> = {
     primary:
-      "bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground",
+      "bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground shadow-sm",
     secondary:
       "bg-secondary hover:bg-secondary/80 disabled:bg-muted text-secondary-foreground",
     ghost:
@@ -47,14 +54,23 @@
       "bg-transparent hover:bg-destructive/10 text-destructive-foreground",
   };
 
-  const sizing = $derived(iconOnly ? "p-2" : "py-3 px-4");
+  const sizing = $derived(
+    iconOnly ? "p-2" : variant === "primary" ? "py-3 px-6" : "py-3 px-4",
+  );
   const widthClass = $derived(fullWidth && !iconOnly ? "w-full" : "");
 </script>
 
 {#if href}
   <a
     {href}
-    class={cn(base, sizing, variants[variant], widthClass, className)}
+    class={cn(
+      base,
+      radiusFor[variant],
+      sizing,
+      variants[variant],
+      widthClass,
+      className,
+    )}
     {...rest as HTMLAnchorAttributes}
   >
     {@render children()}
@@ -63,7 +79,14 @@
   {@const buttonRest = rest as HTMLButtonAttributes}
   <button
     type={buttonRest.type ?? "button"}
-    class={cn(base, sizing, variants[variant], widthClass, className)}
+    class={cn(
+      base,
+      radiusFor[variant],
+      sizing,
+      variants[variant],
+      widthClass,
+      className,
+    )}
     {...buttonRest}
   >
     {@render children()}

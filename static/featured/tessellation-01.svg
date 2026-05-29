@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="g1" cx="22%" cy="28%" r="60%">
+      <stop offset="0%" stop-color="#1B4DFF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#1B4DFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="78%" cy="72%" r="55%">
+      <stop offset="0%" stop-color="#1B4DFF" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#1B4DFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g3" cx="68%" cy="18%" r="40%">
+      <stop offset="0%" stop-color="#1B4DFF" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#1B4DFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="warm" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#fff8eb" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#fafaf7" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="100%" height="100%" fill="url(#warm)"/>
+  <rect width="100%" height="100%" fill="url(#g1)"/>
+  <rect width="100%" height="100%" fill="url(#g2)"/>
+  <rect width="100%" height="100%" fill="url(#g3)"/>
+
+  <g fill="#1B4DFF">
+    <g opacity="0.85">
+      <rect x="120" y="160" width="56" height="56"/>
+      <rect x="198" y="142" width="56" height="56"/>
+      <rect x="120" y="234" width="56" height="56"/>
+      <rect x="190" y="234" width="56" height="56"/>
+    </g>
+    <g opacity="0.45">
+      <rect x="1280" y="640" width="44" height="44"/>
+      <rect x="1342" y="626" width="44" height="44"/>
+      <rect x="1280" y="698" width="44" height="44"/>
+      <rect x="1336" y="698" width="44" height="44"/>
+    </g>
+    <g opacity="0.28">
+      <rect x="780" y="80" width="32" height="32"/>
+      <rect x="824" y="70" width="32" height="32"/>
+      <rect x="780" y="122" width="32" height="32"/>
+      <rect x="820" y="122" width="32" height="32"/>
+    </g>
+    <g opacity="0.32">
+      <rect x="420" y="780" width="40" height="40"/>
+      <rect x="475" y="767" width="40" height="40"/>
+      <rect x="420" y="833" width="40" height="40"/>
+      <rect x="470" y="833" width="40" height="40"/>
+    </g>
+    <g opacity="0.18">
+      <rect x="1100" y="220" width="28" height="28"/>
+      <rect x="1138" y="211" width="28" height="28"/>
+      <rect x="1100" y="258" width="28" height="28"/>
+      <rect x="1136" y="258" width="28" height="28"/>
+    </g>
+    <g opacity="0.22">
+      <rect x="560" y="500" width="36" height="36"/>
+      <rect x="610" y="488" width="36" height="36"/>
+      <rect x="560" y="548" width="36" height="36"/>
+      <rect x="606" y="548" width="36" height="36"/>
+    </g>
+    <g opacity="0.12">
+      <rect x="940" y="850" width="24" height="24"/>
+      <rect x="972" y="842" width="24" height="24"/>
+      <rect x="940" y="882" width="24" height="24"/>
+      <rect x="970" y="882" width="24" height="24"/>
+    </g>
+  </g>
+</svg>

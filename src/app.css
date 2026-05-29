@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Switzer";
+  src: url("/fonts/Switzer-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme inline {
+  --font-sans: "Switzer", system-ui, -apple-system, "Segoe UI", sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -45,8 +54,10 @@
 :root {
   /* Light palette — vibrant cobalt primary on warm-neutral surfaces.
      The brand colour pops against the restrained palette: warm
-     off-white background, pure-white cards one step above. */
-  --radius: 0.625rem;
+     off-white background, pure-white cards one step above.
+     v2 radius anchor: 0.5rem (was 0.625rem) — slightly tighter
+     baseline that cascades through every Tailwind-derived radius. */
+  --radius: 0.5rem;
   --background: #fafaf7;
   --foreground: #1a1a1a;
   --card: #ffffff;
@@ -129,7 +140,19 @@
   --sidebar-ring: #1b4dff;
 }
 
-/* Respect prefers-reduced-motion: kill non-essential transitions and animations. */
+/*
+  Glass-panel surface used by the home upload panel, the in-flow
+  extension that slides out from it, and the download panel on
+  /d/[id]. Variants (rounded-r-lg for the fused extension, etc.)
+  layer on top via additional Tailwind utilities at the call site.
+*/
+@utility glass-panel {
+  @apply rounded-lg border border-border/60 overflow-hidden;
+  @apply bg-card/85 supports-[backdrop-filter]:bg-card/75;
+  @apply backdrop-blur-2xl backdrop-saturate-150;
+  @apply shadow-[0_1px_2px_rgb(0_0_0_/_0.03),0_4px_16px_rgb(0_0_0_/_0.04)];
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

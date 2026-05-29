@@ -1,9 +1,5 @@
-// Vault crypto primitives. See docs/adr/0004-vault-redesign-password-and-recovery-phrase.md.
-//
-// All KEKs are derived with Argon2id (m=64 MiB, t=3, p=1, len=32 → AES-256
-// key). The recovery phrase is BIP39 (12 words / 128-bit entropy), wordlist
-// English. K_vault is wrapped under two KEKs (password + phrase) using
-// AES-GCM-256; wire format is `iv(12) || ciphertext(32) || tag(16) = 60 bytes`.
+// Vault primitives. Argon2id(m=64MiB,t=3,p=1,len=32) → AES-256 KEK. Phrase is BIP39-12 (English).
+// Wrap format: iv(12) || ct(32) || tag(16) = 60 bytes.
 
 import { argon2id } from "hash-wasm";
 import { entropyToMnemonic, mnemonicToEntropy, generateMnemonic, validateMnemonic } from "@scure/bip39";
@@ -48,11 +44,6 @@ function argonParamsFor(kdfVersion: number) {
   throw new Error(`Unsupported kdfVersion: ${kdfVersion}`);
 }
 
-/**
- * Argon2id(password, salt) → raw 32-byte key bytes. Caller decides whether
- * to import them as a CryptoKey or use the raw bytes (Argon2 output is the
- * KEK; we use the raw bytes directly as an AES-GCM-256 key).
- */
 export async function deriveKekFromPassword(
   password: string,
   salt: Uint8Array,
@@ -71,11 +62,7 @@ export async function deriveKekFromPassword(
   return out as Uint8Array;
 }
 
-/**
- * Argon2id(phrase_entropy, salt) → raw 32-byte key bytes. The KDF input is
- * the 16-byte entropy the mnemonic encodes, not the words — this keeps the
- * derivation independent of wordlist edits, locale, and whitespace.
- */
+/** Derives from raw entropy (not the words) — independent of wordlist edits, locale, whitespace. */
 export async function deriveKekFromPhrase(
   mnemonic: string,
   salt: Uint8Array,
@@ -105,11 +92,6 @@ export function generateRecoveryPhrase(): string {
   return generateMnemonic(wordlist, PHRASE_ENTROPY_BITS);
 }
 
-/**
- * Normalise user-entered phrases: lowercase, collapse whitespace, trim. The
- * BIP39 wordlist is all-lowercase and single-space-separated; users paste in
- * with mixed case and odd spacing.
- */
 export function normaliseRecoveryPhrase(input: string): string {
   return input.trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -124,19 +106,14 @@ function phraseToEntropy(mnemonic: string): Uint8Array {
   return mnemonicToEntropy(normaliseRecoveryPhrase(mnemonic), wordlist);
 }
 
-// Round-trip helper — exposed for tests / debugging. Production code does
-// not need this directly.
+/** Test/debug helper. */
 export function _entropyToPhrase(entropy: Uint8Array): string {
   return entropyToMnemonic(entropy, wordlist);
 }
 
 // ─── AES-GCM envelope ───────────────────────────────────────────────────────
 
-/**
- * Import 32 raw KEK bytes as a non-extractable AES-GCM-256 CryptoKey. The
- * KEK lives only in WebCrypto memory after this point — the raw bytes can
- * be zeroed by the caller.
- */
+/** Non-extractable; caller may zero the raw bytes afterwards. */
 export async function importKek(kek: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
@@ -147,12 +124,7 @@ export async function importKek(kek: Uint8Array): Promise<CryptoKey> {
   );
 }
 
-/**
- * Import raw K_vault (32 bytes) as a non-extractable AES-GCM-256 CryptoKey.
- * Used both for wrapping K_transfer at upload time and for unwrapping at
- * dashboard load. Non-extractable so a successful memory-scrape attack
- * cannot lift the bytes out of WebCrypto.
- */
+/** Non-extractable to harden against memory scrape. */
 export async function importKVault(rawKVault: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
@@ -163,10 +135,7 @@ export async function importKVault(rawKVault: Uint8Array): Promise<CryptoKey> {
   );
 }
 
-/**
- * Encrypt a 32-byte secret (typically K_vault or K_transfer) under a KEK.
- * Returns the 60-byte wire format `iv(12) || ct(32) || tag(16)`.
- */
+/** Returns iv(12)||ct(32)||tag(16) = 60 bytes. */
 export async function wrapSecret(
   kek: CryptoKey,
   secret: Uint8Array,
@@ -186,10 +155,7 @@ export async function wrapSecret(
   return out;
 }
 
-/**
- * Decrypt a 60-byte wire-format wrap under a KEK. Returns the recovered raw
- * secret, or null if the blob is malformed / the tag fails.
- */
+/** Returns null on malformed wire or tag failure. */
 export async function unwrapSecret(
   kek: CryptoKey,
   wire: Uint8Array,

@@ -1,6 +1,3 @@
-// Reactive session state. Populated by +layout.ts on initial load and updated
-// after login/logout actions.
-
 import { api, type MeResponse } from "$lib/api/client";
 import { clearVaultCache } from "$lib/vault/client";
 
@@ -11,9 +8,6 @@ class AuthState {
   loaded = $state(false);
 
   isAuthenticated = $derived(this.user !== null);
-  // A signed-in user without a vault must complete /setup/vault
-  // before reaching the dashboard. The layout guard reads this to
-  // keep the redirect logic in one place.
   needsVaultSetup = $derived(
     this.user !== null && this.user.vaultSetupCompletedAt === null,
   );
@@ -23,7 +17,7 @@ class AuthState {
     this.loaded = true;
   }
 
-  /** Local update after vault setup completes — avoids a full /me refresh. */
+  /** Local update; avoids a full /me refresh after vault setup. */
   markVaultSetupComplete(at: string) {
     if (this.user) {
       this.user = { ...this.user, vaultSetupCompletedAt: at };
@@ -45,9 +39,7 @@ class AuthState {
     try {
       await api.logout();
     } finally {
-      // Sign-out must drop the vault key from memory — otherwise
-      // the next signed-in user on the same tab inherits the prior
-      // K_vault.
+      // Drop K_vault so the next user on this tab doesn't inherit it.
       clearVaultCache();
       this.user = null;
     }

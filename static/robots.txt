@@ -4,4 +4,4 @@ Allow: /
 # do not index temporary transfer links
 Disallow: /d/
 
-Sitemap: https://jtransfer.jimmyverburgt.com/sitemap.xml
+Sitemap: https://tessil.app/sitemap.xml

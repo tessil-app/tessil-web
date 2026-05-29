@@ -1,8 +1,4 @@
 <script lang="ts">
-  // Account sub-route: subscription panel + data export + danger zone.
-  // The identity strip (email/plan/member-since) lives in the settings
-  // layout above; this page hosts the per-account actions.
-
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
@@ -23,9 +19,6 @@
   let isDeleting = $state(false);
   let errorMessage = $state<string | null>(null);
 
-  // Subscription panel state. `null` while the initial fetch is in
-  // flight; afterward it always reflects the server's current view
-  // (which is the canonical truth — `users.tier` is the cache).
   let billing = $state<BillingStatusResponse | null>(null);
   let billingError = $state<string | null>(null);
   let isOpeningPortal = $state(false);
@@ -154,7 +147,7 @@
             </p>
           {:else if billing.subscription}
             <p class="text-sm text-muted-foreground">
-              You're supporting JTransfer — thanks. Next renewal on
+              Thanks for backing the project. Next renewal on
               <span class="text-foreground"
                 >{dateFmt.format(new Date(billing.subscription.currentPeriodEnd))}</span
               >.
@@ -186,8 +179,8 @@
             </p>
           {:else}
             <p class="text-sm text-muted-foreground">
-              You're on Free. Pro lifts every limit and keeps the project
-              alive. €5/month or €50/year — cancel any time.
+              You're on Free. Pro lifts the limits routine users hit.
+              €5/month or €50/year, cancel any time.
             </p>
           {/if}
 
@@ -207,7 +200,7 @@
 
 <DividerRow
   title="Your data"
-  body="Export everything we have on you as JSON, including your transfers and recent sign-in activity. File contents are never included — they were never readable to us."
+  body="Export everything we have on you as JSON: your account, transfers, and recent sign-in activity. File contents aren't included — we never had them."
 >
   {#snippet actions()}
     <Button
