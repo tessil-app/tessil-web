@@ -39,7 +39,7 @@
   {role}
   aria-live={ariaLive}
   class={cn(
-    "rounded-[calc(var(--radius-2xl)-1px)] border p-4 space-y-2",
+    "rounded-md border p-4 space-y-2",
     toneClasses[tone],
     className
   )}

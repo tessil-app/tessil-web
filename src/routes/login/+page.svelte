@@ -23,16 +23,10 @@
   let submitted = $state(false);
   let errorMessage = $state<string | null>(null);
 
-  // Cross-device code entry — visible after the magic link has been
-  // sent. The user only fills this in when they opened the link on
-  // a different device and got back here with the 6-digit code.
   let code = $state("");
   let isVerifyingCode = $state(false);
   let codeError = $state<string | null>(null);
 
-  // Passkey path — visible on browsers that support WebAuthn.
-  // Conditional UI fires silently in parallel with the email input
-  // when the platform supports it.
   let passkeySupported = $state(false);
   let isPasskeySigningIn = $state(false);
   let passkeyError = $state<string | null>(null);
@@ -53,9 +47,7 @@
     passkeySupported = isPasskeySupported();
     if (!passkeySupported) return;
 
-    // Fire-and-forget conditional UI: opens the autofill passkey picker on
-    // the email input. Silent on browsers that don't support it, and any
-    // cancel is a no-op (the user can still click the button below).
+    // Fire-and-forget autofill passkey picker; cancels are silent.
     void (async () => {
       const supportsAutofill = await conditionalUiAvailable();
       if (!supportsAutofill || auth.isAuthenticated) return;
@@ -64,7 +56,7 @@
         await auth.refresh();
         goto("/dashboard", { replaceState: true });
       } catch {
-        // Conditional UI swallows cancels.
+        // Conditional UI cancels are no-ops.
       }
     })();
   });
@@ -79,7 +71,6 @@
       goto("/dashboard", { replaceState: true });
     } catch (err) {
       if (err instanceof PasskeyError) {
-        // "cancelled" — keep the surface quiet; user knows they cancelled.
         if (err.kind !== "cancelled") {
           passkeyError = err.message;
         }
@@ -136,14 +127,14 @@
 </script>
 
 <svelte:head>
-  <title>Sign in — JTransfer</title>
+  <title>Sign in — Tessil</title>
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
 <PageLayout>
   <PageHeader
     title="Sign in"
-    tagline="We'll email you a one-time sign-in link. New here? We'll create your account on first sign-in — no password needed."
+    tagline="We'll email you a one-time link. First time here? Your account is created on first sign-in — no password needed."
   />
 
   <Frame.Root>

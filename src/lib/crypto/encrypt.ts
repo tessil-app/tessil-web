@@ -19,10 +19,7 @@ export interface EncryptedFilename {
 
 const STRING_PAD_MULTIPLE = 32;
 
-// Encrypts a UTF-8 string under an AES-GCM key, padding the
-// plaintext to a 32-byte boundary so length metadata can't be
-// inferred from the ciphertext byte count. Used for filenames
-// (every file) and the optional per-transfer title.
+/** Pads to a 32-byte boundary to hide length metadata. */
 export async function encryptString(
   plaintext: string,
   key: CryptoKey
@@ -65,7 +62,6 @@ export async function encryptFile(
   const totalSize = file.size;
   let processedSize = 0;
 
-  // Read and encrypt the file in chunks
   const reader = file.stream().getReader();
   let buffer = new Uint8Array(0);
 
@@ -73,14 +69,12 @@ export async function encryptFile(
     const { done, value } = await reader.read();
 
     if (value) {
-      // Append new data to buffer
       const newBuffer = new Uint8Array(buffer.length + value.length);
       newBuffer.set(buffer);
       newBuffer.set(value, buffer.length);
       buffer = newBuffer;
     }
 
-    // Process complete chunks
     while (buffer.length >= CHUNK_SIZE || (done && buffer.length > 0)) {
       const chunkSize = Math.min(CHUNK_SIZE, buffer.length);
       const chunk = buffer.slice(0, chunkSize);
@@ -90,14 +84,13 @@ export async function encryptFile(
       processedSize += chunkSize;
 
       if (onProgress) {
-        onProgress((processedSize / totalSize) * 50); // First 50% is reading
+        onProgress((processedSize / totalSize) * 50); // 0-50%: read
       }
     }
 
     if (done) break;
   }
 
-  // Concatenate all chunks
   const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
   const plaintext = new Uint8Array(totalLength);
   let offset = 0;
@@ -110,7 +103,7 @@ export async function encryptFile(
     onProgress(50);
   }
 
-  // Encrypt the entire file (AES-GCM handles the file as a single unit for auth)
+  // AES-GCM auths the file as a single unit.
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
     key,

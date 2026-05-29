@@ -1,14 +1,4 @@
 <script lang="ts">
-  // Blocking dialog. Uses the native <dialog> element so the browser
-  // handles focus trapping, inert background, and the Escape key for us —
-  // we just toggle .showModal() / .close() in an effect.
-  //
-  // Usage:
-  //   <Modal open={state} onClose={() => (state = false)} title="…">
-  //     …body…
-  //     {#snippet footer()}<Button …/>{/snippet}
-  //   </Modal>
-
   import { cn } from "$lib/utils";
   import IconXRegular from "phosphor-icons-svelte/IconXRegular.svelte";
   import type { Snippet } from "svelte";
@@ -48,8 +38,7 @@
   });
 
   function handleCancel(e: Event) {
-    // Native <dialog> fires 'cancel' on Escape. Intercept so a non-dismissible
-    // modal can't be dismissed via the keyboard.
+    // Native <dialog> fires 'cancel' on Escape; suppress for non-dismissible.
     if (!dismissible) {
       e.preventDefault();
       return;
@@ -74,11 +63,11 @@
 >
   <div
     class={cn(
-      "rounded-[calc(var(--radius-2xl)-1px)] border border-border bg-card text-card-foreground shadow-lg",
+      "rounded-lg border border-border bg-card text-card-foreground overflow-hidden",
       className,
     )}
   >
-    <div class="flex items-start justify-between gap-3 p-5 border-b border-border">
+    <div class="flex items-start justify-between gap-3 px-6 py-4 border-b border-border">
       <div class="space-y-1 min-w-0">
         <h2 class="font-semibold text-base leading-snug text-foreground">{title}</h2>
         {#if description}
@@ -98,13 +87,13 @@
     </div>
 
     {#if children}
-      <div class="p-5 space-y-4 text-sm leading-relaxed text-foreground">
+      <div class="px-6 py-4 space-y-4 text-sm leading-relaxed text-foreground">
         {@render children()}
       </div>
     {/if}
 
     {#if footer}
-      <div class="flex items-center justify-end gap-2 p-5 pt-0">
+      <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30">
         {@render footer()}
       </div>
     {/if}

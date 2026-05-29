@@ -1,9 +1,5 @@
 <script lang="ts">
-  // Vault sub-route: change password + regenerate recovery phrase. Both
-  // operations re-authenticate the user against their current password —
-  // the recovery phrase is never accepted here so a phrase-only attacker
-  // can't use this surface to lock the real owner out.
-
+  // Both operations re-auth against current password; phrase is never accepted here.
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import * as Frame from "$lib/components/frame";
@@ -173,7 +169,7 @@
   function downloadRegenPhrase() {
     if (!regenNewPhrase) return;
     const body =
-      "JTransfer recovery phrase\n" +
+      "Tessil recovery phrase\n" +
       "Keep this somewhere safe. If you forget your vault password, this\n" +
       "is the only way to recover access to your files.\n\n" +
       regenNewPhrase +
@@ -182,7 +178,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "jtransfer-recovery-phrase.txt";
+    a.download = "tessil-recovery-phrase.txt";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -341,7 +337,7 @@
           password, your vault is unrecoverable.
         </Alert>
 
-        <div class="rounded-[calc(var(--radius-2xl)-1px)] border border-border bg-muted/30 p-4">
+        <div class="rounded-md border border-border bg-muted/30 p-4">
           {#if !regenRevealed}
             <div class="flex items-center justify-between">
               <p class="text-sm text-muted-foreground">
@@ -421,7 +417,7 @@
     />
     <span class="text-sm text-foreground leading-relaxed">
       I've written down or stored the new 12-word recovery phrase somewhere I
-      can get back to. I understand JTransfer can't recover it for me.
+      can get back to. I understand Tessil can't recover it for me.
     </span>
   </label>
 

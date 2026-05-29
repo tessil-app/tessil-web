@@ -11,7 +11,7 @@ pre-commit:
   commands:
     block-env-files:
       # Refuse commits that include a .env file. Secrets belong in
-      # /etc/jtransfer/ on the VPS, never in git (see docs/runbooks/secrets.md).
+      # /etc/tessil/ on the VPS, never in git (see docs/runbooks/secrets.md).
       run: |
         files="{staged_files}"
         if printf '%s\n' "$files" | grep -E '(^|/)\.env(\.|$)' >/dev/null; then

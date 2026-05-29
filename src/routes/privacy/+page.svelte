@@ -6,16 +6,16 @@
 </script>
 
 <svelte:head>
-  <title>Privacy Policy - JTransfer</title>
+  <title>Privacy Policy - Tessil</title>
   <meta
     name="description"
-    content="What data JTransfer handles, how long, and your GDPR rights. End-to-end encrypted file transfer."
+    content="What data Tessil handles, how long, and your GDPR rights. End-to-end encrypted file transfer."
   />
   <meta name="robots" content="index, follow" />
-  <meta property="og:title" content="Privacy Policy - JTransfer" />
+  <meta property="og:title" content="Privacy Policy - Tessil" />
   <meta
     property="og:description"
-    content="JTransfer privacy policy for end-to-end encrypted file transfer."
+    content="Tessil privacy policy for end-to-end encrypted file transfer."
   />
 </svelte:head>
 
@@ -33,9 +33,9 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Introduction</h2>
             <p class="text-muted-foreground">
-              JTransfer ("we", "our", "us") is an end-to-end encrypted file transfer
+              Tessil ("we", "our", "us") is an end-to-end encrypted file transfer
               service. This page explains what data we handle when you use the
-              service at jtransfer.jimmyverburgt.com.
+              service at tessil.app.
             </p>
             <p class="text-muted-foreground">
               Your files are unreadable to us by design. They're encrypted in your
@@ -43,7 +43,7 @@
               link's URL fragment — the fragment never reaches our servers.
             </p>
             <p class="text-muted-foreground">
-              You can use JTransfer anonymously or with an account. An account adds
+              You can use Tessil anonymously or with an account. An account adds
               management features for the transfers you create — it doesn't change
               how files are encrypted.
             </p>
@@ -232,7 +232,7 @@
                 processor; used for transactional mail only — never marketing.
               </li>
               <li>
-                <strong>Polar.sh:</strong> Merchant of Record for JTransfer Pro
+                <strong>Polar.sh:</strong> Merchant of Record for Tessil Pro
                 subscriptions. Receives your email, payment details, billing
                 address, and transaction history when you subscribe.
                 US-incorporated; EU data residency under the EU-US Data Privacy
@@ -260,7 +260,7 @@
               Questions about this policy or our data practices:
             </p>
             <p class="text-muted-foreground">
-              <a href="mailto:privacy@jimmyverburgt.com" class="text-primary hover:underline">privacy@jimmyverburgt.com</a>
+              <a href="mailto:privacy@tessil.app" class="text-primary hover:underline">privacy@tessil.app</a>
             </p>
           </section>
         </div>

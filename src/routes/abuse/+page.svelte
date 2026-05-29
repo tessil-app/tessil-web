@@ -23,14 +23,14 @@
     error = null;
 
     try {
-      const subject = encodeURIComponent("JTransfer Abuse Report");
+      const subject = encodeURIComponent("Tessil Abuse Report");
       const body = encodeURIComponent(
         `Transfer URL: ${transferUrl}\n\nReason: ${reason}\n\nReporter contact: ${contact || "Not provided"}`
       );
-      window.location.href = `mailto:abuse@jimmyverburgt.com?subject=${subject}&body=${body}`;
+      window.location.href = `mailto:abuse@tessil.app?subject=${subject}&body=${body}`;
       submitted = true;
     } catch {
-      error = "Failed to submit report. Please email abuse@jimmyverburgt.com directly.";
+      error = "Failed to submit report. Please email abuse@tessil.app directly.";
     } finally {
       submitting = false;
     }
@@ -38,23 +38,23 @@
 </script>
 
 <svelte:head>
-  <title>Report Abuse - JTransfer</title>
+  <title>Report Abuse - Tessil</title>
   <meta
     name="description"
-    content="Report illegal or abusive transfers on JTransfer. Submit a link for review."
+    content="Report illegal or abusive transfers on Tessil. Submit a link for review."
   />
   <meta name="robots" content="index, follow" />
-  <meta property="og:title" content="Report Abuse - JTransfer" />
+  <meta property="og:title" content="Report Abuse - Tessil" />
   <meta
     property="og:description"
-    content="Report illegal or abusive transfers on JTransfer. End-to-end encrypted file transfer."
+    content="Report illegal or abusive transfers on Tessil. End-to-end encrypted file transfer."
   />
 </svelte:head>
 
 <PageLayout width="3xl">
   <PageHeader
     title="Report Abuse"
-    tagline="Report a transfer or related misuse on JTransfer."
+    tagline="Report a transfer or related misuse on Tessil."
   />
 
   <Frame.Root>
@@ -74,9 +74,9 @@
           <p class="text-sm text-muted-foreground max-w-md text-balance">
             If your email client didn't open, send the report to
             <a
-              href="mailto:abuse@jimmyverburgt.com"
+              href="mailto:abuse@tessil.app"
               class="text-primary hover:underline"
-              >abuse@jimmyverburgt.com</a
+              >abuse@tessil.app</a
             >.
           </p>
         </div>
@@ -84,7 +84,7 @@
         <div class="space-y-6">
           <div class="space-y-3 text-muted-foreground">
             <p>
-              If a transfer on JTransfer contains illegal or abusive content,
+              If a transfer on Tessil contains illegal or abusive content,
               report it below. Every report is reviewed; valid ones get acted
               on under applicable law.
             </p>
@@ -106,7 +106,7 @@
               id="transfer-url"
               label="Transfer URL"
               required
-              placeholder="https://jtransfer.jimmyverburgt.com/d/..."
+              placeholder="https://tessil.app/d/..."
               bind:value={transferUrl}
             />
 
@@ -141,9 +141,9 @@
           <p class="text-sm text-muted-foreground">
             Or email
             <a
-              href="mailto:abuse@jimmyverburgt.com"
+              href="mailto:abuse@tessil.app"
               class="text-primary hover:underline"
-              >abuse@jimmyverburgt.com</a
+              >abuse@tessil.app</a
             >
             directly. For child-safety emergencies, also contact local law
             enforcement.

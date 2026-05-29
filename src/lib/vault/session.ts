@@ -1,14 +1,7 @@
-// IndexedDB-backed K_vault session cache.
-//
-// A non-extractable CryptoKey is cached across page loads with a
-// 24h TTL and a manual lock action. We store the CryptoKey directly
-// in IDB (browsers persist non-extractable AES-GCM keys losslessly)
-// so the dashboard can decrypt filenames on reload without
-// prompting for the password again. The auth session lifetime is
-// independent and longer — when the K_vault entry expires, the
-// user is prompted to unlock.
+// IDB-backed K_vault cache, 24h TTL. Stores the non-extractable CryptoKey directly so
+// the dashboard can decrypt on reload without re-prompting.
 
-const DB_NAME = "jtransfer-vault";
+const DB_NAME = "tessil-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "keys";
 const KEY_ID = "kvault";
@@ -59,8 +52,6 @@ async function withStore<T>(
   });
 }
 
-// Listeners notified whenever lock/unlock state changes. Svelte stores can
-// subscribe to react to expiration / manual lock.
 type Listener = (state: { unlocked: boolean; userId: string | null }) => void;
 const listeners = new Set<Listener>();
 
@@ -75,11 +66,7 @@ export function subscribeToVaultState(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
-/**
- * Persist a freshly-unwrapped K_vault for `userId`. The CryptoKey
- * must be non-extractable so the browser cannot serialise raw bytes
- * out of IDB. TTL is 24h from now.
- */
+/** CryptoKey MUST be non-extractable; TTL is 24h. */
 export async function storeVaultKey(userId: string, key: CryptoKey): Promise<void> {
   const entry: StoredVaultKey = {
     key,
@@ -90,11 +77,7 @@ export async function storeVaultKey(userId: string, key: CryptoKey): Promise<voi
   notify({ unlocked: true, userId });
 }
 
-/**
- * Retrieve the cached K_vault for `userId`. Returns null when missing,
- * expired, or belonging to a different user (e.g. someone else signed in
- * on the same browser). Expired entries are deleted in passing.
- */
+/** Returns null when missing, expired, or stale (different user). */
 export async function readVaultKey(userId: string): Promise<CryptoKey | null> {
   const entry = await withStore<StoredVaultKey | undefined>(
     "readonly",
@@ -102,7 +85,6 @@ export async function readVaultKey(userId: string): Promise<CryptoKey | null> {
   );
   if (!entry) return null;
   if (entry.userId !== userId) {
-    // Belongs to a different user — drop it.
     await clearVaultKey();
     return null;
   }
@@ -119,12 +101,6 @@ export async function clearVaultKey(): Promise<void> {
   notify({ unlocked: false, userId: null });
 }
 
-/**
- * Cheap synchronous-ish check: is there a non-expired vault entry for this
- * user? Returns false if IDB is unavailable. Use this from layout code that
- * needs to gate routes without paying for a full CryptoKey read on every
- * navigation.
- */
 export async function isVaultUnlocked(userId: string): Promise<boolean> {
   const key = await readVaultKey(userId);
   return key !== null;

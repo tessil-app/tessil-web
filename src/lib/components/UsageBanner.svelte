@@ -1,17 +1,6 @@
 <script lang="ts">
-  // Surfaces "you're close to a tier cap" in-page. Two thresholds:
-  // 80% (yellow, soft nudge) and 95% (warning, more prominent). Each
-  // is independently dismissable per billing period — once dismissed
-  // at the 80% threshold for this month, the banner doesn't re-appear
-  // until either the 95% threshold trips or the next period rolls
-  // over. Dismiss state is stored in localStorage keyed by
-  // `{period}:{threshold}` so it survives reloads without ever being
-  // sent to the server.
-  //
-  // The parent passes the usage payload (already-fetched on the
-  // dashboard) and the banner renders nothing when below 80% on every
-  // tracked dimension, OR when the relevant threshold is already
-  // dismissed for the current period.
+  // 80%/95% caps; dismiss state in localStorage keyed by `{period}:{threshold}`.
+  // Below 80% on every dimension OR already-dismissed for this period → renders nothing.
 
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -26,15 +15,11 @@
 
   let { usage }: Props = $props();
 
-  // Period key — buckets dismiss state by the volume reset window so
-  // dismissals don't carry over into the next period.
   function periodKey(iso: string): string {
     const d = new Date(iso);
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
   }
 
-  // Threshold levels we track. Order matters — pick the highest
-  // tripped + not-yet-dismissed when rendering.
   type Threshold = 80 | 95;
 
   function pct(used: number, cap: number): number {
@@ -46,8 +31,6 @@
     return `jt_usage_banner_dismissed:${period}:${threshold}`;
   }
 
-  // Tracked separately so dismiss is reactive. Hydrated on mount;
-  // SSR is off so this runs on the first client paint.
   let dismissed = $state<Record<string, true>>({});
 
   onMount(() => {
@@ -62,9 +45,6 @@
     dismissed = snapshot;
   });
 
-  // Compute the highest threshold the user has actually crossed,
-  // restricted to dimensions where it matters (monthly volume +
-  // daily transfer count). Returns null when nothing's interesting.
   const tripped = $derived.by((): { threshold: Threshold; dimension: string } | null => {
     if (!usage) return null;
     const monthlyPct = pct(usage.monthlyVolume.usedBytes, usage.monthlyVolume.capBytes);

@@ -1,10 +1,4 @@
-// Multipart upload orchestrator.
-//
-// Slices the encrypted Blob into Parts (size dictated by the server),
-// uploads them in parallel directly to R2 via the presigned URLs
-// returned by `/api/upload/init-multipart`, retries each Part on
-// transient failure, and fires `/api/upload/abort-multipart` if any
-// Part exhausts retries.
+// Multipart upload orchestrator. Slices, uploads in parallel to R2, retries, aborts on hard failure.
 
 import {
   api,
@@ -13,8 +7,7 @@ import {
 } from "$lib/api/client";
 
 const MAX_PART_RETRIES = 3;
-// 6 sits at the browser's per-origin connection cap; any retries
-// during failure queue briefly behind in-flight Parts.
+// Browser per-origin connection cap; retries queue briefly behind in-flight Parts.
 const PARALLELISM = 6;
 
 interface PartTask {
@@ -41,8 +34,6 @@ interface MultipartUploadResult {
   size: number;
 }
 
-// Sleep with respect to an optional AbortSignal — short-circuits if the
-// signal aborts mid-backoff so cancel feels instant.
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -61,8 +52,6 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-// Retryable: any network error (no HTTP response — represented as
-// status 0 when fetch rejects) and 408 / 425 / 429 / 5xx.
 function isRetryableStatus(status: number): boolean {
   if (status === 0) return true; // network error
   if (status === 408 || status === 425 || status === 429) return true;
@@ -74,11 +63,6 @@ interface PartUploadResult {
   etag: string;
 }
 
-// Upload one Part via fetch. We use fetch (not XHR) because Part
-// uploads are background workers that don't need per-Part progress
-// events — overall progress is derived from completed Parts. fetch
-// keeps the code simpler and avoids the XHR streaming quirks under
-// Bun + browser test runners.
 async function uploadSinglePart(
   task: PartTask,
   signal?: AbortSignal,
@@ -92,8 +76,7 @@ async function uploadSinglePart(
     });
   } catch (err) {
     if ((err as DOMException).name === "AbortError") throw err;
-    // Network-layer failure (DNS, CORS, connection reset, etc.).
-    // Surface as status 0 so the retry layer treats it as retryable.
+    // Status 0 marks network errors as retryable.
     const wrapped = new Error("Part upload failed (network)");
     (wrapped as Error & { status?: number }).status = 0;
     throw wrapped;
@@ -115,8 +98,6 @@ async function uploadSinglePart(
   return { etag };
 }
 
-// Upload one Part with retries. Returns the etag on success; throws on
-// terminal failure (retries exhausted or AbortError).
 async function uploadPartWithRetry(
   task: PartTask,
   signal?: AbortSignal,
@@ -129,12 +110,10 @@ async function uploadPartWithRetry(
       if ((err as DOMException).name === "AbortError") throw err;
       lastError = err;
       const status = (err as { status?: number }).status ?? 0;
-      if (!isRetryableStatus(status)) break; // 4xx (non-408/425/429) → bail
+      if (!isRetryableStatus(status)) break;
       if (attempt === MAX_PART_RETRIES) break;
 
-      // Exponential backoff with jitter, capped at 10s. ±500ms of
-      // jitter staggers the 4 parallel Parts so a network event
-      // doesn't kick all 4 retries into lockstep.
+      // Exponential backoff with jitter, capped at 10s; jitter prevents lockstep retries.
       const base = Math.min(1000 * Math.pow(2, attempt), 10000);
       const jitter = Math.random() * 500;
       await sleep(base + jitter, signal);
@@ -143,10 +122,6 @@ async function uploadPartWithRetry(
   throw lastError instanceof Error ? lastError : new Error("Part upload failed");
 }
 
-// Simple promise pool: runs up to `concurrency` tasks at a time from
-// the input array, collecting results in order. Bails on the first
-// terminal failure — pending tasks are aborted via the shared signal
-// in the caller.
 async function runWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
@@ -170,22 +145,12 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
-/**
- * Run the full upload-Parts-then-complete flow for one File. On any
- * terminal Part failure (or AbortSignal trip), fires
- * `/api/upload/abort-multipart` and rethrows the original error so
- * the caller can surface it.
- *
- * Caller is responsible for the `init-multipart` call beforehand and
- * for not calling this twice on the same `uploadId`.
- */
+/** Aborts cleanly on terminal failure. Caller handles init-multipart and one-shot semantics. */
 export async function uploadEncryptedBlobMultipart(
   input: MultipartUploadInput,
 ): Promise<MultipartUploadResult> {
   const { uploadId, fileId, transferId, encryptedBlob, partUrls, onProgress, signal } = input;
 
-  // Pre-slice the blob so each worker just PUTs its piece. Slicing a
-  // Blob is O(1) — it returns a view, not a copy.
   let offset = 0;
   const tasks: PartTask[] = partUrls.map((p) => {
     const body = encryptedBlob.slice(offset, offset + p.contentLength);
@@ -198,9 +163,7 @@ export async function uploadEncryptedBlobMultipart(
     };
   });
 
-  // Internal abort controller for cancelling in-flight Parts when one
-  // Part fails terminally. Linked to the caller's signal so a
-  // user-initiated cancel propagates.
+  // Linked to caller signal so a user cancel propagates to in-flight Parts.
   const controller = new AbortController();
   const onCallerAbort = () => controller.abort();
   signal?.addEventListener("abort", onCallerAbort, { once: true });
@@ -227,10 +190,8 @@ export async function uploadEncryptedBlobMultipart(
     });
     return completed;
   } catch (err) {
-    // Cancel any siblings still in flight.
     controller.abort();
-    // Best-effort abort at R2 + server-side cleanup. Swallow errors
-    // here — the lifecycle rule catches anything we miss within 7d.
+    // Best-effort; the R2 lifecycle rule sweeps any orphans within 7d.
     try {
       await api.abortMultipartUpload({ transferId, fileId, uploadId });
     } catch (abortErr) {

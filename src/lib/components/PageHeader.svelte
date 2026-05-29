@@ -1,11 +1,12 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
   import type { Snippet } from "svelte";
+  import Wordmark from "$lib/components/brand/Wordmark.svelte";
 
   interface Props {
     title: string;
     tagline?: string;
-    /** Wordmark href. Pass `null` to render plain text (recipient surfaces). */
+    /** Wordmark href. Pass `null` to render the mark without a link (recipient surfaces). */
     wordmarkHref?: string | null;
     align?: "center" | "left";
     actions?: Snippet;
@@ -31,17 +32,18 @@
     className
   )}
 >
-  <div class={cn(isCenter ? "flex flex-col items-center gap-2" : "flex flex-col gap-1")}>
+  <div class={cn(isCenter ? "flex flex-col items-center gap-3" : "flex flex-col gap-2")}>
     {#if wordmarkHref !== null}
       <a
         href={wordmarkHref}
-        class="text-sm font-semibold tracking-tight text-foreground hover:text-primary transition-colors duration-200 ease-out"
+        class="inline-flex text-sm hover:opacity-80 transition-opacity duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+        aria-label="Tessil — home"
       >
-        JTransfer
+        <Wordmark layout="horizontal" markSize={20} />
       </a>
     {:else}
-      <span class="text-sm font-semibold tracking-tight text-foreground">
-        JTransfer
+      <span class="inline-flex text-sm">
+        <Wordmark layout="horizontal" markSize={20} />
       </span>
     {/if}
 

@@ -5,31 +5,14 @@
 
   interface Props {
     nickname: string | null;
-    /** "Synced · last used 2 hours ago" — caller composes; primitive only renders. */
     meta: string;
-    /**
-     * True when this row authenticated the current session. Adds the
-     * inline " · Used to sign in here" hint and signals to the caller's
-     * confirm panel whether to surface the warning Alert.
-     * Source of truth: `session.authenticator_id`.
-     */
+    /** True when this row authenticated the current session. */
     isCurrent?: boolean;
-    /**
-     * True when `body` should replace the default name+meta render
-     * (the rename state). Svelte 5 snippet declarations are always
-     * truthy, so we can't infer this from `body !== undefined`.
-     */
+    /** Svelte 5 snippets are always truthy, so we need an explicit flag. */
     showBody?: boolean;
-    /** Override the default name+meta render — used by the rename state. */
     body?: Snippet;
-    /** Inline right-side action buttons. */
     actions?: Snippet;
-    /**
-     * True when `below` should render in the inset panel under the row
-     * (rename error or delete-confirm state).
-     */
     showBelow?: boolean;
-    /** Panel that renders below the main row. */
     below?: Snippet;
     class?: string;
   }

@@ -44,7 +44,7 @@
         {disabled}
         aria-pressed={isActive}
         class={cn(
-          "hover:cursor-pointer flex-1 py-2 px-3 text-sm rounded-[calc(var(--radius-2xl)-1px)] transition-[background-color,color] duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60",
+          "hover:cursor-pointer flex-1 py-2 px-3 text-sm rounded-full transition-[background-color,color] duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60",
           isActive
             ? "bg-primary text-primary-foreground"
             : "bg-secondary text-secondary-foreground hover:bg-accent"

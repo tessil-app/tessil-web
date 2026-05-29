@@ -15,7 +15,6 @@ function createUploadStore() {
     expiresInHours: 24,
     currentFileIndex: 0,
     password: "",
-    passwordEnabled: false,
     maxDownloads: null,
     title: "",
   });
@@ -56,9 +55,6 @@ function createUploadStore() {
     },
     get password() {
       return state.password;
-    },
-    get passwordEnabled() {
-      return state.passwordEnabled;
     },
     get title() {
       return state.title;
@@ -137,13 +133,6 @@ function createUploadStore() {
       state.password = password;
     },
 
-    setPasswordEnabled(enabled: boolean) {
-      state.passwordEnabled = enabled;
-      if (!enabled) {
-        state.password = "";
-      }
-    },
-
     setTitle(title: string) {
       state.title = title;
     },
@@ -159,7 +148,6 @@ function createUploadStore() {
         expiresInHours: 24,
         currentFileIndex: 0,
         password: "",
-        passwordEnabled: false,
         maxDownloads: null,
         title: "",
       };

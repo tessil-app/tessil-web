@@ -18,17 +18,13 @@ export interface UploadState {
   status: UploadStatus;
   overallProgress: number;
   error: string | null;
-  /** When the error response carries an `upgradeUrl` (limit-hit on a
-   *  Free tier cap), surface an "Upgrade to Pro" CTA alongside the
-   *  generic Try Again button. Set together with `error`. */
+  /** Set together with `error` when the limit response carries an upgrade URL. */
   errorUpgradeUrl: string | null;
   shareUrl: string | null;
   expiresInHours: number;
   currentFileIndex: number;
   password: string;
-  passwordEnabled: boolean;
   maxDownloads: number | null;
-  /** Optional human-readable name for the transfer; encrypted under
-   *  K_transfer before reaching the server. 200 chars soft cap. */
+  /** Optional, encrypted under K_transfer before reaching the server. */
   title: string;
 }

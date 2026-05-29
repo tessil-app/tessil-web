@@ -31,7 +31,7 @@
 </script>
 
 <svelte:head>
-  <title>Settings — JTransfer</title>
+  <title>Settings — Tessil</title>
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
@@ -81,7 +81,7 @@
               <a
                 href={item.href}
                 class={cn(
-                  "block px-3 py-2 rounded-[calc(var(--radius-2xl)-1px)] text-sm transition-colors duration-200 ease-out whitespace-nowrap focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                  "block px-3 py-2 rounded-md text-sm transition-colors duration-200 ease-out whitespace-nowrap focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                   active
                     ? "bg-accent text-foreground font-medium"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",

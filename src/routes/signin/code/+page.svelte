@@ -1,9 +1,5 @@
 <script lang="ts">
-  // Cross-device sign-in code display. Reached by redirect from
-  // /api/auth/verify when the magic-link click happens on a device
-  // that does NOT carry the pending-login cookie. The code arrives
-  // in the URL fragment and is never sent to the server.
-
+  // Code arrives in the URL fragment; never sent to the server.
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import * as Frame from "$lib/components/frame";
@@ -43,8 +39,7 @@
     const rawCode = params.get("code");
     const rawExp = params.get("exp");
 
-    // Strip the fragment from history so a Back/Forward navigation or shared
-    // tab snapshot doesn't re-expose the code.
+    // Strip fragment so Back/Forward or shared snapshots don't re-expose the code.
     history.replaceState(null, "", window.location.pathname);
 
     if (!rawCode || !/^\d{6}$/.test(rawCode)) return;
@@ -81,14 +76,13 @@
         copied = false;
       }, 2000);
     } catch {
-      // Clipboard API can fail on insecure contexts or denied permissions —
-      // the user can always read and type the code manually.
+      // Clipboard API can fail in insecure contexts; user can type the code manually.
     }
   }
 </script>
 
 <svelte:head>
-  <title>Your sign-in code — JTransfer</title>
+  <title>Your sign-in code — Tessil</title>
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
@@ -129,7 +123,7 @@
               Six-digit code
             </div>
             <div
-              class="rounded-[calc(var(--radius-2xl)-1px)] border bg-muted/30 py-6 text-center font-mono text-4xl sm:text-5xl font-semibold tabular-nums tracking-[0.25em] text-foreground select-all"
+              class="rounded-md border bg-muted/30 py-6 text-center font-mono text-4xl sm:text-5xl font-semibold tabular-nums tracking-[0.25em] text-foreground select-all"
               aria-label="Sign-in code"
             >
               {formattedCode}

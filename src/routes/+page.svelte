@@ -1,34 +1,29 @@
 <script lang="ts">
-  // Home / upload page. Anonymous uploads run unmodified; signed-in
-  // uploads always wrap the transfer key under the user's K_vault, and
-  // prompt for the password mid-flow when the vault is locked.
-
   import { goto } from "$app/navigation";
   import { api, ApiError } from "$lib/api/client";
   import { uploadEncryptedBlobMultipart } from "$lib/upload/multipart";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
-  import Checkbox from "$lib/components/Checkbox.svelte";
-  import DropZone from "$lib/components/DropZone.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
-  import * as Frame from "$lib/components/frame";
+  import HowItWorks from "$lib/components/HowItWorks.svelte";
   import Modal from "$lib/components/Modal.svelte";
-  import PageHeader from "$lib/components/PageHeader.svelte";
-  import PageLayout from "$lib/components/PageLayout.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
-  import ProgressBar from "$lib/components/ProgressBar.svelte";
   import SegmentedControl from "$lib/components/SegmentedControl.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
-  import { encryptFile, encryptFilename, encryptString } from "$lib/crypto/encrypt";
+  import {
+    encryptFile,
+    encryptFilename,
+    encryptString,
+  } from "$lib/crypto/encrypt";
   import { exportKey, generateKey, wrapKey } from "$lib/crypto/key";
   import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
   import type { FileUploadState } from "$lib/stores/upload.types";
-  import { formatSize } from "$lib/utils";
+  import { cn, formatSize } from "$lib/utils";
   import {
     isUnlocked,
     unlockWithPassword,
@@ -38,23 +33,27 @@
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconCopyRegular from "phosphor-icons-svelte/IconCopyRegular.svelte";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
+  import IconPlusRegular from "phosphor-icons-svelte/IconPlusRegular.svelte";
+  import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
+  import { onMount } from "svelte";
 
-  const SITE_URL = "https://jtransfer.jimmyverburgt.com";
-  const PAGE_TITLE = "JTransfer - End-to-end encrypted file transfer";
+  const SITE_URL = "https://tessil.app";
+  const PAGE_TITLE = "Tessil — Send anything. We see nothing.";
   const PAGE_DESCRIPTION =
-    "JTransfer sends files with end-to-end encryption in your browser. We never see your files or encryption keys.";
+    "End-to-end encrypted file transfer. Your browser encrypts before upload — we never see your files or the key.";
+
   const homeSchema = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebSite",
-        name: "JTransfer",
+        name: "Tessil",
         url: SITE_URL,
         description: PAGE_DESCRIPTION,
       },
       {
         "@type": "WebApplication",
-        name: "JTransfer",
+        name: "Tessil",
         applicationCategory: "SecurityApplication",
         operatingSystem: "Any",
         browserRequirements: "Requires JavaScript and modern browser APIs",
@@ -78,10 +77,6 @@
   const MAX_FILENAME_BYTES = 255;
   const TITLE_MAX = 200;
 
-  // Tier-aware expiry options. Anonymous tops out at 1d (24h);
-  // authenticated Free gets +72h; Pro adds 7d/14d/30d. Server-side
-  // enforcement is in `src/config/tiers.ts` — this list just gates
-  // what the UI offers.
   const EXPIRES_OPTIONS = $derived.by(() => {
     const base = [
       { value: 1, label: "1h" },
@@ -100,9 +95,6 @@
     ];
   });
 
-  // Keep `expiresInHours` valid as auth state changes — if a user
-  // signs out mid-upload and the selected value isn't in the new
-  // (smaller) option set, snap to the closest legal value.
   $effect(() => {
     if (!EXPIRES_OPTIONS.some((o) => o.value === uploadStore.expiresInHours)) {
       const legal = EXPIRES_OPTIONS[EXPIRES_OPTIONS.length - 1]!.value;
@@ -118,12 +110,22 @@
     { value: 25, label: "25" },
   ];
 
+  type FeaturedItem = {
+    slug: string;
+    src: string;
+    title: string;
+    artist: string;
+    artistUrl: string | null;
+    tone?: "light" | "dark";
+  };
+
   let copied = $state(false);
   let lastUploadVaulted = $state(false);
+  let isDraggingOver = $state(false);
+  let fileInput = $state<HTMLInputElement | null>(null);
+  let featured = $state<FeaturedItem | null>(null);
+  let imageRevealed = $state(false);
 
-  // Vault unlock modal (only shown when the user is signed in and tries to
-  // upload with a locked vault). Pending raw-K_transfer + pending complete
-  // hooks live on `pendingWrap` so we can resume after a successful unlock.
   let unlockOpen = $state(false);
   let unlockMode = $state<"password" | "phrase">("password");
   let unlockPassword = $state("");
@@ -131,6 +133,20 @@
   let unlockError = $state<string | null>(null);
   let isUnlockingVault = $state(false);
   let pendingResume: ((unlocked: boolean) => void) | null = null;
+
+  onMount(async () => {
+    try {
+      const res = await fetch("/featured/manifest.json", { cache: "no-cache" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { items: FeaturedItem[] };
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        const idx = Math.floor(Math.random() * data.items.length);
+        featured = data.items[idx];
+      }
+    } catch {
+      // Manifest fetch is best-effort; page renders fine without art.
+    }
+  });
 
   function fileRowStatus(
     s: FileUploadState["status"],
@@ -209,8 +225,6 @@
     return `Max ${max} download${max !== 1 ? "s" : ""}`;
   }
 
-  // Returns true once the vault is unlocked, false if the user cancelled.
-  // Caller must already know auth.user is non-null.
   async function ensureVaultUnlocked(): Promise<boolean> {
     if (!auth.user) return false;
     if (await isUnlocked(auth.user.id)) return true;
@@ -291,10 +305,6 @@
         }
       }
 
-      // Signed-in path: every upload is vault-wrapped. If the vault is
-      // locked, prompt now so we can wrap once the K_transfer is generated.
-      // We do this before generating any encryption keys to avoid wasting
-      // CPU if the user cancels the unlock.
       if (auth.isAuthenticated && auth.user) {
         const unlocked = await ensureVaultUnlocked();
         if (!unlocked) {
@@ -306,23 +316,21 @@
       }
 
       const key = await generateKey();
-
       const password =
-        uploadStore.passwordEnabled &&
         uploadStore.password.length >= MIN_PASSWORD_LENGTH
           ? uploadStore.password
           : undefined;
 
-      // Encrypt the optional transfer title under K_transfer. Over-limit
-      // titles are dropped silently here — the form already surfaces a
-      // warning, and we'd rather ship a nameless transfer than block.
       const trimmedTitle = uploadStore.title.trim();
       let encryptedTitlePayload:
         | { encryptedTitle: string; encryptedTitleIv: string }
         | null = null;
       if (trimmedTitle.length > 0 && trimmedTitle.length <= TITLE_MAX) {
         const { ciphertext, iv } = await encryptString(trimmedTitle, key);
-        encryptedTitlePayload = { encryptedTitle: ciphertext, encryptedTitleIv: iv };
+        encryptedTitlePayload = {
+          encryptedTitle: ciphertext,
+          encryptedTitleIv: iv,
+        };
       }
 
       const transfer = await api.createTransfer(
@@ -354,18 +362,12 @@
           const { encryptedBlob, iv: fileIv } = await encryptFile(
             file,
             key,
-            (p) => {
-              uploadStore.setFileStatus(i, "encrypting", p * 0.5);
-            },
+            (p) => uploadStore.setFileStatus(i, "encrypting", p * 0.5),
           );
 
           uploadStore.setFileStatus(i, "encrypting", 50);
           uploadStore.setFileStatus(i, "uploading", 50);
 
-          // Init the multipart upload — returns all Part URLs in one
-          // batch. The orchestrator handles slicing, parallel
-          // uploads, per-Part retry with backoff, and abort on
-          // terminal failure.
           const initResponse = await api.initMultipartUpload({
             transferId: transfer.transferId,
             contentType: file.type || "application/octet-stream",
@@ -382,9 +384,8 @@
             r2Key: initResponse.r2Key,
             encryptedBlob,
             partUrls: initResponse.partUrls,
-            onProgress: (p) => {
-              uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5);
-            },
+            onProgress: (p) =>
+              uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5),
           });
 
           uploadStore.setFileStatus(i, "complete", 100);
@@ -410,10 +411,6 @@
 
       uploadStore.setStatus("uploading");
 
-      // Vault wrap for signed-in uploads. ensureVaultUnlocked() ran earlier
-      // so wrapTransferKey() should never throw here unless the IDB cache
-      // was wiped mid-upload — in that rare case we still abort cleanly
-      // rather than ship a transfer the dashboard can't manage.
       let vaultWrap: { wrappedKey: string } | undefined;
       lastUploadVaulted = false;
       if (auth.isAuthenticated && auth.user) {
@@ -430,11 +427,11 @@
 
       const baseUrl = window.location.origin;
       const shareUrl = `${baseUrl}${completeResponse.shareUrl}#${keyString}`;
-
       uploadStore.setShareUrl(shareUrl);
     } catch (error) {
       if (uploadStore.status !== "error") {
-        const message = error instanceof Error ? error.message : "Upload failed";
+        const message =
+          error instanceof Error ? error.message : "Upload failed";
         const upgradeUrl =
           error instanceof ApiError ? error.upgradeUrl : undefined;
         uploadStore.setError(message, upgradeUrl);
@@ -454,43 +451,13 @@
 
   const hasFiles = $derived(uploadStore.files.length > 0);
 
-  // Per-browser memory advisory. The current non-chunked encryption
-  // holds plaintext + ciphertext in JS heap simultaneously (~2× file
-  // size at peak). Safari and mobile browsers cap their JS heap lower
-  // than desktop Chrome — surface a warning so users know up-front
-  // rather than discovering it via OOM mid-upload.
-  const browserMemoryWarning = $derived.by((): string | null => {
-    if (totalSize <= 0) return null;
-    if (typeof navigator === "undefined") return null;
-    const ua = navigator.userAgent;
-    const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
-    // Practical JS-heap ceilings by browser family.
-    const ceilingBytes = isMobile
-      ? 400 * 1024 * 1024
-      : isSafari
-        ? 750 * 1024 * 1024
-        : 1.5 * 1024 * 1024 * 1024;
-    if (totalSize < ceilingBytes * 0.66) return null;
-    const human = isMobile
-      ? "mobile browsers (~400 MB)"
-      : isSafari
-        ? "Safari (~750 MB)"
-        : "your browser (~1.5 GiB)";
-    return `Files this size can OOM on ${human}. If the upload fails partway, try a smaller file or use Chrome / Firefox on desktop.`;
-  });
-
-  const headerCount = $derived(
-    `${uploadStore.files.length} file${uploadStore.files.length !== 1 ? "s" : ""} · ${formatSize(totalSize)}`,
+  const isSuccess = $derived(
+    uploadStore.status === "complete" && !!uploadStore.shareUrl,
   );
 
   const passwordTooShort = $derived(
-    uploadStore.passwordEnabled &&
+    uploadStore.password.length > 0 &&
       uploadStore.password.length < MIN_PASSWORD_LENGTH,
-  );
-
-  const isSuccess = $derived(
-    uploadStore.status === "complete" && !!uploadStore.shareUrl,
   );
 
   const canSubmitUnlock = $derived(
@@ -499,6 +466,37 @@
         ? unlockPassword.length > 0
         : unlockPhrase.trim().length > 0),
   );
+
+  function handlePageDragOver(e: DragEvent) {
+    e.preventDefault();
+    if (isProcessing) return;
+    isDraggingOver = true;
+  }
+
+  function handlePageDragLeave(e: DragEvent) {
+    if (e.relatedTarget === null) isDraggingOver = false;
+  }
+
+  function handlePageDrop(e: DragEvent) {
+    e.preventDefault();
+    isDraggingOver = false;
+    if (isProcessing) return;
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) handleFilesSelect(Array.from(files));
+  }
+
+  function openFilePicker() {
+    if (isProcessing) return;
+    fileInput?.click();
+  }
+
+  function handleFileChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      handleFilesSelect(Array.from(input.files));
+      input.value = "";
+    }
+  }
 
   function goToSetup() {
     goto("/setup/vault");
@@ -523,305 +521,406 @@
   </script>
 </svelte:head>
 
-<PageLayout>
-  <PageHeader
-    title="Encrypted in your browser."
-    tagline="Your files are scrambled before they leave your device — we never see the contents."
-    wordmarkHref="/"
-  />
+<input
+  bind:this={fileInput}
+  type="file"
+  multiple
+  class="hidden"
+  onchange={handleFileChange}
+  disabled={isProcessing}
+/>
 
-  <Frame.Root>
-    {#if isSuccess}
-      <Frame.Header>
-        <Frame.Title>Share link ready</Frame.Title>
-        <Frame.Description class="flex items-center gap-2">
-          <IconLockRegular class="size-4" />
-          This link decrypts in the recipient's browser.
-        </Frame.Description>
-      </Frame.Header>
-      <Frame.Panel>
-        <div class="space-y-3">
-          <TextInput
-            id="share-link"
-            label="Share link"
-            value={uploadStore.shareUrl ?? ""}
-            readonly
-            mono
-            onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
-          />
-          <div class="flex gap-2">
-            <Button variant="secondary" fullWidth={false} onclick={copyShareLink}>
-              {#if copied}
-                <IconCheckRegular class="size-4" />
-                Copied!
-              {:else}
-                <IconCopyRegular class="size-4" />
-                Copy link
-              {/if}
-            </Button>
-          </div>
-          <p class="text-xs text-muted-foreground">
-            Expires in {formatExpiry(uploadStore.expiresInHours)}. {formatDownloads(
-              uploadStore.maxDownloads,
-            )}.
-          </p>
-          {#if lastUploadVaulted}
-            <p class="text-xs text-muted-foreground">
-              You can also recover this link from your dashboard later.
-            </p>
-          {/if}
-        </div>
-      </Frame.Panel>
-      <Frame.Footer class="px-5 py-4">
-        <div class="flex">
-          <Button variant="secondary" fullWidth={false} onclick={resetUpload}>
-            Upload another
-          </Button>
-        </div>
-      </Frame.Footer>
-    {:else if hasFiles}
-      <Frame.Header>
-        <Frame.Title>{headerCount}</Frame.Title>
-        <Frame.Description class="flex items-center gap-2">
-          <IconLockRegular class="size-4" />
-          Encrypted before upload.
-        </Frame.Description>
-      </Frame.Header>
-      <Frame.Panel>
-        <div class="space-y-4">
-          <div class="space-y-1.5">
-            <p class="text-xs text-muted-foreground">
-              {formatSize(totalSize)} of {formatSize(MAX_TOTAL_UPLOAD_SIZE)} used
-            </p>
-            <ProgressBar
-              progress={(totalSize / MAX_TOTAL_UPLOAD_SIZE) * 100}
-              thin
-            />
-          </div>
+<!-- -mt-14 pulls the image behind the sticky nav so the glass effect actually sees through to artwork. -->
+<section
+  ondragover={handlePageDragOver}
+  ondragleave={handlePageDragLeave}
+  ondrop={handlePageDrop}
+  class={cn(
+    "relative min-h-screen -mt-14 overflow-hidden transition-colors duration-200 ease-out",
+    isDraggingOver && "bg-primary/5",
+  )}
+>
+  {#if featured}
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 bg-cover bg-center pointer-events-none"
+      style="
+        background-image: url('{featured.src}');
+        clip-path: {imageRevealed ? 'inset(0 round 0)' : 'inset(calc(100% - 22rem) 0 0 calc(100% - 50rem) round 1.5rem 0 0 0)'};
+        transition: clip-path 1200ms cubic-bezier(0.83, 0, 0.17, 1);
+      "
+    ></div>
+  {/if}
 
-          <DropZone
-            onFilesSelect={handleFilesSelect}
-            disabled={isProcessing}
-            maxTotalSize={MAX_TOTAL_UPLOAD_SIZE}
-            compact
-          />
+  {#if isDraggingOver}
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 ring-2 ring-primary ring-inset pointer-events-none"
+    ></div>
+  {/if}
 
-          {#if browserMemoryWarning}
-            <Alert tone="warning">
-              {browserMemoryWarning}
-            </Alert>
-          {/if}
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-32">
+    <div class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-6 sm:gap-12 lg:gap-16 items-stretch">
 
-          {#if uploadStore.status === "error" && uploadStore.error}
-            <Alert tone="destructive" title="Upload failed">
-              {uploadStore.error}
-              {#snippet action()}
-                {#if uploadStore.errorUpgradeUrl}
-                  <Button
-                    fullWidth={false}
-                    onclick={() => goto(uploadStore.errorUpgradeUrl!)}
-                  >
-                    Upgrade to Pro
-                  </Button>
-                {/if}
-                <Button variant="secondary" fullWidth={false} onclick={clearError}>
-                  Try again
-                </Button>
-              {/snippet}
-            </Alert>
-          {/if}
-
-          {#if auth.isAuthenticated && auth.needsVaultSetup}
-            <Alert tone="warning" title="Set up your vault first">
-              Signed-in uploads save filenames to your dashboard. Finish vault
-              setup before uploading.
-              {#snippet action()}
-                <Button variant="secondary" fullWidth={false} onclick={goToSetup}>
-                  Set up vault
-                </Button>
-              {/snippet}
-            </Alert>
-          {/if}
-
-          <div>
-            {#each uploadStore.files as fileState, index (fileState.file.name + index)}
-              <FileRow
-                name={fileState.file.name}
-                size={formatSize(fileState.file.size)}
-                kind="upload"
-                status={fileRowStatus(fileState.status)}
-                percent={fileState.progress}
-                onRemove={() => removeFile(index)}
-              />
-            {/each}
-          </div>
-
-          <div
-            class={[
-              "space-y-5 pt-2 transition-opacity duration-200 ease-out",
-              isProcessing && "opacity-60 pointer-events-none",
-            ]}
-          >
-            <div class="space-y-1">
+      <!-- Height animates between empty (420) and has-files (580) sizes; sync'd with the extension's width animation. -->
+      <aside
+        class={cn(
+          "relative sm:sticky sm:top-6 sm:flex sm:items-stretch",
+          hasFiles && !isSuccess ? "sm:h-[580px]" : "sm:h-[420px]",
+        )}
+        style="transition: height 700ms cubic-bezier(0.83, 0, 0.17, 1);"
+      >
+        <!-- Loses right-side border + rounded corners when the extension is open so they visually fuse. -->
+        <div
+          class={cn(
+            "glass-panel relative z-10 w-full sm:w-[320px] sm:flex sm:flex-col ease-liquid",
+            hasFiles &&
+              !isSuccess &&
+              "lg:rounded-tr-none lg:rounded-br-none lg:border-r-transparent",
+          )}
+          style="transition: border-radius 700ms cubic-bezier(0.83, 0, 0.17, 1), border-color 700ms cubic-bezier(0.83, 0, 0.17, 1);"
+        >
+          {#if isSuccess}
+            <div class="px-5 py-4 border-b border-border">
+              <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <IconLockRegular class="size-4 text-primary" />
+                Share link ready
+              </div>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                Decrypts in the recipient's browser.
+              </p>
+            </div>
+            <div class="p-5 space-y-3">
               <TextInput
-                id="transfer-title"
-                label="Transfer name (optional)"
-                placeholder="e.g. Q3 designs"
-                value={uploadStore.title}
-                oninput={(e) =>
-                  uploadStore.setTitle(
-                    (e.currentTarget as HTMLInputElement).value,
-                  )}
-                maxlength={TITLE_MAX + 32}
-                disabled={isProcessing}
+                id="home-share-link"
+                aria-label="Share link"
+                value={uploadStore.shareUrl ?? ""}
+                readonly
+                mono
+                onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
               />
               <p class="text-xs text-muted-foreground">
-                Encrypted in your browser with the same key as the files. Anyone
-                with the share link sees the name; the server only stores
-                ciphertext.
-              </p>
-              {#if uploadStore.title.length > TITLE_MAX}
-                <p class="text-xs text-warning-foreground">
-                  {uploadStore.title.length} / {TITLE_MAX} — too long. We'll
-                  ship this transfer without a name unless you trim it.
-                </p>
-              {/if}
-            </div>
-
-            <SegmentedControl
-              label="Expires in"
-              options={EXPIRES_OPTIONS}
-              value={uploadStore.expiresInHours}
-              onChange={(v) => uploadStore.setExpiresInHours(v)}
-              disabled={isProcessing}
-            />
-
-            <SegmentedControl
-              label="Max downloads"
-              options={DOWNLOADS_OPTIONS}
-              value={uploadStore.maxDownloads}
-              onChange={(v) => uploadStore.setMaxDownloads(v)}
-              disabled={isProcessing}
-            />
-
-            <div class="space-y-2">
-              <Checkbox
-                checked={uploadStore.passwordEnabled}
-                onchange={(e) =>
-                  uploadStore.setPasswordEnabled(
-                    (e.currentTarget as HTMLInputElement).checked,
-                  )}
-                disabled={isProcessing}
-              >
-                Password protect
-              </Checkbox>
-
-              {#if uploadStore.passwordEnabled}
-                <PasswordInput
-                  id="transfer-password"
-                  label="Password"
-                  srOnlyLabel
-                  placeholder="Enter a password"
-                  value={uploadStore.password}
-                  oninput={(e) =>
-                    uploadStore.setPassword(
-                      (e.currentTarget as HTMLInputElement).value,
-                    )}
-                  disabled={isProcessing}
-                />
-                {#if uploadStore.password.length > 0 && passwordTooShort}
-                  <p class="text-xs text-warning-foreground">
-                    Password must be at least {MIN_PASSWORD_LENGTH} characters
-                  </p>
+                Expires in {formatExpiry(uploadStore.expiresInHours)}.
+                {formatDownloads(uploadStore.maxDownloads)}.
+                {#if lastUploadVaulted}
+                  Saved to your dashboard.
                 {/if}
+              </p>
+            </div>
+            <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/30">
+              <Button variant="secondary" fullWidth={false} onclick={resetUpload}>
+                Send another
+              </Button>
+              <Button variant="primary" fullWidth={false} onclick={copyShareLink}>
+                {#if copied}
+                  <IconCheckRegular class="size-4" />
+                  Copied
+                {:else}
+                  <IconCopyRegular class="size-4" />
+                  Copy link
+                {/if}
+              </Button>
+            </div>
+          {:else if !hasFiles}
+            <button
+              type="button"
+              onclick={openFilePicker}
+              disabled={isProcessing}
+              aria-label="Drop files here or click to browse"
+              class={cn(
+                "w-full p-5 flex flex-col items-center justify-center text-center hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-lg transition-colors duration-200 ease-out sm:flex-1",
+                isDraggingOver ? "bg-primary/5" : "hover:bg-accent",
+                isProcessing && "opacity-60 cursor-not-allowed",
+              )}
+            >
+              <span class="inline-flex items-center justify-center size-9 rounded-full bg-primary/10 text-primary">
+                <IconUploadRegular class="size-4" />
+              </span>
+              <div class="space-y-0.5 mt-3.5">
+                <p class="text-sm font-semibold text-foreground leading-snug">
+                  {#if isDraggingOver}
+                    Release to encrypt
+                  {:else}
+                    Drop a file
+                  {/if}
+                </p>
+                <p class="text-xs text-muted-foreground leading-relaxed max-w-[16rem]">
+                  Or click to browse. Encrypts in your browser.
+                </p>
+              </div>
+              <span class="mt-4 text-[11px] text-muted-foreground/80">
+                Up to {formatSize(MAX_TOTAL_UPLOAD_SIZE)} per transfer
+              </span>
+            </button>
+          {:else}
+            <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 text-sm font-semibold text-foreground min-w-0">
+                <IconLockRegular class="size-4 text-primary shrink-0" />
+                <span class="truncate">
+                  {uploadStore.files.length} file{uploadStore.files.length !== 1 ? "s" : ""}
+                  · {formatSize(totalSize)}
+                </span>
+              </div>
+              {#if !isProcessing}
+                <button
+                  type="button"
+                  onclick={resetUpload}
+                  class="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+                >
+                  Clear
+                </button>
               {/if}
             </div>
 
-            {#if auth.isAuthenticated && !auth.needsVaultSetup}
-              <p class="text-xs text-muted-foreground">
-                Signed in — this transfer will be saved to your dashboard so
-                you can rename, delete, or rebuild the share link later.
+            <div class="px-5 py-4 space-y-4 flex-1 min-h-0 overflow-y-auto file-list-scroll">
+              {#if uploadStore.status === "error" && uploadStore.error}
+                <Alert tone="destructive" title="Upload failed">
+                  {uploadStore.error}
+                  {#snippet action()}
+                    {#if uploadStore.errorUpgradeUrl}
+                      <Button
+                        fullWidth={false}
+                        onclick={() => goto(uploadStore.errorUpgradeUrl!)}
+                      >
+                        Upgrade to Pro
+                      </Button>
+                    {/if}
+                    <Button variant="secondary" fullWidth={false} onclick={clearError}>
+                      Try again
+                    </Button>
+                  {/snippet}
+                </Alert>
+              {/if}
+
+              {#if auth.isAuthenticated && auth.needsVaultSetup}
+                <Alert tone="warning" title="Set up your vault first">
+                  Signed-in uploads save filenames to your dashboard.
+                  {#snippet action()}
+                    <Button variant="secondary" fullWidth={false} onclick={goToSetup}>
+                      Set up vault
+                    </Button>
+                  {/snippet}
+                </Alert>
+              {/if}
+
+              <!-- Inline file list for viewports below the extension's breakpoint. -->
+              <div class="lg:hidden">
+                {#each uploadStore.files as fileState, index (fileState.file.name + index)}
+                  <FileRow
+                    name={fileState.file.name}
+                    size={formatSize(fileState.file.size)}
+                    kind="upload"
+                    status={fileRowStatus(fileState.status)}
+                    percent={fileState.progress}
+                    onRemove={() => removeFile(index)}
+                  />
+                {/each}
+              </div>
+
+              {#if !isProcessing}
+                <button
+                  type="button"
+                  onclick={openFilePicker}
+                  class="w-full flex items-center justify-center gap-2 py-2.5 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:border-muted-foreground hover:text-foreground transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:cursor-pointer"
+                >
+                  <IconPlusRegular class="size-4" />
+                  Add more files
+                </button>
+
+                <div class="space-y-4 pt-1">
+                  <div class="space-y-1">
+                    <TextInput
+                      id="home-transfer-title"
+                      label="Transfer name (optional)"
+                      placeholder="e.g. Q3 designs"
+                      value={uploadStore.title}
+                      oninput={(e) =>
+                        uploadStore.setTitle(
+                          (e.currentTarget as HTMLInputElement).value,
+                        )}
+                      maxlength={TITLE_MAX + 32}
+                    />
+                    {#if uploadStore.title.length > TITLE_MAX}
+                      <p class="text-xs text-warning-foreground">
+                        {uploadStore.title.length} / {TITLE_MAX} — too long.
+                      </p>
+                    {/if}
+                  </div>
+
+                  <SegmentedControl
+                    label="Expires in"
+                    options={EXPIRES_OPTIONS}
+                    value={uploadStore.expiresInHours}
+                    onChange={(v) => uploadStore.setExpiresInHours(v)}
+                  />
+
+                  <SegmentedControl
+                    label="Max downloads"
+                    options={DOWNLOADS_OPTIONS}
+                    value={uploadStore.maxDownloads}
+                    onChange={(v) => uploadStore.setMaxDownloads(v)}
+                  />
+
+                  <div class="space-y-1">
+                    <PasswordInput
+                      id="home-transfer-password"
+                      label="Password (optional)"
+                      placeholder="Add a password to protect the link"
+                      value={uploadStore.password}
+                      oninput={(e) =>
+                        uploadStore.setPassword(
+                          (e.currentTarget as HTMLInputElement).value,
+                        )}
+                    />
+                    {#if passwordTooShort}
+                      <p class="text-xs text-warning-foreground">
+                        At least {MIN_PASSWORD_LENGTH} characters.
+                      </p>
+                    {/if}
+                  </div>
+                </div>
+              {/if}
+            </div>
+
+            <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/30">
+              {#if isProcessing}
+                <Button variant="primary" fullWidth={false} disabled>
+                  <Spinner class="size-4" />
+                  Encrypting and uploading…
+                </Button>
+              {:else}
+                <Button
+                  variant="primary"
+                  fullWidth={false}
+                  onclick={handleUpload}
+                  disabled={passwordTooShort || (auth.isAuthenticated && auth.needsVaultSetup)}
+                >
+                  Create share link
+                </Button>
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Extension slides out as an in-flow flex sibling so the grid's first column tracks its width. -->
+        <div
+          aria-hidden={!(hasFiles && !isSuccess)}
+          class={cn(
+            "hidden lg:block overflow-hidden ease-liquid shrink-0",
+            hasFiles && !isSuccess
+              ? "w-[300px]"
+              : "w-0 pointer-events-none",
+          )}
+          style="transition: width 700ms cubic-bezier(0.83, 0, 0.17, 1);"
+        >
+          <div class="glass-panel w-[300px] h-full flex flex-col rounded-l-none border-l-0">
+            <div class="px-5 py-4 border-b border-border">
+              <p class="text-sm font-semibold text-foreground">
+                Files
+                <span class="font-normal text-muted-foreground">
+                  · Queued for this transfer.
+                </span>
               </p>
-            {/if}
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto file-list-scroll">
+              {#each uploadStore.files as fileState, index (fileState.file.name + index)}
+                <FileRow
+                  name={fileState.file.name}
+                  size={formatSize(fileState.file.size)}
+                  kind="upload"
+                  status={fileRowStatus(fileState.status)}
+                  percent={fileState.progress}
+                  onRemove={() => removeFile(index)}
+                />
+              {/each}
+            </div>
           </div>
         </div>
-      </Frame.Panel>
-      <Frame.Footer class="px-5 py-4">
-        {#if isProcessing}
-          <Button variant="primary" disabled>
-            <Spinner class="size-4" />
-            Encrypting and uploading…
-          </Button>
-        {:else}
-          <Button
-            variant="primary"
-            onclick={handleUpload}
-            disabled={passwordTooShort || (auth.isAuthenticated && auth.needsVaultSetup)}
-          >
-            Create share link
-          </Button>
-        {/if}
-      </Frame.Footer>
-    {:else}
-      <Frame.Panel>
-        {#if uploadStore.status === "error" && uploadStore.error}
-          <div class="mb-4">
-            <Alert tone="destructive" title="Couldn't add files">
-              {uploadStore.error}
-              {#snippet action()}
-                {#if uploadStore.errorUpgradeUrl}
-                  <Button
-                    fullWidth={false}
-                    onclick={() => goto(uploadStore.errorUpgradeUrl!)}
-                  >
-                    Upgrade to Pro
-                  </Button>
-                {/if}
-                <Button variant="secondary" fullWidth={false} onclick={clearError}>
-                  Dismiss
-                </Button>
-              {/snippet}
-            </Alert>
-          </div>
-        {/if}
-        <DropZone
-          onFilesSelect={handleFilesSelect}
-          disabled={isProcessing}
-          maxTotalSize={MAX_TOTAL_UPLOAD_SIZE}
-        />
-      </Frame.Panel>
-    {/if}
-  </Frame.Root>
+      </aside>
 
-  <SiteFooter current="home">
-    {#snippet tagline()}
-      All files are end-to-end encrypted in your browser before upload.
-      JTransfer cannot read your files, even in transit or at rest.
-    {/snippet}
-  </SiteFooter>
+      <div class="space-y-4 sm:text-right sm:max-w-md sm:ml-auto sm:pt-4">
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-foreground leading-[1.05]" style="letter-spacing: -0.03em">
+          Send anything.
+          <br />
+          We see nothing.
+        </h1>
+        <p class="text-base text-muted-foreground leading-relaxed">
+          End-to-end encrypted in your browser. The key never
+          reaches our server.
+        </p>
+        <p class="text-sm text-muted-foreground/80 leading-relaxed">
+          Drop a file in the panel — or anywhere on this page.
+        </p>
+      </div>
+    </div>
+  </div>
 
-  <section
-    class="mt-12 pt-10 border-t border-border/60 text-sm text-muted-foreground leading-relaxed space-y-3"
-  >
-    <h2 class="text-base font-semibold text-foreground">
-      JTransfer, explained
-    </h2>
-    <p>
-      JTransfer is a secure file transfer service built for fast, private
-      sharing. Files are encrypted in your browser before upload, so only people
-      with your link and key can open them.
-    </p>
-    <p>
-      Share large files with confidence using end-to-end encryption, optional
-      password protection, and expiring links. Your content stays private
-      because encryption happens client-side and keys never touch our servers.
-    </p>
-    <p>
-      From project assets to sensitive documents, JTransfer keeps delivery
-      simple: drag, drop, and share a secure link in seconds.
-    </p>
-  </section>
-</PageLayout>
+  {#if featured}
+    <div class="absolute right-[25rem] translate-x-1/2 bottom-4 z-20 flex flex-col items-center gap-1.5">
+      <button
+        type="button"
+        onclick={() => (imageRevealed = !imageRevealed)}
+        aria-pressed={imageRevealed}
+        aria-label={imageRevealed
+          ? `Hide ${featured.title}`
+          : `Reveal ${featured.title} by ${featured.artist}`}
+        class="group inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <span class="size-1.5 rounded-full bg-primary"></span>
+        <span class="font-medium">{featured.title}</span>
+        <span class="text-muted-foreground">by {featured.artist}</span>
+        <span class="text-muted-foreground/60 mx-1" aria-hidden="true">·</span>
+        <span class="text-muted-foreground group-hover:text-foreground transition-colors duration-200 ease-out font-medium">
+          {imageRevealed ? "Hide" : "Reveal"}
+        </span>
+      </button>
+      {#if featured.artistUrl}
+        <a
+          href={featured.artistUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-background transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          Artist →
+        </a>
+      {/if}
+    </div>
+  {/if}
+</section>
+
+<div class="bg-background border-t border-border">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <HowItWorks class="mt-0 pt-0 border-t-0" />
+
+    <section class="mt-14 pt-10 border-t border-border/60 space-y-3 text-sm text-muted-foreground leading-relaxed">
+      <h2 class="text-base font-semibold text-foreground">
+        Tessil, explained
+      </h2>
+      <p>
+        Tessil is an end-to-end encrypted file transfer service.
+        Files are scrambled in your browser before they leave your
+        device. The decryption key lives in the URL fragment of the
+        share link — the part after <code>#</code> that browsers
+        don't send to servers. We never see your files, your
+        filenames, or your keys.
+      </p>
+      <p>
+        Anonymous transfers expire in hours; signed-in transfers
+        can run longer and live on your dashboard. Password
+        protection adds a second factor independent of the link.
+        Read more about the security model on the
+        <a href="/security" class="text-primary hover:underline">security page</a>.
+      </p>
+      <p>
+        Built and run by one person. Free for routine use; Pro lifts
+        the limits — see the <a href="/pricing" class="text-primary hover:underline">pricing page</a> for what
+        the extra headroom costs.
+      </p>
+    </section>
+
+    <SiteFooter current="home" />
+  </div>
+</div>
 
 <Modal
   open={unlockOpen}
@@ -832,7 +931,7 @@
   <form onsubmit={submitUnlock} class="space-y-4" novalidate>
     {#if unlockMode === "password"}
       <PasswordInput
-        id="upload-unlock-password"
+        id="home-unlock-password"
         label="Vault password"
         autocomplete="current-password"
         required
@@ -841,7 +940,7 @@
       />
     {:else}
       <Textarea
-        id="upload-unlock-phrase"
+        id="home-unlock-phrase"
         label="Recovery phrase"
         placeholder="word word word …"
         rows={3}
@@ -868,7 +967,7 @@
         : "Have your password? Use it instead."}
     </button>
 
-    <div class="flex items-center justify-end gap-2 pt-2 border-t border-border">
+    {#snippet footer()}
       <Button
         type="button"
         variant="ghost"
@@ -886,6 +985,34 @@
           Unlock and upload
         {/if}
       </Button>
-    </div>
+    {/snippet}
   </form>
 </Modal>
+
+<style>
+  /* Minimal scrollbar — neutral grayscale, never brand colour. */
+  :global(.file-list-scroll) {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(0 0 0 / 0.18) transparent;
+  }
+  :global(.file-list-scroll::-webkit-scrollbar) {
+    width: 6px;
+    height: 6px;
+  }
+  :global(.file-list-scroll::-webkit-scrollbar-track) {
+    background: transparent;
+  }
+  :global(.file-list-scroll::-webkit-scrollbar-thumb) {
+    background-color: rgb(0 0 0 / 0.18);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+  }
+  :global(.file-list-scroll::-webkit-scrollbar-thumb:hover) {
+    background-color: rgb(0 0 0 / 0.32);
+  }
+
+  :global(.ease-liquid) {
+    transition-timing-function: cubic-bezier(0.83, 0, 0.17, 1);
+  }
+</style>

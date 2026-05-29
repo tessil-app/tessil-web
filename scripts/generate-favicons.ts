@@ -1,19 +1,18 @@
-// Regenerate every favicon variant from the canonical mark SVG.
+// Regenerate every favicon and OG variant from canonical brand SVGs.
 // Run with: bun run brand:build
 //
-// Reads:  static/brand/mark.svg
-// Writes: static/favicon.svg, apple-touch-icon.png, icon-192.png,
-//         icon-512.png, icon-512-maskable.png, favicon-32x32.png,
-//         site.webmanifest
+// Reads:  static/brand/mark.svg, static/brand/og-image.svg
+// Writes: static/favicon.svg, favicon-32x32.png, apple-touch-icon.png,
+//         icon-192.png, icon-512.png, icon-512-maskable.png,
+//         site.webmanifest, og-image.png
 //
 // favicon.ico is intentionally skipped — modern browsers prefer
-// favicon.svg, and legacy clients that still want .ico get served
-// the 32x32 PNG renamed. If a true multi-resolution .ico becomes
-// important, add the `png-to-ico` dep and a final step here.
+// favicon.svg, and the few legacy clients that still want .ico can
+// be served the 32x32 PNG renamed.
 //
-// Rasterizer: @resvg/resvg-js. Bun.Image is raster-only and can't
-// decode SVG; resvg-js is a small, focused Rust-backed rasterizer
-// with no other moving parts.
+// Rasterizer: @resvg/resvg-js. Switzer-Variable.woff2 is loaded as
+// the default font family so og-image.svg renders correctly without
+// system Switzer installed.
 
 import { Resvg } from "@resvg/resvg-js";
 import { copyFile, readFile, writeFile } from "node:fs/promises";
@@ -21,19 +20,34 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const src = join(root, "static/brand/mark.svg");
 const staticDir = join(root, "static");
+const markSrc = join(staticDir, "brand/mark.svg");
+const ogSrc = join(staticDir, "brand/og-image.svg");
+const switzerFont = join(staticDir, "fonts/Switzer-Variable.woff2");
 
-async function renderPng(svg: Buffer, size: number, outName: string) {
+async function renderMarkPng(svg: Buffer, size: number, outName: string) {
   const resvg = new Resvg(svg, { fitTo: { mode: "width", value: size } });
   const png = resvg.render().asPng();
   await writeFile(join(staticDir, outName), png);
 }
 
-async function main() {
-  const svg = await readFile(src);
+async function renderOgPng(svg: Buffer) {
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: "width", value: 1200 },
+    font: {
+      fontFiles: [switzerFont],
+      loadSystemFonts: false,
+      defaultFontFamily: "Switzer",
+    },
+  });
+  const png = resvg.render().asPng();
+  await writeFile(join(staticDir, "og-image.png"), png);
+}
 
-  await copyFile(src, join(staticDir, "favicon.svg"));
+async function main() {
+  const mark = await readFile(markSrc);
+
+  await copyFile(markSrc, join(staticDir, "favicon.svg"));
 
   const variants: { name: string; size: number }[] = [
     { name: "favicon-32x32.png", size: 32 },
@@ -44,8 +58,11 @@ async function main() {
   ];
 
   await Promise.all(
-    variants.map(({ name, size }) => renderPng(svg, size, name)),
+    variants.map(({ name, size }) => renderMarkPng(mark, size, name)),
   );
+
+  const og = await readFile(ogSrc);
+  await renderOgPng(og);
 
   const manifest = {
     name: "Tessil",
@@ -75,6 +92,7 @@ async function main() {
   console.log("Brand assets regenerated:");
   console.log("  static/favicon.svg");
   for (const { name } of variants) console.log(`  static/${name}`);
+  console.log("  static/og-image.png");
   console.log("  static/site.webmanifest");
 }
 

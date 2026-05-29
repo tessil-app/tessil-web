@@ -1,8 +1,8 @@
-# JTransfer Frontend
+# Tessil Web
 
-[![CI](https://github.com/VerburgtJimmy/jtransfer-front/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/VerburgtJimmy/jtransfer-front/actions/workflows/ci.yml)
+[![CI](https://github.com/tessil-app/tessil-web/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tessil-app/tessil-web/actions/workflows/ci.yml)
 
-Frontend application for JTransfer - a secure, end-to-end encrypted file sharing service.
+Frontend application for Tessil - a secure, end-to-end encrypted file sharing service.
 
 ## Status
 
@@ -76,7 +76,7 @@ src/
 
 ## Security Model
 
-JTransfer uses end-to-end encryption:
+Tessil uses end-to-end encryption:
 
 1. **File encryption**: Files are encrypted in the browser using AES-GCM with a randomly generated 256-bit key
 2. **Filename encryption**: Filenames are also encrypted with the same key
@@ -108,10 +108,10 @@ Copyright © 2024–2026 Jimmy Verburgt.
 Source code is licensed under the **GNU Affero General Public
 License v3.0** — see [LICENSE](LICENSE) for the full text. AGPL-3.0
 is a strong copyleft license: anyone who runs a modified version
-of JTransfer as a network service must make the source of their
+of Tessil as a network service must make the source of their
 modifications available to users of that service.
 
-The **JTransfer name, logo, and visual identity are trademarks**
+The **Tessil name, logo, and visual identity are trademarks**
 and are **not** licensed under AGPL — see [TRADEMARK.md](TRADEMARK.md)
 for what you can and cannot do with the brand. Forks must rename
 and re-brand before being run as a service.

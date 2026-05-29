@@ -1,5 +1,3 @@
-// AES-256-GCM key generation and encoding
-
 export async function generateKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(
     { name: 'AES-GCM', length: 256 },
@@ -24,7 +22,6 @@ export async function importKey(base64Url: string): Promise<CryptoKey> {
   );
 }
 
-// URL-safe base64 encoding (no padding)
 function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -38,12 +35,7 @@ function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
 }
 
 function base64UrlToArrayBuffer(base64Url: string): ArrayBuffer {
-  // Convert URL-safe base64 to standard base64
-  let base64 = base64Url
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-
-  // Add padding if needed
+  let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
   while (base64.length % 4) {
     base64 += '=';
   }
@@ -56,8 +48,7 @@ function base64UrlToArrayBuffer(base64Url: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// Password-based key wrapping (PBKDF2 + AES-KW)
-// Fragment format for wrapped key: "w.{saltBase64Url}.{wrappedKeyBase64Url}"
+// PBKDF2 + AES-KW. Wrapped fragment format: "w.{salt}.{wrappedKey}".
 const PBKDF2_ITERATIONS = 300_000;
 
 async function deriveWrappingKey(password: string, salt: Uint8Array): Promise<CryptoKey> {

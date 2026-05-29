@@ -4,11 +4,7 @@
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
-  import * as Frame from "$lib/components/frame";
-  import PageHeader from "$lib/components/PageHeader.svelte";
-  import PageLayout from "$lib/components/PageLayout.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import { decryptFile, decryptFilename, decryptString } from "$lib/crypto/decrypt";
   import { importKey, isWrappedKey, unwrapKey } from "$lib/crypto/key";
@@ -40,9 +36,6 @@
   let key = $state<CryptoKey | null>(null);
   let accessToken = $state<string | null>(null);
   let downloadAllInProgress = $state(false);
-  // Decrypted transfer title. Surfaced as the page H1 once the
-  // fragment key has decrypted it; never sent to or seen by the
-  // server.
   let decryptedTitle = $state<string | null>(null);
 
   let password = $state("");
@@ -94,11 +87,12 @@
       const lower = message.toLowerCase();
       if (lower.includes("expired")) {
         errorTitle = "This transfer has expired";
-        errorMessage = "The sender set an expiry date that has passed.";
+        errorMessage =
+          "The sender set an expiry that has passed. Ask them for a fresh link.";
       } else if (lower.includes("not found") || lower.includes("404")) {
         errorTitle = "This link is no longer valid";
         errorMessage =
-          "The transfer may have expired, been deleted, or the link is incorrect.";
+          "The transfer expired, was deleted, or the link is incorrect.";
       } else {
         errorTitle = "Unable to access files";
         errorMessage = message;
@@ -137,8 +131,6 @@
     }
     files = decryptedFiles;
 
-    // Best-effort title decrypt. A failure here is non-fatal — we keep the
-    // generic H1 and let the recipient continue.
     if (meta.encryptedTitle && meta.encryptedTitleIv) {
       try {
         const t = await decryptString(
@@ -263,144 +255,151 @@
       : `Download all (${files.length})`
   );
 
-  // Page H1: prefer the decrypted title once the recipient has unlocked
-  // (or for unprotected transfers, decrypted) the fragment key. Otherwise
-  // fall back to the standing security tagline. The marketing copy moves
-  // to the tagline slot so the trust signal is still visible.
   const pageH1 = $derived(
     pageStatus === "ready" && decryptedTitle
       ? decryptedTitle
-      : "Encrypted in your browser."
+      : "An encrypted transfer."
   );
   const pageTagline = $derived(
     pageStatus === "ready" && decryptedTitle
-      ? "Files are decrypted in your browser — we never saw the contents."
-      : "Your files are scrambled before they leave your device — we never see the contents."
+      ? "Decrypted in your browser. We never saw the contents."
+      : "Decrypted in your browser. We never see the contents."
   );
 </script>
 
 <svelte:head>
-  <title>Secure Download - JTransfer</title>
+  <title>Secure download — Tessil</title>
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
-<PageLayout>
-  <PageHeader
-    title={pageH1}
-    tagline={pageTagline}
-    wordmarkHref={null}
-  />
+<section class="relative">
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 lg:pt-20 pb-16">
+    <div class="grid grid-cols-1 sm:grid-cols-[320px_1fr] gap-6 sm:gap-16 lg:gap-24 items-stretch">
 
-  <Frame.Root>
-    <Frame.Header>
-      <Frame.Title>
-        {#if pageStatus === "ready"}
-          {fileCountTitle}
-        {:else}
-          Encrypted transfer
-        {/if}
-      </Frame.Title>
-      <Frame.Description class="flex items-center gap-2">
-        <IconLockRegular class="size-4" />
-        Encrypted end-to-end. The server never saw the contents.
-      </Frame.Description>
-    </Frame.Header>
-
-    <Frame.Panel>
-      {#if pageStatus === "loading"}
-        <div
-          class="flex items-center justify-center py-8 text-muted-foreground"
-        >
-          <Spinner aria-label="Loading transfer" />
-        </div>
-      {:else if pageStatus === "password_required"}
-        <form
-          onsubmit={(e) => {
-            e.preventDefault();
-            handlePasswordSubmit();
-          }}
-          class="space-y-4"
-        >
-          <p class="text-sm text-muted-foreground">
-            This transfer is password protected. Enter the password to decrypt.
+      <aside class="glass-panel sm:sticky sm:top-6 sm:min-h-[420px] sm:flex sm:flex-col">
+        <div class="px-5 py-4 border-b border-border">
+          <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <IconLockRegular class="size-4 text-primary shrink-0" />
+            {#if pageStatus === "ready"}
+              {fileCountTitle}
+            {:else if pageStatus === "password_required"}
+              Password required
+            {:else if pageStatus === "error"}
+              Unable to access
+            {:else}
+              Encrypted transfer
+            {/if}
+          </div>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            Decrypted in your browser.
           </p>
-          <PasswordInput
-            id="transfer-password"
-            label="Password"
-            placeholder="Enter the password"
-            bind:value={password}
-            disabled={isVerifyingPassword}
-            error={passwordError ?? undefined}
-          />
-        </form>
-      {:else if pageStatus === "error"}
-        <Alert tone="destructive" title={errorTitle}>
-          {errorMessage}
-        </Alert>
-      {:else if pageStatus === "ready"}
-        <div>
-          {#each files as file, index (file.id)}
-            <FileRow
-              name={file.name}
-              size={formatSize(file.size)}
-              kind="download"
-              status={file.status}
-              percent={file.progress}
-              trailingHidden={isSingleFile}
-              errorSub={file.status === "error" ? file.error : undefined}
-              onDownload={() => downloadFile(index)}
-              onRetry={() => downloadFile(index)}
-            />
-          {/each}
         </div>
-      {/if}
-    </Frame.Panel>
 
-    {#if pageStatus === "password_required"}
-      <Frame.Footer>
-        <Button
-          variant="primary"
-          onclick={handlePasswordSubmit}
-          disabled={!password || isVerifyingPassword}
-        >
-          {#if isVerifyingPassword}
-            <Spinner class="size-4" />
-            Verifying…
-          {:else}
-            Unlock
+        <!-- Content -->
+        <div class="px-5 py-4 sm:flex-1 overflow-y-auto">
+          {#if pageStatus === "loading"}
+            <div
+              class="flex items-center justify-center py-8 text-muted-foreground"
+            >
+              <Spinner aria-label="Loading transfer" />
+            </div>
+          {:else if pageStatus === "password_required"}
+            <form
+              onsubmit={(e) => {
+                e.preventDefault();
+                handlePasswordSubmit();
+              }}
+              class="space-y-4"
+            >
+              <p class="text-sm text-muted-foreground">
+                The sender added a password. Ask them for it if you don't have it.
+              </p>
+              <PasswordInput
+                id="transfer-password"
+                label="Password"
+                placeholder="Enter the password"
+                bind:value={password}
+                disabled={isVerifyingPassword}
+                error={passwordError ?? undefined}
+              />
+            </form>
+          {:else if pageStatus === "error"}
+            <Alert tone="destructive" title={errorTitle}>
+              {errorMessage}
+            </Alert>
+          {:else if pageStatus === "ready"}
+            <div>
+              {#each files as file, index (file.id)}
+                <FileRow
+                  name={file.name}
+                  size={formatSize(file.size)}
+                  kind="download"
+                  status={file.status}
+                  percent={file.progress}
+                  trailingHidden={isSingleFile}
+                  errorSub={file.status === "error" ? file.error : undefined}
+                  onDownload={() => downloadFile(index)}
+                  onRetry={() => downloadFile(index)}
+                />
+              {/each}
+            </div>
           {/if}
-        </Button>
-      </Frame.Footer>
-    {:else if pageStatus === "ready"}
-      <Frame.Footer>
-        {#if allComplete}
-          <Button variant="primary" disabled>
-            <IconCheckRegular class="size-4" />
-            Downloaded
-          </Button>
-        {:else if downloadAllInProgress || anyDownloading}
-          <Button variant="primary" disabled>
-            <Spinner class="size-4" />
-            Downloading…
-          </Button>
-        {:else}
-          <Button variant="primary" onclick={downloadAllFiles}>
-            <IconDownloadRegular class="size-4" />
-            {downloadAllLabel}
-          </Button>
-        {/if}
-      </Frame.Footer>
-    {/if}
-  </Frame.Root>
+        </div>
 
-  <SiteFooter current="download">
-    {#snippet tagline()}
-      <a
-        href="/"
-        class="hover:text-foreground transition-colors duration-200 ease-out"
-      >
-        Share your own files securely →
-      </a>
-    {/snippet}
-  </SiteFooter>
-</PageLayout>
+        {#if pageStatus === "password_required"}
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/30">
+            <Button
+              variant="primary"
+              fullWidth={false}
+              onclick={handlePasswordSubmit}
+              disabled={!password || isVerifyingPassword}
+            >
+              {#if isVerifyingPassword}
+                <Spinner class="size-4" />
+                Verifying…
+              {:else}
+                Unlock
+              {/if}
+            </Button>
+          </div>
+        {:else if pageStatus === "ready"}
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/30">
+            {#if allComplete}
+              <Button variant="primary" fullWidth={false} disabled>
+                <IconCheckRegular class="size-4" />
+                Downloaded
+              </Button>
+            {:else if downloadAllInProgress || anyDownloading}
+              <Button variant="primary" fullWidth={false} disabled>
+                <Spinner class="size-4" />
+                Downloading…
+              </Button>
+            {:else}
+              <Button variant="primary" fullWidth={false} onclick={downloadAllFiles}>
+                <IconDownloadRegular class="size-4" />
+                {downloadAllLabel}
+              </Button>
+            {/if}
+          </div>
+        {/if}
+      </aside>
+
+      <div class="space-y-4 sm:text-right sm:max-w-md sm:ml-auto sm:pt-4">
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-foreground leading-[1.05] break-words" style="letter-spacing: -0.03em">
+          {pageH1}
+        </h1>
+        <p class="text-base text-muted-foreground leading-relaxed">
+          {pageTagline}
+        </p>
+        <p class="text-sm">
+          <a
+            href="/"
+            class="text-primary hover:underline underline-offset-4"
+          >
+            Want to send something back? →
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

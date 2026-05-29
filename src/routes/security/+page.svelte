@@ -6,23 +6,23 @@
 </script>
 
 <svelte:head>
-  <title>Security Overview - JTransfer</title>
+  <title>Security Overview - Tessil</title>
   <meta
     name="description"
-    content="How JTransfer's encryption works, what we can and cannot see, and how to report vulnerabilities."
+    content="How Tessil's encryption works, what we can and cannot see, and how to report vulnerabilities."
   />
   <meta name="robots" content="index, follow" />
-  <meta property="og:title" content="Security Overview - JTransfer" />
+  <meta property="og:title" content="Security Overview - Tessil" />
   <meta
     property="og:description"
-    content="How end-to-end encryption works on JTransfer, what we can and cannot access, and how to report a vulnerability."
+    content="How end-to-end encryption works on Tessil, what we can and cannot access, and how to report a vulnerability."
   />
 </svelte:head>
 
 <PageLayout width="3xl">
   <PageHeader
     title="Security Overview"
-    tagline="How end-to-end encryption works on JTransfer, and how to report a vulnerability."
+    tagline="How end-to-end encryption works on Tessil, and how to report a vulnerability."
   />
 
     <Frame.Root>
@@ -33,7 +33,7 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">Scope</h2>
             <p class="text-muted-foreground">
-              JTransfer is an end-to-end encrypted file transfer service. This
+              Tessil is an end-to-end encrypted file transfer service. This
               page is the security model: what we can and cannot access, how keys
               are handled, and how to report a vulnerability.
             </p>
@@ -144,14 +144,14 @@
             <h2 class="text-lg font-semibold text-foreground">Sign-in codes and anti-phishing</h2>
             <p class="text-muted-foreground">
               Open a sign-in link on a different device than the one you
-              started on, and JTransfer shows you a 6-digit code instead of
+              started on, and Tessil shows you a 6-digit code instead of
               signing you in there. Type the code back on the device where
               you started.
             </p>
             <p class="text-muted-foreground">
-              <strong>JTransfer will never ask you to share that code.</strong>
+              <strong>Tessil will never ask you to share that code.</strong>
               We will never email, call, or message you to request a
-              sign-in code. If anyone — claiming to be JTransfer support, a
+              sign-in code. If anyone — claiming to be Tessil support, a
               friend, a delivery service — asks for the code, it's a phishing
               attempt. Don't share it.
             </p>
@@ -172,7 +172,7 @@
             </p>
             <p class="text-muted-foreground">
               <strong>Passkeys are bound to this site's domain.</strong> Your
-              browser only releases a JTransfer passkey to JTransfer — it
+              browser only releases a Tessil passkey to Tessil — it
               can't be used on a look-alike site, even one that copies our
               design pixel-for-pixel. The browser enforces this (the
               WebAuthn standard), not us. It's why passkeys resist phishing
@@ -188,7 +188,7 @@
               Passkeys don't change the encryption model. File payloads stay
               end-to-end encrypted, the encryption key still lives only in
               the URL fragment, and signing in with a passkey only
-              authenticates you to JTransfer — it doesn't give us access to
+              authenticates you to Tessil — it doesn't give us access to
               your transfers' contents.
             </p>
           </section>
@@ -237,9 +237,9 @@
             </p>
             <p class="text-muted-foreground">
               <a
-                href="mailto:security@jimmyverburgt.com"
+                href="mailto:security@tessil.app"
                 class="text-primary hover:underline"
-              >security@jimmyverburgt.com</a>
+              >security@tessil.app</a>
             </p>
             <p class="text-sm text-muted-foreground">
               Include reproduction steps, affected URLs, and impact.

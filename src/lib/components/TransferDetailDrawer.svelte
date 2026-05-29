@@ -1,16 +1,4 @@
 <script lang="ts">
-  // Per-transfer detail drawer for the dashboard. Owns its own:
-  //   • title edit state (input value, save + clear flows)
-  //   • share-link reveal flow (rebuilt locally from K_vault → K_transfer)
-  //   • inline delete confirm
-  //
-  // Filename + title decryption results come in via `vaultState`, which the
-  // dashboard manages so the table preview and drawer always agree.
-  //
-  // The drawer is destroyed when `open` flips false (key change on the
-  // dialog), so transient state (dirty title, confirm-delete pending,
-  // revealed share link) resets cleanly between transfers.
-
   import { api, type OwnedTransferSummary } from "$lib/api/client";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
@@ -26,9 +14,6 @@
     unwrapTransferKey,
   } from "$lib/vault/client";
 
-  // Mirrors the dashboard's per-row state. Kept loose so the dashboard can
-  // pre-fill `title` (decrypted) and `names` (decrypted) without us having
-  // to re-derive them inside the drawer on every open.
   export type VaultRowState =
     | { status: "locked" }
     | { status: "unlocking" }
@@ -64,21 +49,16 @@
     onTitleSaved,
   }: Props = $props();
 
-  // Title edit state — initialised from the decrypted title when we open.
-  // `originalTitle` is the value we'd revert to on Cancel; `titleInput`
-  // is what the user is typing.
   let originalTitle = $state("");
   let titleInput = $state("");
   let titleSaving = $state(false);
   let titleError = $state<string | null>(null);
 
-  // Share-link recovery
   let shareUrl = $state<string | null>(null);
   let recovering = $state(false);
   let recoverError = $state<string | null>(null);
   let copied = $state(false);
 
-  // Delete inline confirm
   let confirmingDelete = $state(false);
   let deleting = $state(false);
   let deleteError = $state<string | null>(null);
@@ -103,8 +83,7 @@
     deleteError = null;
   });
 
-  // When the vault unlocks while the drawer is open, pick up the freshly
-  // decrypted title — but only if the user hasn't started editing.
+  // Pick up a freshly-decrypted title when the vault unlocks mid-drawer, unless the user is editing.
   $effect(() => {
     if (!open || !transfer) return;
     if (vaultState?.status !== "unlocked") return;
@@ -136,7 +115,6 @@
       let encryptedTitleIv: string | null = null;
 
       if (trimmedTitle.length > 0) {
-        // Need K_transfer to encrypt the title. Unwrap from K_vault.
         const raw = await unwrapTransferKey(userId, transfer.wrappedKey ?? "");
         if (!raw) {
           titleError = "Couldn't unlock this transfer's key. Try unlocking the vault again.";
@@ -214,7 +192,7 @@
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Couldn't delete that transfer.";
       if (msg === "Transfer not found.") {
-        // Treat as already-gone so the row clears from the list.
+        // Treat as already-gone so the row clears.
         onDeleted(transfer.id);
         onClose();
         return;
@@ -225,8 +203,6 @@
     }
   }
 
-  // Helpers shared with the dashboard row. Re-derived here so the drawer
-  // stays self-contained.
   function statusOf(t: OwnedTransferSummary): {
     label: string;
     tone: "success" | "warning" | "muted";
@@ -264,7 +240,7 @@
     {@const decryptedNames = vaultState?.status === "unlocked" ? vaultState.names : null}
 
     <div class="space-y-3">
-      <section class="space-y-2 rounded-2xl bg-card p-4">
+      <section class="space-y-2 rounded-lg bg-card p-4">
         <label
           for="transfer-title-input"
           class="block text-sm font-medium text-foreground"
@@ -311,7 +287,7 @@
         {/if}
       </section>
 
-      <section class="space-y-3 rounded-2xl bg-card p-4">
+      <section class="space-y-3 rounded-lg bg-card p-4">
         <h3 class="text-sm font-medium text-foreground">
           Files
           <span class="text-muted-foreground font-normal">
@@ -343,7 +319,7 @@
         {/if}
       </section>
 
-      <section class="space-y-2 rounded-2xl bg-card p-4">
+      <section class="space-y-2 rounded-lg bg-card p-4">
         <h3 class="text-sm font-medium text-foreground">Details</h3>
         <dl class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
           <dt class="text-muted-foreground">Status</dt>
@@ -368,7 +344,7 @@
         </dl>
       </section>
 
-      <section class="space-y-2 rounded-2xl bg-card p-4">
+      <section class="space-y-2 rounded-lg bg-card p-4">
         <h3 class="text-sm font-medium text-foreground">Share link</h3>
         {#if recoverError}
           <Alert tone="warning">{recoverError}</Alert>
@@ -431,7 +407,7 @@
         {/if}
       </section>
 
-      <section class="space-y-2 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+      <section class="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
         <h3 class="text-sm font-medium text-foreground">Danger zone</h3>
         <p class="text-xs text-muted-foreground">
           Deleting removes the encrypted files and revokes the share link.
