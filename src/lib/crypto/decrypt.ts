@@ -52,11 +52,25 @@ export async function decryptFile(
   return new Blob([decrypted]);
 }
 
+export interface DownloadProgress {
+  /** 0–100 across download + decrypt. */
+  percent: number;
+  /** Smoothed (EMA) download rate in bytes/sec; null during decrypt / until known. */
+  bytesPerSecond: number | null;
+  /** Estimated seconds remaining; null during decrypt / until a rate is known. */
+  etaSeconds: number | null;
+}
+
+/**
+ * Streams the encrypted blob from R2 with real bytes-received progress (so big
+ * files don't look frozen), reports a smoothed speed + ETA, then decrypts.
+ * Download maps to 0–90%, decrypt to 90–100% — the download dominates wall-clock.
+ */
 export async function downloadAndDecrypt(
   downloadUrl: string,
   ivBase64: string,
   key: CryptoKey,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: DownloadProgress) => void
 ): Promise<Blob> {
   const response = await fetch(downloadUrl);
 
@@ -75,6 +89,11 @@ export async function downloadAndDecrypt(
   const chunks: Uint8Array[] = [];
   let received = 0;
 
+  let emaBps = 0;
+  let lastSampleT = performance.now();
+  let lastSampleBytes = 0;
+  let lastEmitT = 0;
+
   while (true) {
     const { done, value } = await reader.read();
 
@@ -83,8 +102,23 @@ export async function downloadAndDecrypt(
     chunks.push(value);
     received += value.length;
 
-    if (onProgress && total > 0) {
-      onProgress((received / total) * 80); // 0-80%: download
+    const now = performance.now();
+    const dt = (now - lastSampleT) / 1000;
+    if (dt >= 0.2) {
+      const inst = Math.max(0, (received - lastSampleBytes) / dt);
+      emaBps = emaBps === 0 ? inst : 0.2 * inst + 0.8 * emaBps;
+      lastSampleT = now;
+      lastSampleBytes = received;
+    }
+
+    // Throttle UI emits — reads fire very frequently on a fast connection.
+    if (onProgress && total > 0 && (now - lastEmitT >= 80 || received >= total)) {
+      lastEmitT = now;
+      onProgress({
+        percent: (received / total) * 90, // 0-90%: download
+        bytesPerSecond: emaBps > 0 ? emaBps : null,
+        etaSeconds: emaBps > 0 ? Math.max(0, total - received) / emaBps : null,
+      });
     }
   }
 
@@ -95,13 +129,13 @@ export async function downloadAndDecrypt(
     offset += chunk.length;
   }
 
-  if (onProgress) {
-    onProgress(80);
-  }
+  onProgress?.({ percent: 90, bytesPerSecond: null, etaSeconds: null });
 
   return decryptFile(encryptedData.buffer as ArrayBuffer, ivBase64, key, (p) => {
-    if (onProgress) {
-      onProgress(80 + (p * 0.2)); // 80-100%: decrypt
-    }
+    onProgress?.({
+      percent: 90 + p * 0.1, // 90-100%: decrypt
+      bytesPerSecond: null,
+      etaSeconds: null,
+    });
   });
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
+  import { cubicIn } from "svelte/easing";
   import IconArrowsClockwiseRegular from "phosphor-icons-svelte/IconArrowsClockwiseRegular.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
@@ -16,8 +17,6 @@
     status?: Status;
     kind?: Kind;
     percent?: number;
-    /** Small line under the progress bar while in progress (e.g. ETA). */
-    detail?: string;
     /** Hide trailing action when this is the only row in a single-file download. */
     trailingHidden?: boolean;
     errorSub?: string;
@@ -33,7 +32,6 @@
     status = "idle",
     kind = "upload",
     percent = 0,
-    detail,
     trailingHidden = false,
     errorSub,
     onRemove,
@@ -45,9 +43,30 @@
   const isError = $derived(status === "error");
   const inProgress = $derived(status === "uploading" || status === "downloading");
   const showTrail = $derived(!(trailingHidden && status === "idle"));
+
+  // Exit transition for a removed row: slides right off the edge while fading,
+  // with a red flash peaking mid-way — a "swish away" on delete.
+  function swishAway(
+    node: HTMLElement,
+    { duration = 340 }: { duration?: number } = {},
+  ) {
+    const height = node.offsetHeight;
+    return {
+      duration,
+      easing: cubicIn,
+      css: (t: number) => {
+        const flash = Math.sin(t * Math.PI); // 0 → 1 → 0 across the transition
+        // Hold full height through the first part of the exit so the rows below
+        // don't jump, then collapse so they slide up smoothly.
+        const collapse = Math.min(1, t * 1.8);
+        return `overflow: hidden; transform: translateX(${(1 - t) * 56}px); opacity: ${t}; background-color: rgba(239, 68, 68, ${flash * 0.16}); height: ${collapse * height}px;`;
+      },
+    };
+  }
 </script>
 
 <div
+  out:swishAway
   class={cn(
     "flex items-start gap-3 py-3 px-1 not-last:border-b border-border/60",
     className
@@ -98,8 +117,8 @@
           <IconCheckRegular class="size-4" />
         </span>
       {:else if inProgress}
-        <span class="text-xs tabular-nums text-muted-foreground whitespace-nowrap">
-          {Math.round(percent)}%{#if detail} · {detail}{/if}
+        <span class="text-xs tabular-nums text-muted-foreground">
+          {Math.round(percent)}%
         </span>
       {:else if isError}
         <button
@@ -115,7 +134,7 @@
           type="button"
           onclick={onRemove}
           aria-label="Remove {name}"
-          class="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          class="p-2 rounded text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/10 transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <IconXRegular class="size-4" />
         </button>

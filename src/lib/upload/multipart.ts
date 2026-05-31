@@ -12,8 +12,11 @@ import {
 } from "$lib/api/client";
 
 const MAX_PART_RETRIES = 3;
-// Browser per-origin connection cap; retries queue briefly behind in-flight Parts.
-const PARALLELISM = 6;
+// Concurrent part uploads. Kept moderate (below the browser's ~6-connection cap)
+// so a large file doesn't put too much data in flight at once — heavy concurrency
+// makes connection drops ("network connection was lost") more likely, notably on
+// Safari/WebKit.
+const PARALLELISM = 4;
 
 interface PartTask {
   partNumber: number;

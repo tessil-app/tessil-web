@@ -73,6 +73,7 @@ function createUploadStore() {
 
     addFiles(newFiles: File[]) {
       const fileStates: FileUploadState[] = newFiles.map((file) => ({
+        id: crypto.randomUUID(),
         file,
         status: "pending",
         progress: 0,
@@ -125,6 +126,14 @@ function createUploadStore() {
       state.error = error;
       state.errorUpgradeUrl = upgradeUrl ?? null;
       state.status = "error";
+    },
+
+    clearError() {
+      state.error = null;
+      state.errorUpgradeUrl = null;
+      if (state.status === "error") {
+        state.status = "idle";
+      }
     },
 
     setShareUrl(url: string) {
