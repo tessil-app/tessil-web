@@ -235,7 +235,7 @@ export async function uploadEncryptedBlobMultipart(
     const dt = (now - lastSampleT) / 1000;
     if (dt >= 0.2) {
       const inst = Math.max(0, (totalLoaded - lastSampleBytes) / dt);
-      emaBps = emaBps === 0 ? inst : 0.3 * inst + 0.7 * emaBps;
+      emaBps = emaBps === 0 ? inst : 0.2 * inst + 0.8 * emaBps;
       lastSampleT = now;
       lastSampleBytes = totalLoaded;
     }

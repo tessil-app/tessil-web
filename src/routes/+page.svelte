@@ -123,6 +123,7 @@
   let copied = $state(false);
   let uploadSpeed = $state<number | null>(null);
   let uploadEta = $state<number | null>(null);
+  let lastSpeedTs = 0;
   let lastUploadVaulted = $state(false);
   let isDraggingOver = $state(false);
   let fileInput = $state<HTMLInputElement | null>(null);
@@ -303,6 +304,7 @@
 
     uploadSpeed = null;
     uploadEta = null;
+    lastSpeedTs = 0;
 
     try {
       uploadStore.setStatus("validating");
@@ -404,8 +406,14 @@
             partUrls: initResponse.partUrls,
             onProgress: (p) => {
               uploadStore.setFileStatus(i, "uploading", 15 + p.percent * 0.85);
-              uploadSpeed = p.bytesPerSecond;
-              uploadEta = p.etaSeconds;
+              // Throttle the displayed speed/ETA to ~1s so the readout stays
+              // steady instead of flickering on every progress event.
+              const now = performance.now();
+              if (p.percent >= 100 || now - lastSpeedTs > 1000) {
+                uploadSpeed = p.bytesPerSecond;
+                uploadEta = p.etaSeconds;
+                lastSpeedTs = now;
+              }
             },
           });
 
@@ -772,6 +780,9 @@
                     kind="upload"
                     status={fileRowStatus(fileState.status)}
                     percent={fileState.progress}
+                    detail={fileState.status === "uploading" && uploadEta != null
+                      ? formatEta(uploadEta)
+                      : undefined}
                     onRemove={() => removeFile(index)}
                   />
                 {/each}
@@ -890,6 +901,9 @@
                   kind="upload"
                   status={fileRowStatus(fileState.status)}
                   percent={fileState.progress}
+                  detail={fileState.status === "uploading" && uploadEta != null
+                    ? formatEta(uploadEta)
+                    : undefined}
                   onRemove={() => removeFile(index)}
                 />
               {/each}

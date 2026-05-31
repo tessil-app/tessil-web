@@ -21,8 +21,19 @@ function createUploadStore() {
 
   function calculateOverallProgress(): number {
     if (state.files.length === 0) return 0;
-    const totalProgress = state.files.reduce((sum, f) => sum + f.progress, 0);
-    return totalProgress / state.files.length;
+    // Byte-weighted: a 300 MB file should dominate a 5 MB one, rather than each
+    // file counting equally. Falls back to a plain average if every file is
+    // zero-length (edge case).
+    const totalBytes = state.files.reduce((sum, f) => sum + f.file.size, 0);
+    if (totalBytes === 0) {
+      const totalProgress = state.files.reduce((sum, f) => sum + f.progress, 0);
+      return totalProgress / state.files.length;
+    }
+    const weighted = state.files.reduce(
+      (sum, f) => sum + f.progress * f.file.size,
+      0,
+    );
+    return weighted / totalBytes;
   }
 
   return {

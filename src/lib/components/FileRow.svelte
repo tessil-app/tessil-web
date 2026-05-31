@@ -16,6 +16,8 @@
     status?: Status;
     kind?: Kind;
     percent?: number;
+    /** Small line under the progress bar while in progress (e.g. ETA). */
+    detail?: string;
     /** Hide trailing action when this is the only row in a single-file download. */
     trailingHidden?: boolean;
     errorSub?: string;
@@ -31,6 +33,7 @@
     status = "idle",
     kind = "upload",
     percent = 0,
+    detail,
     trailingHidden = false,
     errorSub,
     onRemove,
@@ -95,8 +98,8 @@
           <IconCheckRegular class="size-4" />
         </span>
       {:else if inProgress}
-        <span class="text-xs tabular-nums text-muted-foreground">
-          {Math.round(percent)}%
+        <span class="text-xs tabular-nums text-muted-foreground whitespace-nowrap">
+          {Math.round(percent)}%{#if detail} · {detail}{/if}
         </span>
       {:else if isError}
         <button
