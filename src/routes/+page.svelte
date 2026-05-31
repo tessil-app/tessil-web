@@ -910,20 +910,9 @@
                 <Button variant="secondary" fullWidth={false} class="flex-1" onclick={returnToSettings}>
                   Back
                 </Button>
-                {#if uploadStore.errorUpgradeUrl}
-                  <Button
-                    variant="primary"
-                    fullWidth={false}
-                    class="flex-1"
-                    onclick={() => goto(uploadStore.errorUpgradeUrl!)}
-                  >
-                    Upgrade
-                  </Button>
-                {:else}
-                  <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>
-                    Try again
-                  </Button>
-                {/if}
+                <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>
+                  Try again
+                </Button>
               {:else}
                 <Button
                   variant="primary"
@@ -1049,9 +1038,8 @@
         <a href="/security" class="text-primary hover:underline">security page</a>.
       </p>
       <p>
-        Built and run by one person. Free for routine use; Pro lifts
-        the limits — see the <a href="/pricing" class="text-primary hover:underline">pricing page</a> for what
-        the extra headroom costs.
+        Built and run by one person, and free to use. If Tessil saves you a
+        headache, you can support the project — the link's in the footer below.
       </p>
     </section>
 

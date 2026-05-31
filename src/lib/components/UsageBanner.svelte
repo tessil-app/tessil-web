@@ -3,9 +3,7 @@
   // Below 80% on every dimension OR already-dismissed for this period → renders nothing.
 
   import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
-  import Button from "$lib/components/Button.svelte";
   import type { UsageResponse } from "$lib/api/client";
   import { formatSize } from "$lib/utils";
 
@@ -81,8 +79,6 @@
     }
     return `${usage.dailyTransfers.used} of ${usage.dailyTransfers.cap} transfers today`;
   });
-
-  const isPro = $derived(usage?.tier === "pro");
 </script>
 
 {#if shouldShow && tripped}
@@ -95,16 +91,5 @@
     {:else}
       You're approaching the {tripped.dimension} cap. {detailText}.
     {/if}
-    {#snippet action()}
-      {#if !isPro}
-        <Button
-          variant="secondary"
-          fullWidth={false}
-          onclick={() => goto("/pricing")}
-        >
-          Upgrade to Pro
-        </Button>
-      {/if}
-    {/snippet}
   </Alert>
 {/if}

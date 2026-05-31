@@ -113,7 +113,7 @@
             <p class="text-muted-foreground">When you have an account we store:</p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>Your email address (for sign-in)</li>
-              <li>Your tier (free or paid)</li>
+              <li>Your account tier (currently free)</li>
               <li>A hashed session token for as long as you stay signed in</li>
               <li>The browser user-agent at sign-in time, for context in your sign-in email</li>
               <li>Authentication events (sign-in requests, successes, sign-outs) — kept for 90 days then automatically deleted</li>

@@ -58,9 +58,21 @@
       <span aria-hidden="true">·</span>
     {/each}
     {#if github}
-      <a href="https://github.com/VerburgtJimmy" class={linkClass}>GitHub</a>
+      <a href="https://github.com/tessil-app" class={linkClass}>GitHub</a>
       <span aria-hidden="true">·</span>
     {/if}
-    <a href="/pricing" class={linkClass}>Pro</a>
+    <a
+      href="https://github.com/sponsors/VerburgtJimmy"
+      target="_blank"
+      rel="noopener noreferrer"
+      class={linkClass}>Sponsor</a
+    >
+    <span aria-hidden="true">·</span>
+    <a
+      href="https://ko-fi.com/jimmyverburgt"
+      target="_blank"
+      rel="noopener noreferrer"
+      class={linkClass}>Ko-fi</a
+    >
   </div>
 </footer>

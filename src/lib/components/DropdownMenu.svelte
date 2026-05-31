@@ -1,5 +1,7 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
+  import { scale } from "svelte/transition";
+  import { expoOut } from "svelte/easing";
   import type { Snippet } from "svelte";
 
   interface Props {
@@ -116,9 +118,10 @@
       role="menu"
       tabindex="-1"
       onkeydown={handleMenuKey}
+      transition:scale={{ duration: 150, start: 0.96, opacity: 0, easing: expoOut }}
       class={cn(
-        "absolute z-50 mt-2 min-w-[12rem] origin-top rounded-md border border-border bg-card p-1 space-y-0.5",
-        align === "end" ? "right-0" : "left-0",
+        "absolute z-50 mt-2 min-w-[12rem] rounded-md border border-border bg-card p-1 space-y-0.5",
+        align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left",
         menuClass,
       )}
     >

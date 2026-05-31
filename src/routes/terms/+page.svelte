@@ -45,12 +45,9 @@
               temporary share links.
             </p>
             <p class="text-muted-foreground">
-              A free tier is available without an account. Tessil Pro is an
-              optional paid subscription with higher per-file and per-month limits,
-              billed monthly through Polar.sh (our Merchant of Record). Polar
-              handles the full checkout, billing, and tax compliance. See the
-              <a href="/pricing" class="text-primary hover:underline">pricing page</a>
-              for current Pro features and cost.
+              Tessil is free to use. It works without an account; signing in adds
+              a dashboard and longer-lived transfers. There is no paid plan at
+              this time.
             </p>
           </section>
 
@@ -87,10 +84,9 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">5. Service Limitations</h2>
             <p class="text-muted-foreground">
-              Per-file size, monthly volume, and expiry length vary by account tier.
-              Current caps for each tier are listed on the
-              <a href="/pricing" class="text-primary hover:underline">pricing page</a>.
-              Fair-usage limits apply across all tiers to prevent abuse.
+              Per-file size, monthly volume, and expiry length are limited to keep
+              the service fast and prevent abuse. Signed-in accounts get somewhat
+              higher limits than anonymous use. Fair-usage limits apply to everyone.
             </p>
             <p class="text-muted-foreground">
               We may modify these limits when needed to keep the service available.
