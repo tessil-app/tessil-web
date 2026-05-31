@@ -102,9 +102,9 @@
   dialog.jt-drawer {
     transform: translateX(100%);
     transition:
-      transform 200ms ease-out,
-      overlay 200ms ease-out allow-discrete,
-      display 200ms ease-out allow-discrete;
+      transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+      overlay 300ms ease-out allow-discrete,
+      display 300ms ease-out allow-discrete;
   }
   dialog.jt-drawer[open] {
     transform: translateX(0);
@@ -114,16 +114,34 @@
       transform: translateX(100%);
     }
   }
+
+  /* Backdrop fades with the slide (same expo-out timing as the panel). */
+  dialog.jt-drawer::backdrop {
+    background: rgba(20, 22, 26, 0.4);
+    opacity: 0;
+    transition:
+      opacity 300ms ease-out,
+      overlay 300ms ease-out allow-discrete,
+      display 300ms ease-out allow-discrete;
+  }
+  dialog.jt-drawer[open]::backdrop {
+    opacity: 1;
+  }
+  @starting-style {
+    dialog.jt-drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
   /* Shadow on the dialog itself, since UA stylesheet sets overflow:auto on dialogs and clips inner shadows. */
   dialog.jt-drawer {
     box-shadow:
-      -4px 0 48px 0 rgba(33, 35, 39, 0.12),
-      0 0 1px 0 rgba(33, 35, 39, 0.08);
+      -4px 0 32px 0 rgba(33, 35, 39, 0.08),
+      0 0 1px 0 rgba(33, 35, 39, 0.05);
   }
   @media (prefers-color-scheme: dark) {
     dialog.jt-drawer {
       box-shadow:
-        -4px 0 48px 0 #000,
+        -4px 0 32px 0 rgba(0, 0, 0, 0.45),
         0 0 1px 0 hsla(214, 8%, 98%, 0.08);
     }
   }

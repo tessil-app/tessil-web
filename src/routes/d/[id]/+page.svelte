@@ -1,17 +1,18 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { api, type TransferMetadata } from "$lib/api/client";
-  import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
+  import CircularProgress from "$lib/components/CircularProgress.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
-  import { decryptFile, decryptFilename, decryptString } from "$lib/crypto/decrypt";
+  import { decryptFilename, decryptString, downloadAndDecrypt } from "$lib/crypto/decrypt";
   import { importKey, isWrappedKey, unwrapKey } from "$lib/crypto/key";
-  import { formatSize } from "$lib/utils";
+  import { formatEta, formatSize, formatSpeed } from "$lib/utils";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
+  import IconWarningRegular from "phosphor-icons-svelte/IconWarningRegular.svelte";
   import { onMount } from "svelte";
 
   type PageStatus = "loading" | "password_required" | "ready" | "error";
@@ -43,6 +44,21 @@
   let isVerifyingPassword = $state(false);
   let transferId = $state<string | null>(null);
   let rawFragment = $state<string | null>(null);
+
+  type FeaturedItem = {
+    slug: string;
+    src: string;
+    title: string;
+    artist: string;
+    artistUrl: string | null;
+    tone?: "light" | "dark";
+  };
+  let featured = $state<FeaturedItem | null>(null);
+  let imageRevealed = $state(false);
+
+  let downloadSpeed = $state<number | null>(null);
+  let downloadEta = $state<number | null>(null);
+  let lastSpeedTs = 0;
 
   onMount(async () => {
     try {
@@ -98,6 +114,19 @@
         errorMessage = message;
       }
       pageStatus = "error";
+    }
+  });
+
+  onMount(async () => {
+    try {
+      const res = await fetch("/featured/manifest.json", { cache: "no-cache" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { items: FeaturedItem[] };
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        featured = data.items[Math.floor(Math.random() * data.items.length)];
+      }
+    } catch {
+      // Best-effort; the page renders fine without art.
     }
   });
 
@@ -183,28 +212,45 @@
     }
   }
 
+  function friendlyDownloadError(error: unknown): string {
+    const raw = error instanceof Error ? error.message.toLowerCase() : "";
+    if (/network|connection|lost|fetch|load failed/.test(raw)) {
+      return "The connection dropped. Try again.";
+    }
+    return "Couldn't download this file. Try again.";
+  }
+
   async function downloadFile(index: number) {
     const file = files[index];
     if (!key || file.status === "downloading") return;
+
+    downloadSpeed = null;
+    downloadEta = null;
+    lastSpeedTs = 0;
 
     try {
       files[index].status = "downloading";
       files[index].progress = 0;
 
-      files[index].progress = 10;
-      const encryptedData = await api.downloadFile(
+      const { downloadUrl } = await api.getDownloadUrl(
         file.id,
-        accessToken ?? undefined
+        accessToken ?? undefined,
       );
-      files[index].progress = 70;
 
-      const decryptedBlob = await decryptFile(
-        encryptedData,
+      const decryptedBlob = await downloadAndDecrypt(
+        downloadUrl,
         file.fileIv,
         key,
         (p) => {
-          files[index].progress = 70 + p * 0.3;
-        }
+          files[index].progress = p.percent;
+          // Throttle the displayed speed/ETA to ~1s so it reads steadily.
+          const now = performance.now();
+          if (p.percent >= 100 || now - lastSpeedTs > 1000) {
+            downloadSpeed = p.bytesPerSecond;
+            downloadEta = p.etaSeconds;
+            lastSpeedTs = now;
+          }
+        },
       );
 
       const url = URL.createObjectURL(decryptedBlob);
@@ -220,8 +266,7 @@
       files[index].progress = 100;
     } catch (err) {
       files[index].status = "error";
-      files[index].error =
-        err instanceof Error ? err.message : "Download failed";
+      files[index].error = friendlyDownloadError(err);
     }
   }
 
@@ -245,6 +290,17 @@
   const anyDownloading = $derived(
     files.some((f) => f.status === "downloading")
   );
+  const downloadingIndex = $derived(
+    files.findIndex((f) => f.status === "downloading"),
+  );
+  const overallDownloadProgress = $derived.by(() => {
+    if (files.length === 0) return 0;
+    const totalBytes = files.reduce((s, f) => s + f.size, 0);
+    if (totalBytes === 0) {
+      return files.reduce((s, f) => s + f.progress, 0) / files.length;
+    }
+    return files.reduce((s, f) => s + f.progress * f.size, 0) / totalBytes;
+  });
   const isSingleFile = $derived(files.length === 1);
   const fileCountTitle = $derived(
     `${files.length} file${files.length !== 1 ? "s" : ""} received`
@@ -272,9 +328,22 @@
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 </svelte:head>
 
-<section class="relative">
-  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 lg:pt-20 pb-16">
-    <div class="grid grid-cols-1 sm:grid-cols-[320px_1fr] gap-6 sm:gap-16 lg:gap-24 items-stretch">
+<!-- -mt-14 pulls the image behind the sticky nav so the glass effect sees through to artwork. -->
+<section class="relative min-h-screen -mt-14 overflow-hidden">
+  {#if featured}
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 bg-cover bg-center pointer-events-none"
+      style="
+        background-image: url('{featured.src}');
+        clip-path: {imageRevealed ? 'inset(0 round 0)' : 'inset(calc(100% - 22rem) 0 0 calc(100% - 50rem) round 1.5rem 0 0 0)'};
+        transition: clip-path 1200ms cubic-bezier(0.83, 0, 0.17, 1);
+      "
+    ></div>
+  {/if}
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-24">
+    <div class="grid grid-cols-1 sm:grid-cols-[320px_1fr] gap-6 sm:gap-10 lg:gap-12 items-stretch">
 
       <aside class="glass-panel sm:sticky sm:top-6 sm:min-h-[420px] sm:flex sm:flex-col">
         <div class="px-5 py-4 border-b border-border">
@@ -296,7 +365,7 @@
         </div>
 
         <!-- Content -->
-        <div class="px-5 py-4 sm:flex-1 overflow-y-auto">
+        <div class="px-5 py-4 sm:flex-1 sm:flex sm:flex-col overflow-y-auto">
           {#if pageStatus === "loading"}
             <div
               class="flex items-center justify-center py-8 text-muted-foreground"
@@ -324,33 +393,61 @@
               />
             </form>
           {:else if pageStatus === "error"}
-            <Alert tone="destructive" title={errorTitle}>
-              {errorMessage}
-            </Alert>
-          {:else if pageStatus === "ready"}
-            <div>
-              {#each files as file, index (file.id)}
-                <FileRow
-                  name={file.name}
-                  size={formatSize(file.size)}
-                  kind="download"
-                  status={file.status}
-                  percent={file.progress}
-                  trailingHidden={isSingleFile}
-                  errorSub={file.status === "error" ? file.error : undefined}
-                  onDownload={() => downloadFile(index)}
-                  onRetry={() => downloadFile(index)}
-                />
-              {/each}
+            <div role="alert" class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-8">
+              <span class="inline-flex items-center justify-center size-12 rounded-full bg-destructive/10 text-destructive-foreground">
+                <IconWarningRegular class="size-6" />
+              </span>
+              <div class="space-y-1">
+                <p class="text-sm font-semibold text-foreground">{errorTitle}</p>
+                <p class="text-xs text-muted-foreground leading-relaxed max-w-[18rem]">
+                  {errorMessage}
+                </p>
+              </div>
             </div>
+          {:else if pageStatus === "ready"}
+            {#if downloadAllInProgress || anyDownloading}
+              <div class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
+                <CircularProgress
+                  percent={overallDownloadProgress}
+                  sublabel="Downloading…"
+                />
+                <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
+                  {#if downloadSpeed}
+                    <p class="tabular-nums">
+                      {formatSpeed(downloadSpeed)}{#if downloadEta} · {formatEta(downloadEta)} left{/if}
+                    </p>
+                  {/if}
+                  {#if files.length > 1 && downloadingIndex >= 0}
+                    <p>File {downloadingIndex + 1} of {files.length}</p>
+                  {/if}
+                </div>
+              </div>
+            {:else}
+              <div>
+                {#each files as file, index (file.id)}
+                  <FileRow
+                    name={file.name}
+                    size={formatSize(file.size)}
+                    kind="download"
+                    status={file.status}
+                    percent={file.progress}
+                    trailingHidden={isSingleFile}
+                    errorSub={file.status === "error" ? file.error : undefined}
+                    onDownload={() => downloadFile(index)}
+                    onRetry={() => downloadFile(index)}
+                  />
+                {/each}
+              </div>
+            {/if}
           {/if}
         </div>
 
         {#if pageStatus === "password_required"}
-          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/30">
+          <div class="flex items-center gap-2 px-5 py-4 border-t border-border bg-muted/30">
             <Button
               variant="primary"
               fullWidth={false}
+              class="flex-1"
               onclick={handlePasswordSubmit}
               disabled={!password || isVerifyingPassword}
             >
@@ -363,19 +460,19 @@
             </Button>
           </div>
         {:else if pageStatus === "ready"}
-          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/30">
+          <div class="flex items-center gap-2 px-5 py-4 border-t border-border bg-muted/30">
             {#if allComplete}
-              <Button variant="primary" fullWidth={false} disabled>
+              <Button variant="primary" fullWidth={false} class="flex-1" disabled>
                 <IconCheckRegular class="size-4" />
                 Downloaded
               </Button>
             {:else if downloadAllInProgress || anyDownloading}
-              <Button variant="primary" fullWidth={false} disabled>
+              <Button variant="primary" fullWidth={false} class="flex-1" disabled>
                 <Spinner class="size-4" />
                 Downloading…
               </Button>
             {:else}
-              <Button variant="primary" fullWidth={false} onclick={downloadAllFiles}>
+              <Button variant="primary" fullWidth={false} class="flex-1" onclick={downloadAllFiles}>
                 <IconDownloadRegular class="size-4" />
                 {downloadAllLabel}
               </Button>
@@ -402,4 +499,36 @@
       </div>
     </div>
   </div>
+
+  {#if featured}
+    <div class="absolute right-[25rem] translate-x-1/2 bottom-4 z-20 flex flex-col items-center gap-1.5">
+      <button
+        type="button"
+        onclick={() => (imageRevealed = !imageRevealed)}
+        aria-pressed={imageRevealed}
+        aria-label={imageRevealed
+          ? `Hide ${featured.title}`
+          : `Reveal ${featured.title} by ${featured.artist}`}
+        class="group inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <span class="size-1.5 rounded-full bg-primary"></span>
+        <span class="font-medium">{featured.title}</span>
+        <span class="text-muted-foreground">by {featured.artist}</span>
+        <span class="text-muted-foreground/60 mx-1" aria-hidden="true">·</span>
+        <span class="min-w-[2.75rem] text-center text-muted-foreground group-hover:text-foreground transition-colors duration-200 ease-out font-medium">
+          {imageRevealed ? "Hide" : "Reveal"}
+        </span>
+      </button>
+      {#if featured.artistUrl}
+        <a
+          href={featured.artistUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-background transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          Artist →
+        </a>
+      {/if}
+    </div>
+  {/if}
 </section>

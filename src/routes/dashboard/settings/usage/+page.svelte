@@ -3,10 +3,7 @@
   // tier caps. Data comes from /api/me/usage, which reads the
   // rate-limit counters without consuming a slot.
 
-  import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
-  import Badge from "$lib/components/Badge.svelte";
-  import Button from "$lib/components/Button.svelte";
   import * as Frame from "$lib/components/frame";
   import ProgressBar from "$lib/components/ProgressBar.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
@@ -56,11 +53,6 @@
     <div class="space-y-4">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <h2 class="text-xl font-semibold text-foreground">This period</h2>
-        {#if usage}
-          <Badge tone={usage.tier === "pro" ? "success" : "muted"}>
-            {usage.tier === "pro" ? "Pro" : "Free"}
-          </Badge>
-        {/if}
       </div>
 
       {#if usageError}
@@ -120,13 +112,6 @@
           </dl>
         </section>
 
-        {#if usage.tier !== "pro"}
-          <div class="pt-2">
-            <Button fullWidth={false} onclick={() => goto("/pricing")}>
-              Upgrade for more headroom
-            </Button>
-          </div>
-        {/if}
       {/if}
     </div>
   </Frame.Panel>

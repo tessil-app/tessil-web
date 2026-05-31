@@ -7,6 +7,8 @@ export type UploadStatus =
   | "error";
 
 export interface FileUploadState {
+  /** Stable identity for keyed lists/transitions; survives reordering on remove. */
+  id: string;
   file: File;
   status: "pending" | "encrypting" | "uploading" | "complete" | "error";
   progress: number;

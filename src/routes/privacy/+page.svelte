@@ -84,7 +84,7 @@
                 session expiry timestamps.
               </li>
               <li>
-                <strong>Account tier.</strong> Currently always <code>free</code>; reserved for future paid plans.
+                <strong>Account tier.</strong> Currently always <code>free</code>.
               </li>
               <li>
                 <strong>Ownership link on transfers.</strong> Transfers you create while signed in are tagged with
@@ -230,14 +230,6 @@
                 <strong>Scaleway Transactional Email (TEM):</strong> Sends one-time sign-in links and
                 account-related notifications. Receives your email address and the message contents. EU-based
                 processor; used for transactional mail only — never marketing.
-              </li>
-              <li>
-                <strong>Polar.sh:</strong> Merchant of Record for Tessil Pro
-                subscriptions. Receives your email, payment details, billing
-                address, and transaction history when you subscribe.
-                US-incorporated; EU data residency under the EU-US Data Privacy
-                Framework. We never see your card number — Polar handles the full
-                checkout and sends us only the subscription status.
               </li>
             </ul>
             <p class="text-muted-foreground">
