@@ -105,7 +105,7 @@
               <li>We cannot comply with requests to provide file contents (as we don't have access)</li>
             </ul>
             <p class="text-muted-foreground">
-              For more information, please see our <a href="/privacy" class="text-primary hover:underline">Privacy Policy</a>.
+              For more information, please see our <a href="/privacy" class="text-primary underline underline-offset-2">Privacy Policy</a>.
             </p>
           </section>
 
@@ -120,7 +120,7 @@
               still act on reports:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Anyone can report abuse via our <a href="/abuse" class="text-primary hover:underline">abuse reporting page</a></li>
+              <li>Anyone can report abuse via our <a href="/abuse" class="text-primary underline underline-offset-2">abuse reporting page</a></li>
               <li>Upon receiving a valid report, we will immediately delete the reported transfer and all associated data</li>
               <li>We will preserve any available metadata (such as IP addresses and timestamps) for law enforcement when legally required</li>
               <li>We cooperate fully with law enforcement investigations in accordance with applicable law</li>
@@ -128,7 +128,7 @@
             <p class="text-muted-foreground">
               For urgent matters involving child safety, please contact your local law enforcement
               immediately in addition to reporting to us at
-              <a href="mailto:abuse@tessil.app" class="text-primary hover:underline">abuse@tessil.app</a>.
+              <a href="mailto:abuse@tessil.app" class="text-primary underline underline-offset-2">abuse@tessil.app</a>.
             </p>
           </section>
 
@@ -145,7 +145,7 @@
             </ul>
             <p class="text-muted-foreground">
               Due to our zero-knowledge architecture, we do not have access to encryption keys or file contents.
-              Available metadata is limited to what is described in our <a href="/privacy" class="text-primary hover:underline">Privacy Policy</a>.
+              Available metadata is limited to what is described in our <a href="/privacy" class="text-primary underline underline-offset-2">Privacy Policy</a>.
             </p>
           </section>
 
@@ -224,7 +224,7 @@
               Questions about these Terms:
             </p>
             <p class="text-muted-foreground">
-              <a href="mailto:legal@tessil.app" class="text-primary hover:underline">legal@tessil.app</a>
+              <a href="mailto:legal@tessil.app" class="text-primary underline underline-offset-2">legal@tessil.app</a>
             </p>
           </section>
         </div>

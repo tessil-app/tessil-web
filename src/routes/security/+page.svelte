@@ -238,7 +238,7 @@
             <p class="text-muted-foreground">
               <a
                 href="mailto:security@tessil.app"
-                class="text-primary hover:underline"
+                class="text-primary underline underline-offset-2"
               >security@tessil.app</a>
             </p>
             <p class="text-sm text-muted-foreground">
@@ -255,7 +255,7 @@
               <a
                 href="https://www.maxmind.com"
                 rel="noopener noreferrer"
-                class="text-primary hover:underline"
+                class="text-primary underline underline-offset-2"
               >maxmind.com</a>. The databases are loaded locally on our servers —
               no per-request data is sent to MaxMind.
             </p>

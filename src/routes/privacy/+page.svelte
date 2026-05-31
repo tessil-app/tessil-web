@@ -198,7 +198,7 @@
             </ul>
             <p class="text-muted-foreground">
               <strong>Self-service deletion.</strong> If you have an account, you can delete it at any time from
-              <a href="/dashboard/settings" class="text-primary hover:underline">Settings → Danger zone</a>.
+              <a href="/dashboard/settings" class="text-primary underline underline-offset-2">Settings → Danger zone</a>.
               Deletion is immediate and permanent: your account, all transfers you own, every active session, and
               any pending sign-in links are erased, and the email column on historical audit records is scrubbed.
               We send a confirmation email to your former address once the deletion completes.
@@ -206,7 +206,7 @@
             <p class="text-muted-foreground">
               <strong>Self-service data export.</strong> You can download a JSON copy of your account record,
               recent sign-in activity, and the metadata of the transfers you own from
-              <a href="/dashboard/settings" class="text-primary hover:underline">Settings → Your data</a>.
+              <a href="/dashboard/settings" class="text-primary underline underline-offset-2">Settings → Your data</a>.
               The export does not contain the contents of your files — they are encrypted in your browser with a
               key we never receive.
             </p>
@@ -252,7 +252,7 @@
               Questions about this policy or our data practices:
             </p>
             <p class="text-muted-foreground">
-              <a href="mailto:privacy@tessil.app" class="text-primary hover:underline">privacy@tessil.app</a>
+              <a href="mailto:privacy@tessil.app" class="text-primary underline underline-offset-2">privacy@tessil.app</a>
             </p>
           </section>
         </div>

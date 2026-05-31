@@ -75,7 +75,7 @@
             If your email client didn't open, send the report to
             <a
               href="mailto:abuse@tessil.app"
-              class="text-primary hover:underline"
+              class="text-primary underline underline-offset-2"
               >abuse@tessil.app</a
             >.
           </p>
@@ -142,7 +142,7 @@
             Or email
             <a
               href="mailto:abuse@tessil.app"
-              class="text-primary hover:underline"
+              class="text-primary underline underline-offset-2"
               >abuse@tessil.app</a
             >
             directly. For child-safety emergencies, also contact local law

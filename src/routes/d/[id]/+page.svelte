@@ -491,7 +491,7 @@
         <p class="text-sm">
           <a
             href="/"
-            class="text-primary hover:underline underline-offset-4"
+            class="text-primary underline underline-offset-4"
           >
             Want to send something back? →
           </a>
