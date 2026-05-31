@@ -17,6 +17,10 @@
 
   // Dark mode is scoped to /dashboard; afterNavigate (not $effect) avoids the mode-watcher reactive loop.
   const isApp = $derived($page.url.pathname.startsWith("/dashboard"));
+  // Home runs a wide (max-w-7xl) layout; the nav matches it there so the
+  // wordmark/menu align with the content edges. Everywhere else (dashboard +
+  // the narrow content pages) stays compact at max-w-5xl.
+  const isHome = $derived($page.url.pathname === "/");
 
   afterNavigate(({ to }) => {
     const path = to?.url.pathname ?? "/";
@@ -67,7 +71,12 @@
 </a>
 <div class="min-h-screen bg-background text-foreground">
   <header class="sticky top-0 z-40 border-b border-border/40 bg-background/40 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/30">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+    <div
+      class={cn(
+        "mx-auto py-3 flex items-center justify-between gap-4",
+        isHome ? "max-w-7xl px-4 sm:px-6" : "max-w-5xl px-4",
+      )}
+    >
       <a
         href="/"
         class="inline-flex text-sm hover:opacity-80 transition-opacity duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"

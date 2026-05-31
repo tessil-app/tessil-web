@@ -4,6 +4,7 @@
   import { uploadEncryptedBlobMultipart } from "$lib/upload/multipart";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
+  import CircularProgress from "$lib/components/CircularProgress.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
   import HowItWorks from "$lib/components/HowItWorks.svelte";
   import Modal from "$lib/components/Modal.svelte";
@@ -362,11 +363,11 @@
           const { encryptedBlob, iv: fileIv } = await encryptFile(
             file,
             key,
-            (p) => uploadStore.setFileStatus(i, "encrypting", p * 0.5),
+            (p) => uploadStore.setFileStatus(i, "encrypting", p * 0.15),
           );
 
-          uploadStore.setFileStatus(i, "encrypting", 50);
-          uploadStore.setFileStatus(i, "uploading", 50);
+          uploadStore.setFileStatus(i, "encrypting", 15);
+          uploadStore.setFileStatus(i, "uploading", 15);
 
           const initResponse = await api.initMultipartUpload({
             transferId: transfer.transferId,
@@ -385,7 +386,7 @@
             encryptedBlob,
             partUrls: initResponse.partUrls,
             onProgress: (p) =>
-              uploadStore.setFileStatus(i, "uploading", 50 + p * 0.5),
+              uploadStore.setFileStatus(i, "uploading", 15 + p * 0.85),
           });
 
           uploadStore.setFileStatus(i, "complete", 100);
@@ -454,6 +455,26 @@
   const isSuccess = $derived(
     uploadStore.status === "complete" && !!uploadStore.shareUrl,
   );
+
+  // The settings body scrolls (overflow-y-auto) once settled, but during the
+  // panel's grow/shrink morph its full-height content briefly exceeds the
+  // still-animating container and flashes a scrollbar. Suppress overflow for
+  // the morph window so the transition stays clean.
+  let isMorphing = $state(false);
+  let morphTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    void hasFiles;
+    void isSuccess;
+    isMorphing = true;
+    morphTimer = setTimeout(() => (isMorphing = false), 480);
+    return () => clearTimeout(morphTimer);
+  });
+
+  const currentFile = $derived(uploadStore.files[uploadStore.currentFileIndex]);
+  const phaseLabel = $derived.by(() => {
+    if (uploadStore.status === "validating") return "Checking…";
+    return currentFile?.status === "uploading" ? "Uploading…" : "Encrypting…";
+  });
 
   const passwordTooShort = $derived(
     uploadStore.password.length > 0 &&
@@ -559,16 +580,16 @@
     ></div>
   {/if}
 
-  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-32">
-    <div class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-6 sm:gap-12 lg:gap-16 items-stretch">
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-24">
+    <div class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-6 sm:gap-10 lg:gap-12 items-stretch">
 
       <!-- Height animates between empty (420) and has-files (580) sizes; sync'd with the extension's width animation. -->
       <aside
         class={cn(
           "relative sm:sticky sm:top-6 sm:flex sm:items-stretch",
-          hasFiles && !isSuccess ? "sm:h-[580px]" : "sm:h-[420px]",
+          isSuccess ? "sm:h-auto" : hasFiles ? "sm:h-[580px]" : "sm:h-[420px]",
         )}
-        style="transition: height 700ms cubic-bezier(0.83, 0, 0.17, 1);"
+        style="transition: height 450ms cubic-bezier(0.16, 1, 0.3, 1);"
       >
         <!-- Loses right-side border + rounded corners when the extension is open so they visually fuse. -->
         <div
@@ -578,7 +599,7 @@
               !isSuccess &&
               "lg:rounded-tr-none lg:rounded-br-none lg:border-r-transparent",
           )}
-          style="transition: border-radius 700ms cubic-bezier(0.83, 0, 0.17, 1), border-color 700ms cubic-bezier(0.83, 0, 0.17, 1);"
+          style="transition: border-radius 450ms cubic-bezier(0.16, 1, 0.3, 1), border-color 450ms cubic-bezier(0.16, 1, 0.3, 1);"
         >
           {#if isSuccess}
             <div class="px-5 py-4 border-b border-border">
@@ -611,7 +632,7 @@
               <Button variant="secondary" fullWidth={false} onclick={resetUpload}>
                 Send another
               </Button>
-              <Button variant="primary" fullWidth={false} onclick={copyShareLink}>
+              <Button variant="primary" fullWidth={false} class="min-w-[9.5rem]" onclick={copyShareLink}>
                 {#if copied}
                   <IconCheckRegular class="size-4" />
                   Copied
@@ -672,7 +693,7 @@
               {/if}
             </div>
 
-            <div class="px-5 py-4 space-y-4 flex-1 min-h-0 overflow-y-auto file-list-scroll">
+            <div class={cn("px-5 py-4 flex flex-col gap-4 flex-1 min-h-0 file-list-scroll", isMorphing ? "overflow-hidden" : "overflow-y-auto")}>
               {#if uploadStore.status === "error" && uploadStore.error}
                 <Alert tone="destructive" title="Upload failed">
                   {uploadStore.error}
@@ -701,6 +722,20 @@
                     </Button>
                   {/snippet}
                 </Alert>
+              {/if}
+
+              {#if isProcessing}
+                <div class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
+                  <CircularProgress
+                    percent={uploadStore.overallProgress}
+                    sublabel={phaseLabel}
+                  />
+                  {#if uploadStore.files.length > 1}
+                    <p class="text-xs text-muted-foreground">
+                      File {uploadStore.currentFileIndex + 1} of {uploadStore.files.length}
+                    </p>
+                  {/if}
+                </div>
               {/if}
 
               <!-- Inline file list for viewports below the extension's breakpoint. -->
@@ -811,7 +846,7 @@
               ? "w-[300px]"
               : "w-0 pointer-events-none",
           )}
-          style="transition: width 700ms cubic-bezier(0.83, 0, 0.17, 1);"
+          style="transition: width 450ms cubic-bezier(0.16, 1, 0.3, 1);"
         >
           <div class="glass-panel w-[300px] h-full flex flex-col rounded-l-none border-l-0">
             <div class="px-5 py-4 border-b border-border">
@@ -1013,6 +1048,6 @@
   }
 
   :global(.ease-liquid) {
-    transition-timing-function: cubic-bezier(0.83, 0, 0.17, 1);
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 </style>
