@@ -779,7 +779,7 @@
 
             <div class={cn("px-5 py-4 flex flex-col gap-4 flex-1 min-h-0 file-list-scroll overflow-x-hidden", isMorphing ? "overflow-y-hidden" : "overflow-y-auto")}>
               {#if uploadStore.status === "error"}
-                <div class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
+                <div role="alert" class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
                   <span class="inline-flex items-center justify-center size-12 rounded-full bg-destructive/10 text-destructive-foreground">
                     <IconWarningRegular class="size-6" />
                   </span>
@@ -808,7 +808,7 @@
                     percent={uploadStore.overallProgress}
                     sublabel={phaseLabel}
                   />
-                  <div class="space-y-0.5 text-xs text-muted-foreground">
+                  <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
                     {#if currentFile?.status === "uploading" && uploadSpeed}
                       <p class="tabular-nums">
                         {formatSpeed(uploadSpeed)}{#if uploadEta} · {formatEta(uploadEta)} left{/if}

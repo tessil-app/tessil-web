@@ -55,7 +55,9 @@
 
   let usage = $state<UsageResponse | null>(null);
 
-  // Re-lock every cached row when K_vault expires or the user locks manually.
+  // Single source of truth for row crypto state: re-lock on lock/expiry, and
+  // re-decrypt on (re)unlock — including unlocks triggered from the nav menu,
+  // not just the dashboard's own prompt.
   const unsubscribeVault = subscribeToVaultState(({ unlocked }) => {
     vaultUnlocked = unlocked;
     if (!unlocked) {
@@ -63,6 +65,15 @@
         if (transfers.find((t) => t.id === id)?.wrappedKey) {
           vaultStates[id] = { status: "locked" };
         }
+      }
+      return;
+    }
+    for (const t of transfers) {
+      if (!t.wrappedKey) continue;
+      const st = vaultStates[t.id];
+      if (!st || st.status === "locked") {
+        vaultStates[t.id] = { status: "unlocking" };
+        void unwrapRow(t);
       }
     }
   });
@@ -208,14 +219,10 @@
         unlockError = unlockErrorMessage(result.reason);
         return;
       }
-      const targets = transfers.filter(
-        (t) => t.wrappedKey && vaultStates[t.id]?.status !== "unlocked",
-      );
-      for (const t of targets) vaultStates[t.id] = { status: "unlocking" };
+      // Rows decrypt via the vault-state subscription (single decrypt path).
       promptOpen = false;
       unlockPassword = "";
       unlockPhrase = "";
-      await Promise.all(targets.map((t) => unwrapRow(t)));
     } catch (err) {
       unlockError = err instanceof Error ? err.message : "Couldn't unlock.";
     } finally {

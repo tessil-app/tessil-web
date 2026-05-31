@@ -24,6 +24,7 @@
   }: Props = $props();
 
   let open = $state(false);
+  let openedViaKeyboard = $state(false);
   let triggerEl = $state<HTMLButtonElement | null>(null);
   let menuEl = $state<HTMLDivElement | null>(null);
 
@@ -35,11 +36,13 @@
 
   function toggle() {
     open = !open;
+    if (open) openedViaKeyboard = false;
   }
 
   function handleTriggerKey(e: KeyboardEvent) {
     if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
+      openedViaKeyboard = true;
       open = true;
     } else if (e.key === "Escape") {
       close();
@@ -50,6 +53,10 @@
     if (!menuEl) return;
     const first = menuEl.querySelector<HTMLElement>('[role="menuitem"]');
     first?.focus();
+  }
+
+  function focusMenu() {
+    menuEl?.focus();
   }
 
   function handleMenuKey(e: KeyboardEvent) {
@@ -89,7 +96,10 @@
 
   $effect(() => {
     if (!open) return;
-    queueMicrotask(focusFirstItem);
+    // Mouse-open focuses the menu container (no item highlighted — Safari paints
+    // :focus-visible on a programmatically focused item); keyboard-open focuses
+    // the first item so arrow navigation starts there.
+    queueMicrotask(openedViaKeyboard ? focusFirstItem : focusMenu);
     document.addEventListener("pointerdown", handleDocumentPointer);
     return () => document.removeEventListener("pointerdown", handleDocumentPointer);
   });
@@ -120,7 +130,7 @@
       onkeydown={handleMenuKey}
       transition:scale={{ duration: 150, start: 0.96, opacity: 0, easing: expoOut }}
       class={cn(
-        "absolute z-50 mt-2 min-w-[12rem] rounded-md border border-border bg-card p-1 space-y-0.5",
+        "absolute z-50 mt-2 min-w-[12rem] rounded-md border border-border bg-card p-1 space-y-0.5 focus:outline-none",
         align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left",
         menuClass,
       )}
