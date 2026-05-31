@@ -409,6 +409,7 @@
       uploadStore.setStatus("encrypting");
 
       let uploadFailed = false;
+      let uploadFailure: unknown = null;
       for (let i = 0; i < files.length; i++) {
         if (controller.signal.aborted)
           throw new DOMException("aborted", "AbortError");
@@ -474,6 +475,7 @@
             0,
             err instanceof Error ? err.message : "Upload failed",
           );
+          uploadFailure = err;
           uploadFailed = true;
           break;
         }
@@ -481,10 +483,9 @@
 
       if (uploadFailed) {
         api.abortTransfer(transfer.transferId).catch(() => {});
-        throw new Error(
-          uploadStore.files.find((f) => f.status === "error")?.error ??
-            "Upload failed",
-        );
+        // Re-throw the original error (keeps ApiError type, so tier-limit
+        // messages + upgradeUrl survive through to friendlyUploadError).
+        throw uploadFailure ?? new Error("Upload failed");
       }
 
       uploadStore.setStatus("uploading");
@@ -648,10 +649,10 @@
   {#if featured}
     <div
       aria-hidden="true"
-      class="absolute inset-0 bg-cover bg-center pointer-events-none"
+      class="featured-reveal absolute inset-0 bg-cover bg-center pointer-events-none"
       style="
         background-image: url('{featured.src}');
-        clip-path: {imageRevealed ? 'inset(0 round 0)' : 'inset(calc(100% - 22rem) 0 0 calc(100% - 50rem) round 1.5rem 0 0 0)'};
+        clip-path: {imageRevealed ? 'inset(0 round 0)' : 'inset(var(--reveal-top) 0 0 var(--reveal-left) round var(--reveal-round))'};
         transition: clip-path 1200ms cubic-bezier(0.83, 0, 0.17, 1);
       "
     ></div>
@@ -664,7 +665,7 @@
     ></div>
   {/if}
 
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-24">
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-[16rem] sm:pb-24">
     <div class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-6 sm:gap-10 lg:gap-12 items-stretch">
 
       <!-- Height animates between empty (420) and has-files (580) sizes; sync'd with the extension's width animation. -->
@@ -910,9 +911,15 @@
                 <Button variant="secondary" fullWidth={false} class="flex-1" onclick={returnToSettings}>
                   Back
                 </Button>
-                <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>
-                  Try again
-                </Button>
+                {#if uploadStore.errorUpgradeUrl && !auth.isAuthenticated}
+                  <Button variant="primary" fullWidth={false} class="flex-1" onclick={() => goto("/login?redirect=/")}>
+                    Sign in
+                  </Button>
+                {:else}
+                  <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>
+                    Try again
+                  </Button>
+                {/if}
               {:else}
                 <Button
                   variant="primary"
@@ -982,7 +989,7 @@
   </div>
 
   {#if featured}
-    <div class="absolute right-[25rem] translate-x-1/2 bottom-4 z-20 flex flex-col items-center gap-1.5">
+    <div class="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:right-[25rem] sm:translate-x-1/2 bottom-4 z-20 flex flex-col items-center gap-1.5 max-w-[calc(100vw-2rem)]">
       <button
         type="button"
         onclick={() => (imageRevealed = !imageRevealed)}
@@ -1139,5 +1146,19 @@
 
   :global(.ease-liquid) {
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Featured reveal band — shorter & full-width on mobile, corner crop on desktop. */
+  .featured-reveal {
+    --reveal-top: calc(100% - 13rem);
+    --reveal-left: 0px;
+    --reveal-round: 1.5rem 1.5rem 0 0;
+  }
+  @media (min-width: 640px) {
+    .featured-reveal {
+      --reveal-top: calc(100% - 22rem);
+      --reveal-left: calc(100% - 50rem);
+      --reveal-round: 1.5rem 0 0 0;
+    }
   }
 </style>
