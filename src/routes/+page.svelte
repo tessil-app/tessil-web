@@ -1042,7 +1042,7 @@
         can run longer and live on your dashboard. Password
         protection adds a second factor independent of the link.
         Read more about the security model on the
-        <a href="/security" class="text-primary hover:underline">security page</a>.
+        <a href="/security" class="text-primary underline underline-offset-2">security page</a>.
       </p>
       <p>
         Built and run by one person, and free to use. If Tessil saves you a
