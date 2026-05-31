@@ -1,4 +1,9 @@
 // Multipart upload orchestrator. Slices, uploads in parallel to R2, retries, aborts on hard failure.
+//
+// Part PUTs use XMLHttpRequest (not fetch) so we get upload.onprogress events:
+// fetch exposes no upload progress, which made big files look frozen between
+// part completions. With per-byte progress we report a smooth byte count plus
+// a live speed (EMA) and ETA.
 
 import {
   api,
@@ -17,6 +22,17 @@ interface PartTask {
   body: Blob;
 }
 
+export interface MultipartProgress {
+  /** 0–100 across the whole file. */
+  percent: number;
+  bytesUploaded: number;
+  totalBytes: number;
+  /** Smoothed (EMA) upload rate in bytes/sec; null until enough samples. */
+  bytesPerSecond: number | null;
+  /** Estimated seconds remaining; null until a rate is known. */
+  etaSeconds: number | null;
+}
+
 interface MultipartUploadInput {
   uploadId: string;
   fileId: string;
@@ -24,7 +40,7 @@ interface MultipartUploadInput {
   r2Key: string;
   encryptedBlob: Blob;
   partUrls: InitMultipartUploadPart[];
-  onProgress?: (overallPercent: number) => void;
+  onProgress?: (progress: MultipartProgress) => void;
   /** AbortSignal for user-initiated cancel; rejects all in-flight Parts. */
   signal?: AbortSignal;
 }
@@ -63,49 +79,83 @@ interface PartUploadResult {
   etag: string;
 }
 
-async function uploadSinglePart(
+/**
+ * PUT one part via XHR. `onLoaded` receives the *absolute* bytes uploaded for
+ * this attempt (resets to ~0 when a retry starts a fresh request).
+ */
+function uploadSinglePart(
   task: PartTask,
+  onLoaded: (loaded: number) => void,
   signal?: AbortSignal,
 ): Promise<PartUploadResult> {
-  let response: Response;
-  try {
-    response = await fetch(task.url, {
-      method: "PUT",
-      body: task.body,
-      signal,
-    });
-  } catch (err) {
-    if ((err as DOMException).name === "AbortError") throw err;
-    // Status 0 marks network errors as retryable.
-    const wrapped = new Error("Part upload failed (network)");
-    (wrapped as Error & { status?: number }).status = 0;
-    throw wrapped;
-  }
+  return new Promise<PartUploadResult>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("aborted", "AbortError"));
+      return;
+    }
 
-  if (!response.ok) {
-    const err = new Error(`Part upload failed: ${response.status}`);
-    (err as Error & { status?: number }).status = response.status;
-    throw err;
-  }
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", task.url, true);
 
-  // R2 (S3-compatible) returns the etag in the `ETag` response header,
-  // quoted. CompleteMultipartUpload requires it back verbatim — keep
-  // the quotes.
-  const etag = response.headers.get("ETag") ?? response.headers.get("etag");
-  if (!etag) {
-    throw new Error("Part response missing ETag header");
-  }
-  return { etag };
+    const onAbort = () => xhr.abort();
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const cleanup = () => signal?.removeEventListener("abort", onAbort);
+
+    xhr.upload.onprogress = (e) => onLoaded(e.loaded);
+
+    xhr.onload = () => {
+      cleanup();
+      if (xhr.status >= 200 && xhr.status < 300) {
+        // R2 (S3-compatible) returns the etag in the `ETag` response header,
+        // quoted. CompleteMultipartUpload requires it back verbatim — keep
+        // the quotes. Readable cross-origin because the bucket CORS policy
+        // exposes ETag.
+        const etag =
+          xhr.getResponseHeader("ETag") ?? xhr.getResponseHeader("etag");
+        if (!etag) {
+          reject(new Error("Part response missing ETag header"));
+          return;
+        }
+        onLoaded(task.contentLength); // count the part fully on success
+        resolve({ etag });
+      } else {
+        const err = new Error(`Part upload failed: ${xhr.status}`) as Error & {
+          status?: number;
+        };
+        err.status = xhr.status;
+        reject(err);
+      }
+    };
+
+    xhr.onerror = () => {
+      cleanup();
+      // Status 0 marks network errors as retryable.
+      const err = new Error("Part upload failed (network)") as Error & {
+        status?: number;
+      };
+      err.status = 0;
+      reject(err);
+    };
+
+    xhr.onabort = () => {
+      cleanup();
+      reject(new DOMException("aborted", "AbortError"));
+    };
+
+    xhr.send(task.body);
+  });
 }
 
 async function uploadPartWithRetry(
   task: PartTask,
+  onLoaded: (loaded: number) => void,
   signal?: AbortSignal,
 ): Promise<PartUploadResult> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_PART_RETRIES; attempt++) {
     try {
-      return await uploadSinglePart(task, signal);
+      onLoaded(0); // reset this part's contribution at the start of the attempt
+      return await uploadSinglePart(task, onLoaded, signal);
     } catch (err) {
       if ((err as DOMException).name === "AbortError") throw err;
       lastError = err;
@@ -168,18 +218,56 @@ export async function uploadEncryptedBlobMultipart(
   const onCallerAbort = () => controller.abort();
   signal?.addEventListener("abort", onCallerAbort, { once: true });
 
-  let completedBytes = 0;
-  let completedCount = 0;
   const totalBytes = tasks.reduce((sum, t) => sum + t.contentLength, 0);
+  // Per-part uploaded bytes; aggregated across the parallel parts for a smooth
+  // total. Indexed by task position so a retry can reset just its own slot.
+  const partLoaded = new Array<number>(tasks.length).fill(0);
+
+  // Speed/ETA tracking (EMA over wall-clock).
+  let emaBps = 0;
+  let lastSampleT = performance.now();
+  let lastSampleBytes = 0;
+  let lastEmitT = 0;
+
+  function report(force = false): void {
+    const totalLoaded = partLoaded.reduce((a, b) => a + b, 0);
+    const now = performance.now();
+    const dt = (now - lastSampleT) / 1000;
+    if (dt >= 0.2) {
+      const inst = Math.max(0, (totalLoaded - lastSampleBytes) / dt);
+      emaBps = emaBps === 0 ? inst : 0.3 * inst + 0.7 * emaBps;
+      lastSampleT = now;
+      lastSampleBytes = totalLoaded;
+    }
+    // Throttle UI emits — onprogress can fire very frequently.
+    if (!force && totalLoaded < totalBytes && now - lastEmitT < 80) return;
+    lastEmitT = now;
+    const remaining = Math.max(0, totalBytes - totalLoaded);
+    onProgress?.({
+      percent: totalBytes > 0 ? (totalLoaded / totalBytes) * 100 : 0,
+      bytesUploaded: totalLoaded,
+      totalBytes,
+      bytesPerSecond: emaBps > 0 ? emaBps : null,
+      etaSeconds: emaBps > 0 ? remaining / emaBps : null,
+    });
+  }
 
   try {
-    const results = await runWithConcurrency(tasks, PARALLELISM, async (task) => {
-      const result = await uploadPartWithRetry(task, controller.signal);
-      completedBytes += task.contentLength;
-      completedCount++;
-      onProgress?.((completedBytes / totalBytes) * 100);
+    const results = await runWithConcurrency(tasks, PARALLELISM, async (task, idx) => {
+      const result = await uploadPartWithRetry(
+        task,
+        (loaded) => {
+          partLoaded[idx] = Math.min(loaded, task.contentLength);
+          report();
+        },
+        controller.signal,
+      );
+      partLoaded[idx] = task.contentLength;
+      report();
       return { partNumber: task.partNumber, etag: result.etag };
     });
+
+    report(true); // ensure a final 100% emit
 
     const completeParts: CompleteMultipartUploadPart[] = results;
     const completed = await api.completeMultipartUpload({

@@ -121,6 +121,8 @@
   };
 
   let copied = $state(false);
+  let uploadSpeed = $state<number | null>(null);
+  let uploadEta = $state<number | null>(null);
   let lastUploadVaulted = $state(false);
   let isDraggingOver = $state(false);
   let fileInput = $state<HTMLInputElement | null>(null);
@@ -226,6 +228,18 @@
     return `Max ${max} download${max !== 1 ? "s" : ""}`;
   }
 
+  function formatSpeed(bps: number): string {
+    return `${formatSize(bps)}/s`;
+  }
+
+  function formatEta(seconds: number): string {
+    const total = Math.max(0, Math.round(seconds));
+    if (total < 60) return `${total}s`;
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}m ${s.toString().padStart(2, "0")}s`;
+  }
+
   async function ensureVaultUnlocked(): Promise<boolean> {
     if (!auth.user) return false;
     if (await isUnlocked(auth.user.id)) return true;
@@ -286,6 +300,9 @@
   async function handleUpload() {
     const files = uploadStore.files;
     if (files.length === 0) return;
+
+    uploadSpeed = null;
+    uploadEta = null;
 
     try {
       uploadStore.setStatus("validating");
@@ -385,8 +402,11 @@
             r2Key: initResponse.r2Key,
             encryptedBlob,
             partUrls: initResponse.partUrls,
-            onProgress: (p) =>
-              uploadStore.setFileStatus(i, "uploading", 15 + p * 0.85),
+            onProgress: (p) => {
+              uploadStore.setFileStatus(i, "uploading", 15 + p.percent * 0.85);
+              uploadSpeed = p.bytesPerSecond;
+              uploadEta = p.etaSeconds;
+            },
           });
 
           uploadStore.setFileStatus(i, "complete", 100);
@@ -629,10 +649,10 @@
               </p>
             </div>
             <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/30">
-              <Button variant="secondary" fullWidth={false} onclick={resetUpload}>
+              <Button variant="secondary" fullWidth={false} class="whitespace-nowrap" onclick={resetUpload}>
                 Send another
               </Button>
-              <Button variant="primary" fullWidth={false} class="min-w-[9.5rem]" onclick={copyShareLink}>
+              <Button variant="primary" fullWidth={false} class="min-w-[8.5rem]" onclick={copyShareLink}>
                 {#if copied}
                   <IconCheckRegular class="size-4" />
                   Copied
@@ -730,11 +750,16 @@
                     percent={uploadStore.overallProgress}
                     sublabel={phaseLabel}
                   />
-                  {#if uploadStore.files.length > 1}
-                    <p class="text-xs text-muted-foreground">
-                      File {uploadStore.currentFileIndex + 1} of {uploadStore.files.length}
-                    </p>
-                  {/if}
+                  <div class="space-y-0.5 text-xs text-muted-foreground">
+                    {#if currentFile?.status === "uploading" && uploadSpeed}
+                      <p class="tabular-nums">
+                        {formatSpeed(uploadSpeed)}{#if uploadEta} · {formatEta(uploadEta)} left{/if}
+                      </p>
+                    {/if}
+                    {#if uploadStore.files.length > 1}
+                      <p>File {uploadStore.currentFileIndex + 1} of {uploadStore.files.length}</p>
+                    {/if}
+                  </div>
                 </div>
               {/if}
 
