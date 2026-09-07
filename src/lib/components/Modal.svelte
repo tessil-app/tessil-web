@@ -57,17 +57,17 @@
   oncancel={handleCancel}
   onclick={handleBackdrop}
   class={cn(
-    "fixed inset-0 m-auto max-w-lg w-[calc(100vw-2rem)] p-0 bg-transparent backdrop:bg-foreground/15",
+    "fixed inset-0 m-auto max-w-lg w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] p-0 bg-transparent backdrop:bg-foreground/15",
     "open:animate-in open:fade-in",
   )}
 >
   <div
     class={cn(
-      "rounded-lg border border-border bg-card text-card-foreground overflow-hidden",
+      "flex flex-col max-h-[calc(100dvh-2rem)] rounded-lg border border-border bg-card text-card-foreground overflow-hidden",
       className,
     )}
   >
-    <div class="flex items-start justify-between gap-3 px-6 py-4 border-b border-border">
+    <div class="shrink-0 flex items-start justify-between gap-3 px-6 py-4 border-b border-border">
       <div class="space-y-1 min-w-0">
         <h2 class="font-semibold text-base leading-snug text-foreground">{title}</h2>
         {#if description}
@@ -87,13 +87,13 @@
     </div>
 
     {#if children}
-      <div class="px-6 py-4 space-y-4 text-sm leading-relaxed text-foreground">
+      <div class="min-h-0 overflow-y-auto px-6 py-4 space-y-4 text-sm leading-relaxed text-foreground">
         {@render children()}
       </div>
     {/if}
 
     {#if footer}
-      <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30">
+      <div class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30">
         {@render footer()}
       </div>
     {/if}
