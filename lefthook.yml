@@ -12,11 +12,16 @@ pre-commit:
     block-env-files:
       # Refuse commits that include a .env file. Secrets belong in
       # /etc/tessil/ on the VPS, never in git (see docs/runbooks/secrets.md).
+      # Reads the index directly instead of lefthook's {staged_files}, which
+      # substitutes each path pre-quoted: with two or more files staged the
+      # assignment parsed as a command with an env prefix, leaving the variable
+      # empty so the guard passed on every real commit.
       run: |
-        files="{staged_files}"
-        if printf '%s\n' "$files" | grep -E '(^|/)\.env(\.|$)' >/dev/null; then
+        staged=$(git diff --cached --name-only --diff-filter=ACMR)
+        matches=$(printf '%s\n' "$staged" | grep -E '(^|/)\.env(\.|$)') || true
+        if [ -n "$matches" ]; then
           echo "✖ refusing commit: .env file is staged"
-          printf '%s\n' "$files" | grep -E '(^|/)\.env(\.|$)'
+          printf '%s\n' "$matches"
           echo "  unstage with: git restore --staged <file>"
           exit 1
         fi

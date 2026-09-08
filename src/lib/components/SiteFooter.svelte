@@ -1,4 +1,8 @@
 <script lang="ts">
+  import {
+    SUPPORT_GITHUB_SPONSORS_URL,
+    SUPPORT_KOFI_URL,
+  } from "$lib/config/support";
   import { cn } from "$lib/utils";
   import type { Snippet } from "svelte";
 
@@ -68,14 +72,14 @@
       <span aria-hidden="true">·</span>
     {/if}
     <a
-      href="https://github.com/sponsors/VerburgtJimmy"
+      href={SUPPORT_GITHUB_SPONSORS_URL}
       target="_blank"
       rel="noopener noreferrer"
       class={linkClass}>Sponsor</a
     >
     <span aria-hidden="true">·</span>
     <a
-      href="https://ko-fi.com/jimmyverburgt"
+      href={SUPPORT_KOFI_URL}
       target="_blank"
       rel="noopener noreferrer"
       class={linkClass}>Ko-fi</a

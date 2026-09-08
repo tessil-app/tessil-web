@@ -12,6 +12,7 @@
   import SegmentedControl from "$lib/components/SegmentedControl.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import SupportModal from "$lib/components/SupportModal.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
@@ -26,6 +27,12 @@
   import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
   import type { FileUploadState } from "$lib/stores/upload.types";
+  import {
+    hasDismissedPrompt,
+    markPromptDismissed,
+    markTransferSent,
+    shouldAutoOpenPrompt,
+  } from "$lib/support/prompt";
   import { cn, formatEta, formatSize, formatSpeed } from "$lib/utils";
   import {
     isUnlocked,
@@ -141,6 +148,12 @@
   let isUnlockingVault = $state(false);
   let pendingResume: ((unlocked: boolean) => void) | null = null;
 
+  // Gates the modal out of the prerendered homepage; its copy would
+  // otherwise ship in a closed <dialog> on the primary SEO target.
+  let supportMounted = $state(false);
+  let supportOpen = $state(false);
+  let supportPillVisible = $state(false);
+
   onMount(async () => {
     try {
       const res = await fetch("/featured/manifest.json", { cache: "no-cache" });
@@ -154,6 +167,22 @@
       // Manifest fetch is best-effort; page renders fine without art.
     }
   });
+
+  // Read once on mount so the ask lands on a visit after a completed
+  // transfer, never on top of the share link the user came to copy.
+  onMount(() => {
+    supportMounted = true;
+    supportOpen = shouldAutoOpenPrompt();
+    supportPillVisible = hasDismissedPrompt();
+  });
+
+  // Dismissing and clicking through both mean "do not ask again"; the pill
+  // stays as the way back in.
+  function closeSupport() {
+    markPromptDismissed();
+    supportOpen = false;
+    supportPillVisible = true;
+  }
 
   function fileRowStatus(
     s: FileUploadState["status"],
@@ -508,6 +537,7 @@
       const baseUrl = window.location.origin;
       const shareUrl = `${baseUrl}${completeResponse.shareUrl}#${keyString}`;
       uploadStore.setShareUrl(shareUrl);
+      markTransferSent();
     } catch (error) {
       if ((error as DOMException)?.name === "AbortError") {
         // User cancelled - clean up the partial transfer and return to the
@@ -969,6 +999,18 @@
       </aside>
 
       <div class="space-y-4 sm:text-right sm:max-w-md sm:ml-auto sm:pt-4">
+        {#if supportPillVisible}
+          <div class="flex sm:justify-end">
+            <button
+              type="button"
+              onclick={() => (supportOpen = true)}
+              class="inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
+              Keep Tessil alive
+            </button>
+          </div>
+        {/if}
         <h1 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-foreground leading-[1.05]" style="letter-spacing: -0.03em">
           Send anything.
           <br />
@@ -1188,6 +1230,10 @@
     {/snippet}
   </form>
 </Modal>
+
+{#if supportMounted}
+  <SupportModal open={supportOpen} onClose={closeSupport} />
+{/if}
 
 <style>
   /* Minimal scrollbar - neutral grayscale, never brand colour. */
