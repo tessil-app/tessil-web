@@ -48,18 +48,30 @@
   import IconWarningRegular from "phosphor-icons-svelte/IconWarningRegular.svelte";
   import { onMount } from "svelte";
 
-  const PAGE_TITLE = "Tessil - Send anything. We see nothing.";
+  const PAGE_TITLE =
+    "End-to-end encrypted file transfer, hosted in the EU | Tessil";
   const PAGE_DESCRIPTION =
-    "End-to-end encrypted file transfer. Your browser encrypts before upload - we never see your files or the key.";
+    "End-to-end encrypted file transfer, hosted in the EU. Your browser encrypts before upload and the key stays in the link. Free, no account, verify it yourself.";
 
   const homeSchema = {
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#org`,
+        name: "Tessil",
+        url: SITE_URL,
+        logo: `${SITE_URL}/icon-512.png`,
+        address: { "@type": "PostalAddress", addressCountry: "NL" },
+        sameAs: ["https://github.com/tessil-app"],
+      },
+      {
         "@type": "WebSite",
         name: "Tessil",
         url: SITE_URL,
         description: PAGE_DESCRIPTION,
+        inLanguage: "en",
+        publisher: { "@id": `${SITE_URL}/#org` },
       },
       {
         "@type": "WebApplication",
@@ -67,6 +79,7 @@
         applicationCategory: "SecurityApplication",
         operatingSystem: "Any",
         browserRequirements: "Requires JavaScript and modern browser APIs",
+        inLanguage: ["en", "nl"],
         offers: {
           "@type": "Offer",
           price: "0",
@@ -75,10 +88,12 @@
         featureList: [
           "End-to-end encrypted file transfer",
           "Client-side encryption in browser",
+          "Hosted in the EU (Germany and the Netherlands)",
           "Temporary links with expiration",
           "Optional password protection",
         ],
         url: SITE_URL,
+        provider: { "@id": `${SITE_URL}/#org` },
       },
     ],
   };
@@ -1017,8 +1032,8 @@
           We see nothing.
         </h1>
         <p class="text-base text-muted-foreground leading-relaxed">
-          End-to-end encrypted in your browser. The key never
-          reaches our server.
+          End-to-end encrypted file transfer, hosted in the EU. Your
+          browser encrypts; the key never reaches our server.
         </p>
         <p class="text-sm text-muted-foreground/80 leading-relaxed">
           Drop a file in the panel - or anywhere on this page.
@@ -1099,6 +1114,44 @@
       </p>
     </section>
 
+    <section class="mt-14 pt-10 border-t border-border/60 space-y-3 text-sm text-muted-foreground leading-relaxed">
+      <h2 class="text-base font-semibold text-foreground">
+        Hosted in the EU, by design
+      </h2>
+      <p>
+        Encryption is what keeps your files private. Where the servers stand
+        is what decides which laws apply to the metadata that remains. Tessil
+        runs on EU infrastructure and is built and operated from the
+        Netherlands.
+      </p>
+      <ul class="list-disc pl-5 space-y-1.5">
+        <li>
+          <span class="text-foreground">Application server:</span> Hetzner,
+          Germany.
+        </li>
+        <li>
+          <span class="text-foreground">Database:</span> Scaleway Managed
+          PostgreSQL, Amsterdam. Holds account records and transfer metadata,
+          never file contents.
+        </li>
+        <li>
+          <span class="text-foreground">Encrypted file storage:</span>
+          Cloudflare R2, pinned to the EU jurisdiction. Cloudflare is a US
+          company; R2 only ever holds ciphertext it cannot open.
+        </li>
+        <li>
+          <span class="text-foreground">Transactional email:</span> Scaleway,
+          France. Sign-in links only, never marketing.
+        </li>
+      </ul>
+      <p>
+        No analytics vendors, no third-party scripts, no ad networks. GDPR
+        applies in full, and the
+        <a href="/privacy" class="text-primary underline underline-offset-2">privacy policy</a>
+        lists every processor and what each one can see.
+      </p>
+    </section>
+
     <section class="mt-14 pt-10 border-t border-border/60">
       <h2 class="text-base font-semibold text-foreground mb-4">Frequently asked questions</h2>
       <div class="divide-y divide-border/60 border-y border-border/60 text-sm">
@@ -1118,6 +1171,15 @@
           </summary>
           <p class="mt-2 text-muted-foreground leading-relaxed">
             No. You can send and receive files anonymously. A free account is optional and just adds a dashboard to manage the transfers you create. It doesn't change how files are encrypted.
+          </p>
+        </details>
+        <details class="group py-4">
+          <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
+            Where are my files stored?
+            <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
+          </summary>
+          <p class="mt-2 text-muted-foreground leading-relaxed">
+            In the EU. The application server is in Germany, the database in the Netherlands, and encrypted files sit in EU-region object storage. Only ciphertext is ever stored, and it is deleted when the transfer expires.
           </p>
         </details>
         <details class="group py-4">
