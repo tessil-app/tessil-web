@@ -13,8 +13,10 @@ type Entry = { path: string; alternates?: { en: string; nl: string } };
 const entries: Entry[] = [
   { path: "/", alternates: { en: "/", nl: "/nl" } },
   { path: "/nl", alternates: { en: "/", nl: "/nl" } },
+  { path: "/eu" },
   { path: "/verify" },
   { path: "/compare" },
+  { path: "/compare/eu-encrypted-file-transfer" },
   { path: "/security" },
   { path: "/pricing" },
   { path: "/privacy" },

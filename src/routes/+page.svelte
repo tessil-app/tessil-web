@@ -1149,6 +1149,10 @@
         applies in full, and the
         <a href="/privacy" class="text-primary underline underline-offset-2">privacy policy</a>
         lists every processor and what each one can see.
+        <a href="/eu" class="text-primary underline underline-offset-2">Where your data lives</a>
+        goes through it in detail, and the
+        <a href="/compare/eu-encrypted-file-transfer" class="text-primary underline underline-offset-2">European comparison</a>
+        shows which other services encrypt in the browser.
       </p>
     </section>
 

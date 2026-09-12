@@ -18,6 +18,23 @@
     tagline="Tessil is end-to-end encrypted file transfer: your browser encrypts before upload, and the key never reaches our servers. Here's how that stacks up against the tools people use today."
   />
 
+  <a
+    href="/compare/eu-encrypted-file-transfer"
+    class="group mb-6 block rounded-xl border border-border bg-card/60 p-5 transition-[border-color,background-color] duration-200 ease-out hover:border-border hover:bg-card focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+  >
+    <h2 class="text-lg font-semibold text-foreground">
+      Encrypted file transfer in Europe: twelve services compared
+    </h2>
+    <p class="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+      WeTransfer, SwissTransfer, Smash, TransferNow, Tresorit Send, Proton Drive,
+      Internxt Send and more, sorted by who encrypts in the browser and who holds
+      the keys.
+    </p>
+    <span class="mt-3 inline-block text-sm font-medium text-primary underline underline-offset-2">
+      Read the roundup →
+    </span>
+  </a>
+
   <ul class="grid gap-4 sm:grid-cols-2">
     {#each comparisons as c (c.slug)}
       <li>
