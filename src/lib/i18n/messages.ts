@@ -71,7 +71,7 @@ export const compareStrings: Record<Locale, CompareStrings> = {
     verdictHeading: "The honest verdict",
     faqHeading: "Frequently asked questions",
     moreHeading: "More comparisons",
-    ctaPrimary: "Send a file with Tessil - free",
+    ctaPrimary: "Send a file with Tessil",
     ctaSecondary: "How the encryption works",
     otherLanguage: "Nederlands",
     tableCaption: (competitor) =>
@@ -88,7 +88,7 @@ export const compareStrings: Record<Locale, CompareStrings> = {
     verdictHeading: "Het eerlijke oordeel",
     faqHeading: "Veelgestelde vragen",
     moreHeading: "Meer vergelijkingen",
-    ctaPrimary: "Verstuur een bestand met Tessil - gratis",
+    ctaPrimary: "Verstuur een bestand met Tessil",
     ctaSecondary: "Zo werkt de versleuteling",
     otherLanguage: "English",
     tableCaption: (competitor) =>

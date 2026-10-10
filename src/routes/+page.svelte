@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { api, ApiError } from "$lib/api/client";
+  import { api, ApiError, type EntitlementResponse } from "$lib/api/client";
+  import { clearPass, loadPass, type StoredPass } from "$lib/billing/pass";
   import { uploadEncryptedStreamMultipart } from "$lib/upload/multipart";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -12,11 +13,12 @@
   import SegmentedControl from "$lib/components/SegmentedControl.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
-  import SupportModal from "$lib/components/SupportModal.svelte";
+  import PaywallModal from "$lib/components/PaywallModal.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import { MAX_TOTAL_UPLOAD_SIZE } from "$lib/config/limits";
+  import { PASS_PRICE, PLAN_PRICE } from "$lib/config/pricing";
   import { SITE_URL } from "$lib/config/site";
   import {
     encryptFilename,
@@ -27,12 +29,6 @@
   import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
   import type { FileUploadState } from "$lib/stores/upload.types";
-  import {
-    hasDismissedPrompt,
-    markPromptDismissed,
-    markTransferSent,
-    shouldAutoOpenPrompt,
-  } from "$lib/support/prompt";
   import { cn, formatEta, formatSize, formatSpeed } from "$lib/utils";
   import {
     isUnlocked,
@@ -67,11 +63,20 @@
         applicationCategory: "SecurityApplication",
         operatingSystem: "Any",
         browserRequirements: "Requires JavaScript and modern browser APIs",
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "EUR",
-        },
+        offers: [
+          {
+            "@type": "Offer",
+            name: "Single transfer",
+            price: "1",
+            priceCurrency: "EUR",
+          },
+          {
+            "@type": "Offer",
+            name: "Monthly",
+            price: "5",
+            priceCurrency: "EUR",
+          },
+        ],
         featureList: [
           "End-to-end encrypted file transfer",
           "Client-side encryption in browser",
@@ -87,6 +92,20 @@
   const MAX_FILENAME_BYTES = 255;
   const TITLE_MAX = 200;
 
+  // Null until the API answers. An unreachable API reads as "no paywall"
+  // here, which is safe: the server enforces it on create-transfer anyway.
+  let entitlement = $state<EntitlementResponse | null>(null);
+  const paywallOn = $derived(entitlement?.paywall === true);
+  const mustPay = $derived(paywallOn && entitlement?.entitled === false);
+  const maxTotalSize = $derived(
+    paywallOn && entitlement
+      ? entitlement.paidCaps.maxTransferSize
+      : MAX_TOTAL_UPLOAD_SIZE,
+  );
+  const paidMaxExpiryHours = $derived(
+    entitlement ? Math.max(...entitlement.paidCaps.allowedExpiryHours) : 720,
+  );
+
   const EXPIRES_OPTIONS = $derived.by(() => {
     const base = [
       { value: 1, label: "1h" },
@@ -94,9 +113,13 @@
       { value: 12, label: "12h" },
       { value: 24, label: "1d" },
     ];
-    if (!auth.user) return base;
     const free = [...base, { value: 72, label: "3d" }];
-    if (auth.user.tier !== "pro") return free;
+    // With the paywall on every send is a paid one, so everyone gets the
+    // paid expiry options.
+    if (!paywallOn) {
+      if (!auth.user) return base;
+      if (auth.user.tier !== "pro") return free;
+    }
     return [
       ...free,
       { value: 168, label: "7d" },
@@ -150,9 +173,12 @@
 
   // Gates the modal out of the prerendered homepage; its copy would
   // otherwise ship in a closed <dialog> on the primary SEO target.
-  let supportMounted = $state(false);
-  let supportOpen = $state(false);
-  let supportPillVisible = $state(false);
+  let paywallMounted = $state(false);
+  let paywallOpen = $state(false);
+  let paywallResume = $state<StoredPass | null>(null);
+  let pendingPayment:
+    | ((result: { ok: boolean; passToken: string | null }) => void)
+    | null = null;
 
   onMount(async () => {
     try {
@@ -168,20 +194,52 @@
     }
   });
 
-  // Read once on mount so the ask lands on a visit after a completed
-  // transfer, never on top of the share link the user came to copy.
   onMount(() => {
-    supportMounted = true;
-    supportOpen = shouldAutoOpenPrompt();
-    supportPillVisible = hasDismissedPrompt();
+    paywallMounted = true;
+    void refreshEntitlement();
   });
 
-  // Dismissing and clicking through both mean "do not ask again"; the pill
-  // stays as the way back in.
-  function closeSupport() {
-    markPromptDismissed();
-    supportOpen = false;
-    supportPillVisible = true;
+  async function refreshEntitlement(): Promise<EntitlementResponse | null> {
+    try {
+      entitlement = await api.getEntitlement();
+    } catch {
+      // Keep whatever we had; the server is the real gate.
+    }
+    return entitlement;
+  }
+
+  // Resolves once the sender is paid up, or with ok=false if they back out.
+  // A pass bought earlier and not yet spent is reused without asking again.
+  async function ensurePaid(): Promise<{ ok: boolean; passToken: string | null }> {
+    const current = await refreshEntitlement();
+    if (!current?.paywall || current.entitled) return { ok: true, passToken: null };
+
+    const stored = loadPass();
+    let resume: StoredPass | null = null;
+    if (stored) {
+      try {
+        const { state } = await api.getPassStatus(stored.token);
+        if (state === "paid") return { ok: true, passToken: stored.token };
+        if (state === "unpaid") resume = stored;
+        else clearPass();
+      } catch {
+        resume = stored;
+      }
+    }
+
+    paywallResume = resume;
+    paywallOpen = true;
+    return await new Promise((resolve) => {
+      pendingPayment = resolve;
+    });
+  }
+
+  function settlePayment(result: { ok: boolean; passToken: string | null }) {
+    paywallOpen = false;
+    paywallResume = null;
+    const resume = pendingPayment;
+    pendingPayment = null;
+    resume?.(result);
   }
 
   function fileRowStatus(
@@ -211,8 +269,8 @@
     const newFilesSize = files.reduce((sum, f) => sum + f.size, 0);
     const projectedTotal = currentTotal + newFilesSize;
 
-    if (projectedTotal > MAX_TOTAL_UPLOAD_SIZE) {
-      const remaining = MAX_TOTAL_UPLOAD_SIZE - currentTotal;
+    if (projectedTotal > maxTotalSize) {
+      const remaining = maxTotalSize - currentTotal;
       uploadStore.setError(
         `Not enough space. You have ${formatSize(remaining)} remaining.`,
       );
@@ -369,6 +427,9 @@
     const files = uploadStore.files;
     if (files.length === 0) return;
 
+    const payment = await ensurePaid();
+    if (!payment.ok) return;
+
     uploadSpeed = null;
     uploadEta = null;
     lastSpeedTs = 0;
@@ -429,6 +490,7 @@
         password,
         uploadStore.maxDownloads,
         encryptedTitlePayload,
+        payment.passToken,
       );
       createdTransferId = transfer.transferId;
 
@@ -537,7 +599,7 @@
       const baseUrl = window.location.origin;
       const shareUrl = `${baseUrl}${completeResponse.shareUrl}#${keyString}`;
       uploadStore.setShareUrl(shareUrl);
-      markTransferSent();
+      if (payment.passToken) clearPass();
     } catch (error) {
       if ((error as DOMException)?.name === "AbortError") {
         // User cancelled - clean up the partial transfer and return to the
@@ -546,6 +608,11 @@
           api.abortTransfer(createdTransferId).catch(() => {});
         returnToSettings();
         return;
+      }
+      // A pass the server no longer accepts is dead weight; drop it so the
+      // next attempt offers a fresh one instead of failing the same way.
+      if (error instanceof ApiError && error.code === "pass_already_used") {
+        clearPass();
       }
       if (uploadStore.status !== "error") {
         const friendly = friendlyUploadError(error);
@@ -782,7 +849,8 @@
                 </p>
               </div>
               <span class="mt-4 text-[11px] text-muted-foreground/80">
-                Up to {formatSize(MAX_TOTAL_UPLOAD_SIZE)} per transfer
+                Up to {formatSize(maxTotalSize)} per transfer{#if mustPay}
+                  · {PASS_PRICE} to send, or {PLAN_PRICE} a month{/if}
               </span>
             </button>
           {:else}
@@ -955,7 +1023,7 @@
                   onclick={handleUpload}
                   disabled={passwordTooShort || (auth.isAuthenticated && auth.needsVaultSetup)}
                 >
-                  Create share link
+                  {mustPay ? "Continue to payment" : "Create share link"}
                 </Button>
               {/if}
             </div>
@@ -999,18 +1067,6 @@
       </aside>
 
       <div class="space-y-4 sm:text-right sm:max-w-md sm:ml-auto sm:pt-4">
-        {#if supportPillVisible}
-          <div class="flex sm:justify-end">
-            <button
-              type="button"
-              onclick={() => (supportOpen = true)}
-              class="inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-              Keep Tessil alive
-            </button>
-          </div>
-        {/if}
         <h1 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-foreground leading-[1.05]" style="letter-spacing: -0.03em">
           Send anything.
           <br />
@@ -1083,8 +1139,8 @@
         minutes, using the developer tools already in your browser.
       </p>
       <p>
-        Anonymous transfers expire in hours; signed-in transfers
-        can run longer and live on your dashboard. Password
+        You choose how long a transfer lives, from an hour up to 30
+        days, and how many times it can be downloaded. Password
         protection adds a second factor independent of the link.
         Read more about the security model on the
         <a href="/security" class="text-primary underline underline-offset-2">security page</a>.
@@ -1094,8 +1150,10 @@
         <a href="/compare" class="text-primary underline underline-offset-2">WeTransfer, Proton Drive, and other tools</a>.
       </p>
       <p>
-        Built and run by one person, and free to use. If Tessil saves you a
-        headache, you can support the project. The link's in the footer below.
+        Built and run by one person, with no ads and no investors. Sending
+        costs {PASS_PRICE} per transfer or {PLAN_PRICE} a month, which is what
+        pays for the servers. Receiving is always free. See
+        <a href="/pricing" class="text-primary underline underline-offset-2">pricing</a>.
       </p>
     </section>
 
@@ -1117,7 +1175,7 @@
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-2 text-muted-foreground leading-relaxed">
-            No. You can send and receive files anonymously. A free account is optional and just adds a dashboard to manage the transfers you create. It doesn't change how files are encrypted.
+No. You can send with a one-time {PASS_PRICE} pass and no account, and receiving never needs one. An account is only needed for the {PLAN_PRICE} monthly plan, and adds a dashboard of the transfers you create. It doesn't change how files are encrypted.
           </p>
         </details>
         <details class="group py-4">
@@ -1136,16 +1194,16 @@
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-2 text-muted-foreground leading-relaxed">
-            Large files are supported through multi-part uploads, so big transfers stay reliable even on slower connections. Signed-in transfers allow larger sizes than anonymous ones.
+Up to 2 GB per transfer. Files are encrypted and uploaded in parts, so big transfers stay reliable even on slower connections and do not have to fit in your browser's memory.
           </p>
         </details>
         <details class="group py-4">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
-            Is Tessil free?
+            What does Tessil cost?
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-2 text-muted-foreground leading-relaxed">
-            Yes, completely free, with no ads and no selling of data. Tessil is open source under the AGPL-3.0 licence, so anyone can audit exactly how it handles encryption.
+Sending costs {PASS_PRICE} per transfer with no account, or {PLAN_PRICE} a month for as many as you need. Downloading is free for everyone. There are no ads and no selling of data, and Tessil is open source under the AGPL-3.0 licence, so anyone can audit exactly how it handles encryption.
           </p>
         </details>
         <details class="group py-4">
@@ -1231,8 +1289,15 @@
   </form>
 </Modal>
 
-{#if supportMounted}
-  <SupportModal open={supportOpen} onClose={closeSupport} />
+{#if paywallMounted}
+  <PaywallModal
+    open={paywallOpen}
+    maxTransferSize={maxTotalSize}
+    maxExpiryHours={paidMaxExpiryHours}
+    resume={paywallResume}
+    onPaid={(passToken) => settlePayment({ ok: true, passToken })}
+    onClose={() => settlePayment({ ok: false, passToken: null })}
+  />
 {/if}
 
 <style>

@@ -14,7 +14,7 @@
 
   const PAGE_TITLE = "Versleuteld bestanden versturen - Tessil";
   const PAGE_DESCRIPTION =
-    "Verstuur grote bestanden end-to-end versleuteld. Je browser versleutelt voor de upload, wij zien je bestanden of sleutel nooit. Gratis, zonder account, EU-hosting.";
+    "Verstuur grote bestanden end-to-end versleuteld. Je browser versleutelt voor de upload, wij zien je bestanden of sleutel nooit. Zonder account, EU-hosting, vanaf EUR 1 per transfer.";
 
   const reasons = [
     {
@@ -23,7 +23,7 @@
     },
     {
       title: "Geen account nodig",
-      body: "Anoniem versturen is de standaard en niet de uitzondering. Een gratis account is optioneel en geeft je hogere limieten, een langere vervaltermijn en een overzicht van je eigen transfers. Aan de versleuteling verandert het niets.",
+      body: "Versturen zonder account is de standaard en niet de uitzondering: een eenmalige pas van EUR 1 is genoeg. Een account heb je alleen nodig voor het maandabonnement van EUR 5 en geeft je een overzicht van je eigen transfers. Aan de versleuteling verandert het niets.",
     },
     {
       title: "Gehost in de EU",
@@ -46,15 +46,15 @@
     },
     {
       q: "Heb ik een account nodig om bestanden te versturen?",
-      a: "Nee, anoniem versturen werkt direct. Zonder account verstuur je tot 500 MB per transfer met een vervaltermijn tot 24 uur. Met een gratis account wordt dat 1 GiB en tot 72 uur.",
+      a: "Nee. Met een eenmalige pas van EUR 1 verstuur je zonder account tot 2 GB per transfer, met een vervaltermijn tot 30 dagen. Een account is alleen nodig voor het maandabonnement van EUR 5. Ontvangen kan altijd zonder account.",
     },
     {
       q: "Waar worden mijn bestanden opgeslagen?",
       a: "Op servers in de EU, in Duitsland en Nederland. Wij slaan uitsluitend versleutelde data op, dus ook wij kunnen niet zien wat erin zit. Zodra de vervaltermijn verstreken is worden de bestanden automatisch verwijderd.",
     },
     {
-      q: "Is Tessil gratis?",
-      a: "Ja. Er is op dit moment geen betaald abonnement en versleuteling zit nooit achter een betaalmuur.",
+      q: "Wat kost Tessil?",
+      a: "Versturen kost EUR 1 per transfer zonder account, of EUR 5 per maand voor zoveel transfers als je nodig hebt. Ontvangen is gratis. Het abonnement zeg je met één klik op, zonder opzegtermijn.",
     },
   ];
 
@@ -121,7 +121,7 @@
     <p class="mt-4 text-lg text-muted-foreground leading-relaxed">
       Je bestanden worden in je eigen browser versleuteld voordat ze verstuurd
       worden. Wij bewaren alleen onleesbare data en krijgen de sleutel nooit te
-      zien. Gratis, zonder account, gehost in de EU.
+      zien. Zonder account, gehost in de EU, vanaf EUR 1 per transfer.
     </p>
     <div class="mt-7 flex flex-wrap items-center gap-3">
       <Button href="/" variant="primary" fullWidth={false}>

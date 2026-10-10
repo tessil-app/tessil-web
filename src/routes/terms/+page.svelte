@@ -21,7 +21,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 6, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: October 11, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
@@ -38,9 +38,19 @@
               temporary share links.
             </p>
             <p class="text-muted-foreground">
-              Tessil is free to use. It works without an account; signing in adds
-              a dashboard and longer-lived transfers. There is no paid plan at
-              this time.
+              Receiving files is free. Sending is paid: either a one-time pass
+              for a single transfer, which needs no account, or a monthly plan
+              tied to an account. Current prices and limits are on the
+              <a href="/pricing" class="text-primary underline underline-offset-2">pricing page</a>.
+            </p>
+            <p class="text-muted-foreground">
+              Payments are processed by Polar, who act as merchant of record and
+              are the seller on your receipt. The monthly plan renews each month
+              until you cancel, which you can do at any time from your account
+              settings or Polar's customer portal; it then runs to the end of
+              the period already paid for. A pass is charged once and covers one
+              completed transfer. If a payment went through and the service did
+              not deliver, contact us and it will be refunded.
             </p>
           </section>
 

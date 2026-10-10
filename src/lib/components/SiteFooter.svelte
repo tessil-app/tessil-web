@@ -1,8 +1,4 @@
 <script lang="ts">
-  import {
-    SUPPORT_GITHUB_SPONSORS_URL,
-    SUPPORT_KOFI_URL,
-  } from "$lib/config/support";
   import { cn } from "$lib/utils";
   import type { Snippet } from "svelte";
 
@@ -65,24 +61,12 @@
       {:else}
         <a href={link.href} class={linkClass}>{link.label}</a>
       {/if}
-      <span aria-hidden="true">·</span>
+      {#if github || i < links.length - 1}
+        <span aria-hidden="true">·</span>
+      {/if}
     {/each}
     {#if github}
       <a href="https://github.com/tessil-app" class={linkClass}>GitHub</a>
-      <span aria-hidden="true">·</span>
     {/if}
-    <a
-      href={SUPPORT_GITHUB_SPONSORS_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      class={linkClass}>Sponsor</a
-    >
-    <span aria-hidden="true">·</span>
-    <a
-      href={SUPPORT_KOFI_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      class={linkClass}>Ko-fi</a
-    >
   </div>
 </footer>

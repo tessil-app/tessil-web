@@ -5,6 +5,7 @@
 
   import Alert from "$lib/components/Alert.svelte";
   import * as Frame from "$lib/components/frame";
+  import PlanPanel from "$lib/components/PlanPanel.svelte";
   import ProgressBar from "$lib/components/ProgressBar.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import { api, type UsageResponse } from "$lib/api/client";
@@ -47,6 +48,8 @@
     return `in ${days}d`;
   }
 </script>
+
+<PlanPanel />
 
 <Frame.Root>
   <Frame.Panel>

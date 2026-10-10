@@ -21,7 +21,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 12, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: October 11, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Introduction</h2>
@@ -77,7 +77,9 @@
                 session expiry timestamps.
               </li>
               <li>
-                <strong>Account tier.</strong> Currently always <code>free</code>.
+                <strong>Account tier and subscription.</strong> Whether your account has the monthly
+                plan, its renewal date, and the customer and subscription identifiers Polar assigns.
+                We never receive or store card details.
               </li>
               <li>
                 <strong>Ownership link on transfers.</strong> Transfers you create while signed in are tagged with
@@ -233,6 +235,15 @@
                 <strong>Scaleway Transactional Email (France):</strong> Sends one-time sign-in
                 links and account notifications. Receives your email address and the message
                 contents. Transactional mail only, never marketing.
+              </li>
+              <li>
+                <strong>Polar (United States):</strong> Handles payment as merchant of record: it is
+                the seller, takes your payment details, charges VAT, and emails the receipt. Checkout
+                happens on Polar's own site in a separate tab; nothing from Polar loads on tessil.app.
+                For the monthly plan we send Polar your account email and an internal account ID so
+                the subscription can be matched to your account. For a single-transfer pass we send
+                nothing about you: Polar learns who paid, we do not, and we do not store which
+                payment paid for which transfer.
               </li>
               <li>
                 <strong>Cloudflare:</strong> Encrypted file storage (R2, restricted to the EU

@@ -196,6 +196,15 @@ export interface BillingStatusResponse {
   } | null;
 }
 
+export interface EntitlementResponse {
+  /** True when sending needs a subscription or a pass. */
+  paywall: boolean;
+  entitled: boolean;
+  paidCaps: { maxTransferSize: number; allowedExpiryHours: number[] };
+}
+
+export type PassState = "unknown" | "unpaid" | "paid" | "used";
+
 export interface UsageResponse {
   tier: string;
   monthlyVolume: {
@@ -310,6 +319,7 @@ class ApiClient {
     password?: string,
     maxDownloads?: number | null,
     encryptedTitle?: { encryptedTitle: string; encryptedTitleIv: string } | null,
+    passToken?: string | null,
   ): Promise<CreateTransferResponse> {
     const body: {
       expiresInHours: number;
@@ -317,9 +327,13 @@ class ApiClient {
       maxDownloads?: number;
       encryptedTitle?: string;
       encryptedTitleIv?: string;
+      passToken?: string;
     } = {
       expiresInHours,
     };
+    if (passToken) {
+      body.passToken = passToken;
+    }
     if (password) {
       body.password = password;
     }
@@ -623,6 +637,22 @@ class ApiClient {
 
   async openBillingPortal(): Promise<{ url: string }> {
     return this.request("/api/billing/portal", { method: "POST" });
+  }
+
+  async getEntitlement(): Promise<EntitlementResponse> {
+    return this.request("/api/billing/entitlement");
+  }
+
+  /** Opens a checkout for one single-transfer pass. The token is shown once. */
+  async createPassCheckout(): Promise<{ token: string; url: string }> {
+    return this.request("/api/billing/pass/checkout", { method: "POST" });
+  }
+
+  async getPassStatus(token: string): Promise<{ state: PassState }> {
+    return this.request("/api/billing/pass/status", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
   }
 
   async getMyUsage(): Promise<UsageResponse> {

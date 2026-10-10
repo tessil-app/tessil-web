@@ -5,10 +5,7 @@
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
-  import {
-    SUPPORT_EMAIL,
-    SUPPORT_POLAR_PORTAL_URL,
-  } from "$lib/config/support";
+  import { BILLING_EMAIL, BILLING_PORTAL_URL } from "$lib/config/pricing";
 
   const sectionClass = "space-y-3";
   const headingClass = "text-lg font-semibold text-foreground";
@@ -16,56 +13,53 @@
   const linkClass = "text-primary underline underline-offset-2";
 </script>
 
-<Seo title="Thank you - Tessil" robots="noindex" />
+<Seo title="Payment received - Tessil" robots="noindex" />
 
 <PageLayout width="3xl">
   <PageHeader
-    title="Thank you"
-    tagline="That covers a real part of what it costs to run this."
+    title="Payment received"
+    tagline="You can close this tab. The page with your files picks up on its own."
   />
 
   <Frame.Root>
     <Frame.Panel>
       <div class="space-y-8">
         <section class={sectionClass}>
-          <h2 class={headingClass}>Use the same email as your account</h2>
+          <h2 class={headingClass}>Go back to your upload</h2>
           <p class={bodyClass}>
-            If you checked out with the address you use for your Tessil account,
-            nothing else is needed. Nothing depends on it today; it is simply the
-            only thing that ties a contribution to an account.
-          </p>
-          <p class={bodyClass}>
-            Checked out with a different address, or don't have an account yet?
-            That is fine, and your support counts exactly the same.
+            The tab where you chose your files is waiting for this payment and
+            continues within a few seconds. If you closed it, open Tessil in
+            this same browser, add your files again and send: a paid pass is
+            remembered until it is used, and a subscription is on your account.
           </p>
         </section>
 
         <section class={sectionClass}>
           <h2 class={headingClass}>Your receipt</h2>
           <p class={bodyClass}>
-            Polar handles the payment and emails you a receipt. A monthly
-            contribution renews on the same date each month until you stop it.
-            A one-time contribution is exactly that: charged once, never again.
+            Polar handles the payment and emails you a receipt. A single
+            transfer is charged once and never again. The monthly plan renews
+            on the same date each month until you stop it.
           </p>
         </section>
 
         <section class={sectionClass}>
-          <h2 class={headingClass}>Stopping a monthly contribution</h2>
+          <h2 class={headingClass}>Stopping the monthly plan</h2>
           <p class={bodyClass}>
-            Under a minute, on your own, whenever you want. No notice period and
-            no retention offer. Open
+            Under a minute, on your own, whenever you want. No notice period
+            and no retention offer. Use "Manage or cancel" under Settings, then
+            Usage, or open
             <a
-              href={SUPPORT_POLAR_PORTAL_URL}
+              href={BILLING_PORTAL_URL}
               rel="noopener noreferrer"
               class={linkClass}>the customer portal</a
-            >, which is also linked from every receipt, and cancel there. It
-            stops at the end of the period you have already paid for.
+            >, which is also linked from every receipt. The plan runs to the end
+            of the month you already paid for.
           </p>
           <p class={bodyClass}>
-            If the link has gone missing or a charge looks wrong, mail
-            <a href="mailto:{SUPPORT_EMAIL}" class={linkClass}>{SUPPORT_EMAIL}</a
-            >. I'll cancel it for you and refund the last payment if it renewed
-            after you meant to stop. Full detail on the
+            If something went wrong or a charge looks off, mail
+            <a href="mailto:{BILLING_EMAIL}" class={linkClass}>{BILLING_EMAIL}</a>
+            and I will fix it or refund it. Full detail on the
             <a href="/pricing#cancel" class={linkClass}>pricing page</a>.
           </p>
         </section>

@@ -22,7 +22,7 @@ const TESSIL_NL = {
   openSource: "Ja (AGPL-3.0)",
   hosting: "EU (Duitsland + Nederland)",
   tracking: "Geen",
-  price: "Gratis",
+  price: "EUR 1 per transfer of EUR 5 per maand",
   expiry: true,
   password: true,
 };
@@ -35,14 +35,14 @@ export const comparisonsNl: LocalizedComparison[] = [
     shortName: "WeTransfer",
     metaTitle: "Versleuteld WeTransfer alternatief - Tessil",
     metaDescription:
-      "Een versleuteld alternatief voor WeTransfer. Tessil versleutelt bestanden in je browser en ziet je bestanden of sleutel nooit. Open source, EU-hosting, gratis.",
+      "Een versleuteld alternatief voor WeTransfer. Tessil versleutelt bestanden in je browser en ziet je bestanden of sleutel nooit. Open source, EU-hosting, geen advertenties.",
     heading: "Tessil vs WeTransfer",
     summary:
       "Een end-to-end versleuteld alternatief voor WeTransfer. Je bestanden zijn voor ons onleesbaar: niet als instelling, maar als ontwerp.",
     intro: [
       "WeTransfer is voor de meeste mensen de standaardmanier om grote bestanden te versturen: slepen, link delen, klaar. Handig, maar niet end-to-end versleuteld. WeTransfer beheert zelf de sleutels, dus de dienst (en wie de dienst daartoe kan dwingen) kan in principe bij wat je uploadt. Op de gratis versie krijg je daarnaast advertenties en analytics, en in 2025 ontstond er kritiek op voorwaarden die vergaande rechten op geüploade bestanden leken te claimen, later herzien.",
       "Tessil is gebouwd voor het geval dat dit wel uitmaakt. Bestanden worden in je browser versleuteld met AES-GCM voordat ze je apparaat verlaten, en de ontsleutelsleutel staat in het URL-fragment van de deellink: het deel na de # dat browsers nooit naar een server sturen. Wij bewaren alleen versleutelde data die we zelf niet kunnen lezen.",
-      "Tessil is open source (AGPL-3.0), volledig gehost in de EU, gratis, en je hebt geen account nodig om iets te versturen.",
+      "Tessil is open source (AGPL-3.0), volledig gehost in de EU, en je hebt geen account nodig om iets te versturen. Versturen kost EUR 1 per transfer of EUR 5 per maand; ontvangen is gratis.",
     ],
     rows: [
       { label: "End-to-end versleuteld", tessil: TESSIL_NL.e2e, competitor: false },
@@ -65,7 +65,7 @@ export const comparisonsNl: LocalizedComparison[] = [
     ],
     verdict: [
       "Wil je gewoon snel een bestand naar iemand sturen en speelt privacy geen rol, dan is WeTransfer prima en wrijvingsloos. Wil je dat de dienst je bestanden simpelweg niet kán lezen, voor klantwerk, documenten of wat dan ook dat gevoelig ligt, dan geeft Tessil je dat zonder dat je de simpele link-flow opgeeft.",
-      "De gratis limieten van Tessil liggen lager dan die van WeTransfer. Dat is de eerlijke ruil voor zero-knowledge versleuteling en geen advertenties.",
+      "WeTransfer heeft een gratis versie en Tessil niet: versturen kost EUR 1 per transfer of EUR 5 per maand. Die prijs, en niet advertenties of je data, betaalt voor zero-knowledge versleuteling.",
     ],
     faq: [
       {
@@ -78,7 +78,7 @@ export const comparisonsNl: LocalizedComparison[] = [
       },
       {
         q: "Heb ik een account nodig om Tessil te gebruiken?",
-        a: "Nee, je kunt anoniem versturen. Een optioneel gratis account geeft je een overzicht van de transfers die je aanmaakt. Het verandert niets aan de manier waarop bestanden versleuteld worden.",
+        a: "Nee. Met een eenmalige pas van EUR 1 verstuur je een transfer zonder account. Een account heb je alleen nodig voor het maandabonnement van EUR 5, en geeft je een overzicht van de transfers die je aanmaakt. Het verandert niets aan de manier waarop bestanden versleuteld worden.",
       },
     ],
   },

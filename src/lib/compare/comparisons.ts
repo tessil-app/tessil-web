@@ -49,7 +49,7 @@ const TESSIL = {
   openSource: "Yes (AGPL-3.0)",
   hosting: "EU (Germany + Netherlands)",
   tracking: "None",
-  price: "Free",
+  price: "EUR 1 per transfer or EUR 5/mo",
   expiry: true,
   password: true,
 };
@@ -61,14 +61,14 @@ export const comparisons: Comparison[] = [
     shortName: "WeTransfer",
     metaTitle: "Encrypted WeTransfer alternative - Tessil",
     metaDescription:
-      "Looking for a private, encrypted WeTransfer alternative? Tessil encrypts files in your browser and never sees your files or the key. Open source, EU-hosted, free.",
+      "Looking for a private, encrypted WeTransfer alternative? Tessil encrypts files in your browser and never sees your files or the key. Open source, EU-hosted, no ads.",
     heading: "Tessil vs WeTransfer",
     summary:
       "A private, end-to-end encrypted alternative to WeTransfer. Your files are unreadable to us by design.",
     intro: [
       "WeTransfer is the default way most people send big files: drop them in, share a link. It's convenient, but it isn't end-to-end encrypted - WeTransfer holds the keys, so the service (and anyone who compels it) can in principle access what you upload. The free tier also shows ads and runs analytics, and its terms drew criticism in 2025 over language that appeared to grant broad rights over uploaded content (later revised).",
       "Tessil is built for the case where that matters. Files are encrypted in your browser with AES-GCM before they ever leave your device, and the decryption key lives in the share link's URL fragment - the part after the # that browsers never send to a server. We store only ciphertext we can't read.",
-      "It's open source (AGPL-3.0), hosted entirely in the EU, free, and needs no account to send.",
+      "It's open source (AGPL-3.0), hosted entirely in the EU, and needs no account to send. Sending costs EUR 1 per transfer or EUR 5 a month; receiving is free.",
     ],
     rows: [
       { label: "End-to-end encrypted", tessil: TESSIL.e2e, competitor: false },
@@ -83,7 +83,7 @@ export const comparisons: Comparison[] = [
     ],
     verdict: [
       "If you just want to lob a file at someone and privacy isn't a concern, WeTransfer is fine and frictionless. If you'd rather the service physically can't read what you send - for client work, documents, anything sensitive - Tessil gives you that without giving up the simple link-based flow.",
-      "Tessil's free tier caps transfers smaller than WeTransfer's, which is the honest trade for zero-knowledge encryption and no ads.",
+      "WeTransfer has a free tier and Tessil does not: sending costs EUR 1 per transfer or EUR 5 a month. That price, rather than ads or your data, is what pays for zero-knowledge encryption.",
     ],
     faq: [
       {
@@ -96,7 +96,7 @@ export const comparisons: Comparison[] = [
       },
       {
         q: "Do I need an account to use Tessil?",
-        a: "No. You can send anonymously. An optional free account adds a dashboard to manage the transfers you create - it doesn't change how files are encrypted.",
+        a: "No. A one-time EUR 1 pass sends a transfer with no account. An account is only needed for the EUR 5 monthly plan, and adds a dashboard to manage the transfers you create - it doesn't change how files are encrypted.",
       },
     ],
   },
@@ -137,7 +137,7 @@ export const comparisons: Comparison[] = [
       },
       {
         q: "What does Boomerang cost compared to Tessil?",
-        a: "Boomerang has a free tier and a paid plan around EUR 6.99/month for more storage and larger files. Tessil is currently free. Check Boomerang's site for up-to-date pricing.",
+        a: "Boomerang has a free tier and a paid plan around EUR 6.99/month for more storage and larger files. Tessil has no free tier: sending costs EUR 1 per transfer or EUR 5 a month. Check Boomerang's site for up-to-date pricing.",
       },
       {
         q: "Is Tessil also made in the Netherlands?",
@@ -197,7 +197,7 @@ export const comparisons: Comparison[] = [
     shortName: "Tresorit Send",
     metaTitle: "Open-source Tresorit Send alternative - Tessil",
     metaDescription:
-      "A free, open-source alternative to Tresorit Send. End-to-end encrypted file transfer, the key never reaches the server, EU-hosted, no account required.",
+      "An open-source alternative to Tresorit Send. End-to-end encrypted file transfer, the key never reaches the server, EU-hosted, no account required.",
     heading: "Tessil vs Tresorit Send",
     summary:
       "Like Tresorit Send, but open source and EU-hosted. Encrypted, link-based, no account needed.",
@@ -218,7 +218,7 @@ export const comparisons: Comparison[] = [
       { label: "Password protection", tessil: TESSIL.password, competitor: true },
     ],
     verdict: [
-      "Tresorit Send is a solid, trustworthy option, especially if you're already in the Tresorit ecosystem. Tessil gives you the same encrypted, link-based experience with the added assurances that come from being fully open source and EU-hosted - and it's free.",
+      "Tresorit Send is a solid, trustworthy option, especially if you're already in the Tresorit ecosystem. Tessil gives you the same encrypted, link-based experience with the added assurances that come from being fully open source and EU-hosted. Tresorit Send is free to use; Tessil charges EUR 1 per transfer or EUR 5 a month.",
       "If auditability matters to you, that's the deciding line: Tessil's code is public.",
     ],
     faq: [
@@ -227,8 +227,8 @@ export const comparisons: Comparison[] = [
         a: "They're very similar - both are end-to-end encrypted, link-based, and need no account to send. Tessil is open source (AGPL-3.0) and EU-hosted; Tresorit Send is closed source and Swiss-hosted.",
       },
       {
-        q: "Is Tessil really free?",
-        a: "Yes. The current version is free with no paid tier. There are no ads and no third-party trackers.",
+        q: "What does Tessil cost?",
+        a: "Sending costs EUR 1 per transfer with no account, or EUR 5 a month. Receiving is free. There are no ads and no third-party trackers.",
       },
       {
         q: "Can I verify Tessil's encryption?",
@@ -248,7 +248,7 @@ export const comparisons: Comparison[] = [
       "The same key-in-the-link model as Wormhole, plus open source, EU hosting, and optional accounts.",
     intro: [
       "Wormhole (wormhole.app) popularised the clean, modern take on encrypted sending: files are encrypted in the browser and the key lives in the link, so the service can't read them. Transfers auto-expire quickly. It's a great tool and the closest in spirit to Tessil.",
-      "Tessil uses the same core idea - browser-side encryption with the key in the URL fragment - and differs on the things around it. It's open source under AGPL-3.0, hosted in the EU rather than the US, and offers an optional free account with a dashboard so you can manage and re-share your transfers instead of every send being purely ephemeral.",
+      "Tessil uses the same core idea - browser-side encryption with the key in the URL fragment - and differs on the things around it. It's open source under AGPL-3.0, hosted in the EU rather than the US, and offers an optional account with a dashboard so you can manage and re-share your transfers instead of every send being purely ephemeral.",
       "You also get to choose expiry windows rather than being limited to a fixed short lifetime.",
     ],
     rows: [
@@ -264,7 +264,7 @@ export const comparisons: Comparison[] = [
     ],
     verdict: [
       "Wormhole and Tessil share the part that matters most - neither service can read your files. If you want the most ephemeral, fire-and-forget experience, Wormhole is great. If you'd prefer open-source code you can audit, EU hosting, and the option to keep an account that tracks your transfers, Tessil leans that way.",
-      "Both are free, so it's mostly a question of jurisdiction, openness, and whether you want optional persistence.",
+      "Wormhole is free and Tessil charges EUR 1 per transfer or EUR 5 a month, so weigh that against jurisdiction, openness, and whether you want optional persistence.",
     ],
     faq: [
       {
