@@ -170,6 +170,12 @@
       in this browser until it is used.
     </p>
   {:else}
+    <p class="text-sm text-muted-foreground leading-relaxed">
+      Tessil used to be free. It is run by one person, and the servers and
+      storage came out of my own pocket, which I could not keep up. A small
+      price keeps it online without ads, trackers or investors.
+    </p>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div class={optionClass}>
         <div>
