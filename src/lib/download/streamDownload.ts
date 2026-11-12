@@ -211,6 +211,18 @@ async function pumpParallel(
   }
 }
 
+/**
+ * The download failed after the browser had begun writing the file. The
+ * caller must not fall back to the buffered path: a partial file is already
+ * on disk and buffering a large file would exhaust memory.
+ */
+export class StreamInterruptedError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : "download interrupted");
+    this.name = "StreamInterruptedError";
+  }
+}
+
 export interface StreamDownloadOptions {
   downloadUrl: string;
   key: CryptoKey;
@@ -225,9 +237,10 @@ export interface StreamDownloadOptions {
 }
 
 /**
- * Streams a TSL1 transfer to disk. Throws on any failure (worker unavailable,
- * network error, ranges unsupported, or a non-TSL1 object) so the caller can
- * fall back to the buffered path.
+ * Streams a TSL1 transfer to disk. Throws on any failure. A failure before
+ * the first plaintext was handed to the browser (worker unavailable, ranges
+ * unsupported, a non-TSL1 object) is a plain error and the caller can fall
+ * back to the buffered path; a later one is a StreamInterruptedError.
  */
 export async function streamingDownloadToDisk(opts: StreamDownloadOptions): Promise<void> {
   const { downloadUrl, key, ciphertextSize, filename, mimeType, onProgress, signal } = opts;
@@ -309,7 +322,8 @@ export async function streamingDownloadToDisk(opts: StreamDownloadOptions): Prom
   } catch (err) {
     onAbort();
     removeIframe();
-    throw err;
+    const aborted = (err as DOMException)?.name === "AbortError";
+    throw written > 0 && !aborted ? new StreamInterruptedError(err) : err;
   } finally {
     signal?.removeEventListener("abort", onAbort);
   }

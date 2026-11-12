@@ -9,7 +9,11 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import { decryptFilename, decryptString, downloadAndDecrypt } from "$lib/crypto/decrypt";
   import { importKey, isWrappedKey, unwrapKey } from "$lib/crypto/key";
-  import { canStreamToDisk, streamingDownloadToDisk } from "$lib/download/streamDownload";
+  import {
+    canStreamToDisk,
+    StreamInterruptedError,
+    streamingDownloadToDisk,
+  } from "$lib/download/streamDownload";
   import { formatEta, formatSize, formatSpeed } from "$lib/utils";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
@@ -224,10 +228,29 @@
 
   function friendlyDownloadError(error: unknown): string {
     const raw = error instanceof Error ? error.message.toLowerCase() : "";
+    if (error instanceof StreamInterruptedError) {
+      return "The download was interrupted. Delete the partial file and try again.";
+    }
     if (/network|connection|lost|fetch|load failed/.test(raw)) {
       return "The connection dropped. Try again.";
     }
     return "Couldn't download this file. Try again.";
+  }
+
+  // Each URL request spends one of the transfer's downloads for that
+  // file, so a retry reuses the URL it already has while it is valid.
+  const downloadUrls = new Map<string, { url: string; expiresAt: number }>();
+  const URL_REUSE_MARGIN_MS = 10 * 60 * 1000;
+
+  async function downloadUrlFor(fileId: string): Promise<string> {
+    const cached = downloadUrls.get(fileId);
+    if (cached && cached.expiresAt - Date.now() > URL_REUSE_MARGIN_MS) return cached.url;
+    const fresh = await api.getDownloadUrl(fileId, accessToken ?? undefined);
+    downloadUrls.set(fileId, {
+      url: fresh.downloadUrl,
+      expiresAt: new Date(fresh.expiresAt).getTime(),
+    });
+    return fresh.downloadUrl;
   }
 
   async function downloadFile(index: number) {
@@ -242,15 +265,14 @@
       files[index].status = "downloading";
       files[index].progress = 0;
 
-      const { downloadUrl } = await api.getDownloadUrl(
-        file.id,
-        accessToken ?? undefined,
-      );
+      const downloadUrl = await downloadUrlFor(file.id);
 
       // Large files: stream straight to disk via the service worker so we never
-      // buffer the whole file in memory (and Safari gets a native download). Any
-      // failure (no/blocked worker, or a legacy non-TSL1 object) falls through
-      // to the buffered path below.
+      // buffer the whole file in memory (and Safari gets a native download). A
+      // failure before any data was written (no/blocked worker, or a legacy
+      // non-TSL1 object) falls through to the buffered path below. One that
+      // interrupts a download already under way does not: a partial file is on
+      // disk and buffering a file this size can exhaust memory.
       if (canStreamToDisk() && file.size >= STREAM_THRESHOLD) {
         try {
           await streamingDownloadToDisk({
@@ -267,6 +289,7 @@
           files[index].progress = 100;
           return;
         } catch (err) {
+          if (err instanceof StreamInterruptedError) throw err;
           console.warn("[download] streaming failed; falling back to buffered:", err);
           files[index].progress = 0;
         }

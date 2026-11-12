@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { api, ApiError } from "$lib/api/client";
+  import { checkFileType } from "$lib/upload/fileTypeCheck";
   import { uploadEncryptedStreamMultipart } from "$lib/upload/multipart";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -382,16 +383,9 @@
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i].file;
-        const firstBytes = await file.slice(0, 16).arrayBuffer();
-        const magicBytes = btoa(
-          String.fromCharCode(...new Uint8Array(firstBytes)),
-        );
-
-        const validation = await api.validateMagicBytes(magicBytes);
-        if (!validation.valid) {
-          uploadStore.setError(
-            `"${file.name}": ${validation.reason ?? "File type not allowed"}`,
-          );
+        const blocked = await checkFileType(file);
+        if (blocked) {
+          uploadStore.setError(`"${file.name}": ${blocked}`);
           return;
         }
       }
