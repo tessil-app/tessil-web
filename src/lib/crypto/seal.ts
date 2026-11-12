@@ -2,7 +2,15 @@
 // HPKE (RFC 9180) base mode: DHKEM(P-256, HKDF-SHA256), HKDF-SHA256,
 // AES-256-GCM. See docs/adr/0014-portal-keys-and-vault-items.md.
 //
-// Wire format: version(1) || encapsulated key(65) || ciphertext+tag.
+// Wire format: mode(1) || encapsulated key(65) || ciphertext+tag.
+//
+// Mode 1 is anonymous: anyone who knows the public key can seal to it, so
+// opening proves nothing about who sealed. Use it only where that is fine,
+// such as a depositor sealing a deposit's key. Mode 2 also authenticates
+// the sender's key pair: it opens only if it was sealed by the holder of
+// the private key matching `senderPublicKey`. Use it whenever the recipient
+// will trust what is inside, because the server knows every public key and
+// could otherwise seal contents of its own choosing.
 //
 // `context` says what the sealed bytes are and who they are for, for
 // example "portal-key|{portalId}|{userId}|{keyVersion}". It is mixed into
@@ -10,7 +18,8 @@
 
 import { Aes256Gcm, CipherSuite, DhkemP256HkdfSha256, HkdfSha256 } from "@hpke/core";
 
-const SEAL_VERSION = 1;
+const MODE_ANONYMOUS = 1;
+const MODE_AUTHENTICATED = 2;
 const ENC_BYTES = 65; // uncompressed P-256 point
 const TAG_BYTES = 16;
 const INFO_PREFIX = "tessil/seal/v1|";
@@ -32,24 +41,6 @@ function info(context: string): ArrayBuffer {
   return buffer(encoder.encode(INFO_PREFIX + context));
 }
 
-/** Seals `plaintext` so only the holder of the matching private key can open it. */
-export async function sealTo(
-  recipientPublicKey: Uint8Array,
-  plaintext: Uint8Array,
-  context: string,
-): Promise<Uint8Array> {
-  const publicKey = await crypto.subtle.importKey("raw", buffer(recipientPublicKey), ECDH, true, []);
-  const { ct, enc } = await suite.seal(
-    { recipientPublicKey: publicKey, info: info(context) },
-    buffer(plaintext),
-  );
-  const out = new Uint8Array(1 + ENC_BYTES + ct.byteLength);
-  out[0] = SEAL_VERSION;
-  out.set(new Uint8Array(enc), 1);
-  out.set(new Uint8Array(ct), 1 + ENC_BYTES);
-  return out;
-}
-
 export interface RecipientKeypair {
   /** ECDH P-256 with "deriveBits"; may be non-extractable. */
   privateKey: CryptoKey;
@@ -57,20 +48,60 @@ export interface RecipientKeypair {
   publicKey: Uint8Array;
 }
 
-/** Returns null on an unknown version, the wrong key or context, or tampering. */
+function importPublic(raw: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey("raw", buffer(raw), ECDH, true, []);
+}
+
+async function asPair(keypair: RecipientKeypair): Promise<CryptoKeyPair> {
+  return { privateKey: keypair.privateKey, publicKey: await importPublic(keypair.publicKey) };
+}
+
+/**
+ * Seals `plaintext` so only the holder of the matching private key can open
+ * it. With `sender`, the result also proves it came from that key pair.
+ */
+export async function sealTo(
+  recipientPublicKey: Uint8Array,
+  plaintext: Uint8Array,
+  context: string,
+  sender?: RecipientKeypair,
+): Promise<Uint8Array> {
+  const { ct, enc } = await suite.seal(
+    {
+      recipientPublicKey: await importPublic(recipientPublicKey),
+      info: info(context),
+      ...(sender ? { senderKey: await asPair(sender) } : {}),
+    },
+    buffer(plaintext),
+  );
+  const out = new Uint8Array(1 + ENC_BYTES + ct.byteLength);
+  out[0] = sender ? MODE_AUTHENTICATED : MODE_ANONYMOUS;
+  out.set(new Uint8Array(enc), 1);
+  out.set(new Uint8Array(ct), 1 + ENC_BYTES);
+  return out;
+}
+
+/**
+ * Returns null on an unknown mode, the wrong key or context, or tampering.
+ * With `senderPublicKey` it opens only what that sender sealed, and refuses
+ * anonymous seals; without it, it refuses authenticated ones, so a caller
+ * cannot forget to check the sender.
+ */
 export async function openSealed(
   recipient: RecipientKeypair,
   wire: Uint8Array,
   context: string,
+  senderPublicKey?: Uint8Array,
 ): Promise<Uint8Array | null> {
-  if (wire.byteLength < 1 + ENC_BYTES + TAG_BYTES || wire[0] !== SEAL_VERSION) return null;
+  const expectedMode = senderPublicKey ? MODE_AUTHENTICATED : MODE_ANONYMOUS;
+  if (wire.byteLength < 1 + ENC_BYTES + TAG_BYTES || wire[0] !== expectedMode) return null;
   try {
-    const publicKey = await crypto.subtle.importKey("raw", buffer(recipient.publicKey), ECDH, true, []);
     const plaintext = await suite.open(
       {
-        recipientKey: { privateKey: recipient.privateKey, publicKey },
+        recipientKey: await asPair(recipient),
         enc: buffer(wire.subarray(1, 1 + ENC_BYTES)),
         info: info(context),
+        ...(senderPublicKey ? { senderPublicKey: await importPublic(senderPublicKey) } : {}),
       },
       buffer(wire.subarray(1 + ENC_BYTES)),
     );
