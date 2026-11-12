@@ -124,6 +124,26 @@ describe("the public bundle", () => {
     expect(short.byteLength).toBe(longer.byteLength);
   });
 
+  it("carries the owner's language choice, and ignores one it does not know", async () => {
+    const linkKey = crypto.getRandomValues(new Uint8Array(32));
+    const publicKey = await publicKeyOf();
+    const dutch = await sealPortalBundle("p", linkKey, { publicKey, title: "T", keyVersion: 1, lang: "nl" });
+    expect((await openPortalBundle("p", linkKey, dutch))?.lang).toBe("nl");
+
+    const none = await sealPortalBundle("p", linkKey, { publicKey, title: "T", keyVersion: 1 });
+    expect((await openPortalBundle("p", linkKey, none))?.lang).toBeUndefined();
+
+    const odd = await sealPortalBundle("p", linkKey, {
+      publicKey,
+      title: "T",
+      keyVersion: 1,
+      lang: "xx" as "nl",
+    });
+    const opened = await openPortalBundle("p", linkKey, odd);
+    expect(opened?.title).toBe("T");
+    expect(opened?.lang).toBeUndefined();
+  });
+
   it("round-trips a title with non-ASCII characters", async () => {
     const linkKey = crypto.getRandomValues(new Uint8Array(32));
     const bundle = await sealPortalBundle("p", linkKey, {

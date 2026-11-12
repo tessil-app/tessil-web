@@ -26,6 +26,13 @@ export function blockedReason(bytes: Uint8Array): string | null {
   return hit ? `Executable files (${hit.name}) are not allowed` : null;
 }
 
+/** "script" or "executable" for a refused file, null when it is fine. For callers with their own wording. */
+export async function blockedKind(file: Blob): Promise<"script" | "executable" | null> {
+  const head = new Uint8Array(await file.slice(0, LONGEST).arrayBuffer());
+  if (startsWith(head, SHEBANG)) return "script";
+  return BLOCKED_SIGNATURES.some((sig) => startsWith(head, sig.bytes)) ? "executable" : null;
+}
+
 export async function checkFileType(file: Blob): Promise<string | null> {
   const head = new Uint8Array(await file.slice(0, LONGEST).arrayBuffer());
   return blockedReason(head);

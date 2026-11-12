@@ -6,9 +6,10 @@ import { encryptFilename, encryptString } from "$lib/crypto/encrypt";
 import { generateKey } from "$lib/crypto/key";
 import { sealTo } from "$lib/crypto/seal";
 import { encryptFileStream } from "$lib/crypto/streaming";
-import { checkFileType } from "$lib/upload/fileTypeCheck";
+import { blockedKind } from "$lib/upload/fileTypeCheck";
 import { uploadEncryptedStreamMultipart } from "$lib/upload/multipart";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
+import type { Locale } from "$lib/i18n/locale";
 import { depositTokenFor, linkKeyFromFragment, openPortalBundle } from "./keys";
 
 export const DEPOSIT_NOTE_MAX = 200;
@@ -23,6 +24,8 @@ export interface OpenedPortal {
   accepting: boolean;
   /** Most that one deposit may hold, from the owner's plan. */
   maxTotalSize: number;
+  /** The language the owner chose for this page, if any. */
+  lang: Locale | null;
 }
 
 export type OpenPortalResult =
@@ -61,6 +64,7 @@ export async function openPortalFromLink(
       linkKey,
       accepting: res.accepting,
       maxTotalSize: res.maxTotalSize ?? DEFAULT_MAX_TOTAL_SIZE,
+      lang: info.lang ?? null,
     },
   };
 }
@@ -76,33 +80,45 @@ export type FileProgress = (
   percent: number,
 ) => void;
 
+export type DepositErrorCode =
+  | "blocked_script"
+  | "blocked_executable"
+  | "not_accepting"
+  | "portal_full"
+  | "file_too_large"
+  | "transfer_too_large"
+  | "rate_limited"
+  | "gone"
+  | "failed";
+
+/** What went wrong, as a code: the page words it in the visitor's language. */
 export class DepositError extends Error {
   constructor(
-    message: string,
-    /** The file the message is about, when it is about one. */
-    readonly fileIndex: number | null = null,
+    readonly code: DepositErrorCode,
+    /** The file the error is about, when it is about one. */
+    readonly fileName: string | null = null,
   ) {
-    super(message);
+    super(code);
     this.name = "DepositError";
   }
 }
 
-function explain(err: unknown, fileName: string | null): string {
+function codeFor(err: unknown): DepositErrorCode {
   if (err instanceof ApiError) {
     switch (err.code) {
       case "portal_not_accepting":
-        return "This portal is not accepting files right now.";
+        return "not_accepting";
       case "portal_full":
-        return "This portal is full. Let the person you are sending to know.";
+        return "portal_full";
       case "file_too_large":
-        return fileName ? `"${fileName}" is too large for this portal.` : err.message;
+        return "file_too_large";
       case "transfer_too_large":
-        return "These files are too large to send in one go. Try sending fewer at a time.";
+        return "transfer_too_large";
     }
-    if (err.status === 429) return "Too many uploads right now. Try again in a little while.";
-    if (err.status === 404) return "This portal no longer exists.";
+    if (err.status === 429) return "rate_limited";
+    if (err.status === 404) return "gone";
   }
-  return err instanceof Error ? err.message : "The upload failed.";
+  return "failed";
 }
 
 /**
@@ -118,9 +134,11 @@ export async function sendDeposit(
   const { signal, onProgress } = options;
   const aborted = () => new DOMException("aborted", "AbortError");
 
-  for (let i = 0; i < files.length; i++) {
-    const blocked = await checkFileType(files[i]);
-    if (blocked) throw new DepositError(`"${files[i].name}": ${blocked}`, i);
+  for (const file of files) {
+    const blocked = await blockedKind(file);
+    if (blocked) {
+      throw new DepositError(blocked === "script" ? "blocked_script" : "blocked_executable", file.name);
+    }
   }
 
   const key = await generateKey();
@@ -137,7 +155,7 @@ export async function sendDeposit(
     });
     transferId = started.transferId;
   } catch (err) {
-    throw new DepositError(explain(err, null));
+    throw new DepositError(codeFor(err));
   }
 
   try {
@@ -170,7 +188,7 @@ export async function sendDeposit(
       } catch (err) {
         if ((err as DOMException)?.name === "AbortError") throw err;
         onProgress?.(i, "error", 0);
-        throw new DepositError(explain(err, file.name), i);
+        throw new DepositError(codeFor(err), file.name);
       }
     }
 
@@ -182,7 +200,7 @@ export async function sendDeposit(
     try {
       await api.completeTransfer(transferId, { sealedKey: bytesToBase64Url(sealedKey) });
     } catch (err) {
-      throw new DepositError(explain(err, null));
+      throw new DepositError(codeFor(err));
     }
   } catch (err) {
     api.abortTransfer(transferId).catch(() => {});

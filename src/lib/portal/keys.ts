@@ -13,6 +13,7 @@
 
 import { openSealed, sealTo, type RecipientKeypair } from "$lib/crypto/seal";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
+import { LOCALES, type Locale } from "$lib/i18n/locale";
 import { openVaultItem, sealVaultItem } from "$lib/vault/keypair";
 
 const ECDH = { name: "ECDH", namedCurve: "P-256" } as const;
@@ -63,6 +64,8 @@ export interface PortalPublicInfo {
   publicKey: Uint8Array;
   title: string;
   keyVersion: number;
+  /** Language of the deposit page, chosen by the owner. Absent on older portals. */
+  lang?: Locale;
 }
 
 async function bundleKey(linkKey: Uint8Array): Promise<CryptoKey> {
@@ -90,6 +93,7 @@ export async function sealPortalBundle(
     publicKey: bytesToBase64Url(info.publicKey),
     title: info.title,
     keyVersion: info.keyVersion,
+    ...(info.lang ? { lang: info.lang } : {}),
   });
   // Padded with spaces so the stored size does not give away the title's length.
   const raw = encoder.encode(json);
@@ -134,6 +138,7 @@ export async function openPortalBundle(
       publicKey?: unknown;
       title?: unknown;
       keyVersion?: unknown;
+      lang?: unknown;
     };
     if (
       typeof parsed.publicKey !== "string" ||
@@ -145,7 +150,8 @@ export async function openPortalBundle(
     const publicKey = base64UrlToBytes(parsed.publicKey);
     // Refuses anything that is not a point on the curve.
     await crypto.subtle.importKey("raw", buffer(publicKey), ECDH, true, []);
-    return { publicKey, title: parsed.title, keyVersion: parsed.keyVersion };
+    const lang = LOCALES.find((l) => l === parsed.lang);
+    return { publicKey, title: parsed.title, keyVersion: parsed.keyVersion, ...(lang ? { lang } : {}) };
   } catch {
     return null;
   }
@@ -335,7 +341,11 @@ export interface NewPortal {
 }
 
 /** Everything for a new portal, with its owner as the only member. */
-export async function createPortalKeys(title: string, owner: MemberVault): Promise<NewPortal> {
+export async function createPortalKeys(
+  title: string,
+  owner: MemberVault,
+  lang?: Locale,
+): Promise<NewPortal> {
   const id = newPortalId();
   const keyVersion = 1;
   const linkKey = crypto.getRandomValues(new Uint8Array(LINK_KEY_BYTES));
@@ -347,7 +357,7 @@ export async function createPortalKeys(title: string, owner: MemberVault): Promi
   material.set(pkcs8, LINK_KEY_BYTES);
   try {
     const [publicBundle, sealedKeys, depositToken] = await Promise.all([
-      sealPortalBundle(id, linkKey, { publicKey, title, keyVersion }),
+      sealPortalBundle(id, linkKey, { publicKey, title, keyVersion, lang }),
       keep(owner, id, keyVersion, material),
       depositTokenFor(linkKey),
     ]);

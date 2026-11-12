@@ -14,6 +14,8 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import { api, ApiError } from "$lib/api/client";
+  import { DEFAULT_LOCALE, LOCALES, type Locale } from "$lib/i18n/locale";
+  import { depositStrings } from "$lib/i18n/messages";
   import {
     PORTAL_TITLE_MAX,
     createMyPortal,
@@ -34,6 +36,8 @@
 
   let createOpen = $state(false);
   let newTitle = $state("");
+  // The language the owner's clients will read the page in.
+  let newLang = $state<Locale>(DEFAULT_LOCALE);
   let isCreating = $state(false);
   let createError = $state<string | null>(null);
 
@@ -84,6 +88,8 @@
       return;
     }
     newTitle = "";
+    const wanted = (navigator.languages ?? [navigator.language]).map((l) => l.toLowerCase().slice(0, 2));
+    newLang = LOCALES.find((l) => wanted.includes(l)) ?? DEFAULT_LOCALE;
     createError = null;
     createOpen = true;
   }
@@ -94,7 +100,7 @@
     isCreating = true;
     createError = null;
     try {
-      const result = await createMyPortal(auth.user.id, trimmedTitle, window.location.origin);
+      const result = await createMyPortal(auth.user.id, trimmedTitle, window.location.origin, newLang);
       if (!result.ok) {
         createError = "Your vault is locked. Unlock it and try again.";
         return;
@@ -357,6 +363,25 @@
     <p class="text-xs text-muted-foreground">
       The name is encrypted. We can't read it, and neither can anyone without the link.
     </p>
+
+    <fieldset class="space-y-2" disabled={isCreating}>
+      <legend class="text-sm font-medium text-foreground">Language of the page they see</legend>
+      <div class="flex flex-wrap gap-x-5 gap-y-2">
+        {#each LOCALES as option (option)}
+          <label class="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+            <input
+              type="radio"
+              name="portal-language"
+              value={option}
+              bind:group={newLang}
+              class="size-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            />
+            {depositStrings[option].languageName}
+          </label>
+        {/each}
+      </div>
+      <p class="text-xs text-muted-foreground">Visitors can still switch on the page itself.</p>
+    </fieldset>
     {#if createError}
       <Alert tone="destructive">{createError}</Alert>
     {/if}
