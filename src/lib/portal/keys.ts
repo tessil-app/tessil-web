@@ -7,12 +7,13 @@
 //     public bundle (public key + title), so the server can neither read
 //     the title nor hand a depositor a public key of its own.
 //
-// Each member holds the private key and the link key, sealed to their own
-// public key. Everything is bound to the portal's ID, which is why the
-// browser picks the ID before anything is sent.
+// Each member holds the private key and the link key in their own vault.
+// Everything is bound to the portal's ID, which is why the browser picks
+// the ID before anything is sent.
 
 import { openSealed, sealTo, type RecipientKeypair } from "$lib/crypto/seal";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/vault/crypto";
+import { openVaultItem, sealVaultItem } from "$lib/vault/keypair";
 
 const ECDH = { name: "ECDH", namedCurve: "P-256" } as const;
 const LINK_KEY_BYTES = 32;
@@ -133,10 +134,23 @@ export async function openPortalBundle(
 }
 
 // ─── member keys ────────────────────────────────────────────────────────────
+//
+// A member's copy of the portal keys comes in two forms, told apart by the
+// first byte:
+//
+//   kept    encrypted under the member's own vault key. Only the member
+//           can have made it, so it is trusted as is. This is the form
+//           every member ends up with.
+//   handed  sealed by one member to another's public key, authenticated
+//           with the sender's key pair. It exists only between an invite
+//           and the invitee's first unlock, and is trusted exactly as far
+//           as the invitee trusts that the sender's public key is theirs.
+//
+// A copy sealed to a public key with no sender proof is never accepted:
+// the server knows every public key and could seal keys of its own.
 
-function memberContext(portalId: string, userId: string, keyVersion: number): string {
-  return `portal-keys|${portalId}|${userId}|${keyVersion}`;
-}
+const FORM_KEPT = 0x4b;
+const FORM_HANDED = 0x48;
 
 export interface PortalKeys {
   linkKey: Uint8Array;
@@ -144,73 +158,150 @@ export interface PortalKeys {
   privateKey: CryptoKey;
 }
 
-/** Seals a portal's private key and link key for one member. */
-export async function sealPortalKeysFor(
-  memberPublicKey: Uint8Array,
-  portalId: string,
-  memberUserId: string,
-  keyVersion: number,
-  linkKey: Uint8Array,
-  privateKeyPkcs8: Uint8Array,
-): Promise<Uint8Array> {
-  const plaintext = new Uint8Array(LINK_KEY_BYTES + privateKeyPkcs8.byteLength);
-  plaintext.set(linkKey, 0);
-  plaintext.set(privateKeyPkcs8, LINK_KEY_BYTES);
-  try {
-    return await sealTo(memberPublicKey, plaintext, memberContext(portalId, memberUserId, keyVersion));
-  } finally {
-    plaintext.fill(0);
-  }
+/** A member's vault: their ID and K_vault as HKDF input. */
+export interface MemberVault {
+  userId: string;
+  derivationKey: CryptoKey;
 }
 
-/** Null when these keys were not sealed for this member, portal and version. */
-export async function openPortalKeys(
-  member: RecipientKeypair,
+function vaultKind(portalId: string, keyVersion: number): string {
+  return `portal-keys/${portalId}/${keyVersion}`;
+}
+
+function handoverContext(
   portalId: string,
-  memberUserId: string,
   keyVersion: number,
-  sealedKeys: Uint8Array,
-): Promise<PortalKeys | null> {
-  const plaintext = await openSealed(member, sealedKeys, memberContext(portalId, memberUserId, keyVersion));
-  if (!plaintext || plaintext.byteLength <= LINK_KEY_BYTES) return null;
+  fromUserId: string,
+  toUserId: string,
+): string {
+  return `portal-keys|${portalId}|${keyVersion}|${fromUserId}|${toUserId}`;
+}
+
+function withForm(form: number, body: Uint8Array): Uint8Array {
+  const out = new Uint8Array(1 + body.byteLength);
+  out[0] = form;
+  out.set(body, 1);
+  return out;
+}
+
+async function keep(
+  vault: MemberVault,
+  portalId: string,
+  keyVersion: number,
+  material: Uint8Array,
+): Promise<Uint8Array> {
+  const item = await sealVaultItem(
+    vault.derivationKey,
+    vault.userId,
+    vaultKind(portalId, keyVersion),
+    material,
+  );
+  return withForm(FORM_KEPT, item);
+}
+
+/** link key(32) || PKCS#8 private key, or null if this is not the member's kept copy. */
+async function openKept(
+  vault: MemberVault,
+  portalId: string,
+  keyVersion: number,
+  blob: Uint8Array,
+): Promise<Uint8Array | null> {
+  if (blob.byteLength < 2 || blob[0] !== FORM_KEPT) return null;
+  const material = await openVaultItem(
+    vault.derivationKey,
+    vault.userId,
+    vaultKind(portalId, keyVersion),
+    blob.subarray(1),
+  );
+  return material && material.byteLength > LINK_KEY_BYTES ? material : null;
+}
+
+async function importMaterial(material: Uint8Array): Promise<PortalKeys | null> {
   try {
     const privateKey = await crypto.subtle.importKey(
       "pkcs8",
-      buffer(plaintext.subarray(LINK_KEY_BYTES)),
+      buffer(material.subarray(LINK_KEY_BYTES)),
       ECDH,
       false,
       ["deriveBits"],
     );
-    return { linkKey: plaintext.slice(0, LINK_KEY_BYTES), privateKey };
+    return { linkKey: material.slice(0, LINK_KEY_BYTES), privateKey };
   } catch {
     return null;
+  }
+}
+
+/** Opens a member's kept copy. Null for anything else, a handed copy included. */
+export async function openPortalKeys(
+  vault: MemberVault,
+  portalId: string,
+  keyVersion: number,
+  blob: Uint8Array,
+): Promise<PortalKeys | null> {
+  const material = await openKept(vault, portalId, keyVersion, blob);
+  if (!material) return null;
+  try {
+    return await importMaterial(material);
   } finally {
-    plaintext.fill(0);
+    material.fill(0);
   }
 }
 
 /**
- * Re-seals a portal's keys from one member to another, which is how an
- * invite hands them over. The key bytes exist only inside this function.
- * Null when `from` cannot open the keys.
+ * Hands a portal's keys from one member to another, which is how an invite
+ * works. The key bytes exist only inside this function. Null when `from`
+ * does not hold the keys.
  */
-export async function resealPortalKeys(
-  from: { keypair: RecipientKeypair; userId: string },
-  to: { publicKey: Uint8Array; userId: string },
+export async function handPortalKeys(
+  from: MemberVault & { keypair: RecipientKeypair },
+  to: { userId: string; publicKey: Uint8Array },
   portalId: string,
   keyVersion: number,
-  sealedKeys: Uint8Array,
+  keptBlob: Uint8Array,
 ): Promise<Uint8Array | null> {
-  const plaintext = await openSealed(
-    from.keypair,
-    sealedKeys,
-    memberContext(portalId, from.userId, keyVersion),
-  );
-  if (!plaintext) return null;
+  const material = await openKept(from, portalId, keyVersion, keptBlob);
+  if (!material) return null;
   try {
-    return await sealTo(to.publicKey, plaintext, memberContext(portalId, to.userId, keyVersion));
+    const sealed = await sealTo(
+      to.publicKey,
+      material,
+      handoverContext(portalId, keyVersion, from.userId, to.userId),
+      from.keypair,
+    );
+    return withForm(FORM_HANDED, sealed);
   } finally {
-    plaintext.fill(0);
+    material.fill(0);
+  }
+}
+
+/**
+ * Accepts keys handed over by `from`. Opens only if they were sealed by the
+ * holder of `from.publicKey`; whether that key really is the inviter's is
+ * what comparing fingerprints establishes. Returns the keys and the kept
+ * copy to store in place of the handed one, so later unlocks no longer
+ * depend on anyone's public key.
+ */
+export async function acceptPortalKeys(
+  to: MemberVault & { keypair: RecipientKeypair },
+  from: { userId: string; publicKey: Uint8Array },
+  portalId: string,
+  keyVersion: number,
+  handedBlob: Uint8Array,
+): Promise<{ keys: PortalKeys; kept: Uint8Array } | null> {
+  if (handedBlob.byteLength < 2 || handedBlob[0] !== FORM_HANDED) return null;
+  const material = await openSealed(
+    to.keypair,
+    handedBlob.subarray(1),
+    handoverContext(portalId, keyVersion, from.userId, to.userId),
+    from.publicKey,
+  );
+  if (!material || material.byteLength <= LINK_KEY_BYTES) return null;
+  try {
+    const keys = await importMaterial(material);
+    if (!keys) return null;
+    return { keys, kept: await keep(to, portalId, keyVersion, material) };
+  } finally {
+    material.fill(0);
   }
 }
 
@@ -225,25 +316,25 @@ export interface NewPortal {
 }
 
 /** Everything for a new portal, with its owner as the only member. */
-export async function createPortalKeys(
-  title: string,
-  ownerUserId: string,
-  ownerPublicKey: Uint8Array,
-): Promise<NewPortal> {
+export async function createPortalKeys(title: string, owner: MemberVault): Promise<NewPortal> {
   const id = newPortalId();
   const keyVersion = 1;
   const linkKey = crypto.getRandomValues(new Uint8Array(LINK_KEY_BYTES));
   const pair = await crypto.subtle.generateKey(ECDH, true, ["deriveBits"]);
   const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
   const pkcs8 = new Uint8Array(await crypto.subtle.exportKey("pkcs8", pair.privateKey));
+  const material = new Uint8Array(LINK_KEY_BYTES + pkcs8.byteLength);
+  material.set(linkKey, 0);
+  material.set(pkcs8, LINK_KEY_BYTES);
   try {
     const [publicBundle, sealedKeys] = await Promise.all([
       sealPortalBundle(id, linkKey, { publicKey, title, keyVersion }),
-      sealPortalKeysFor(ownerPublicKey, id, ownerUserId, keyVersion, linkKey, pkcs8),
+      keep(owner, id, keyVersion, material),
     ]);
     return { id, linkKey, publicBundle, sealedKeys };
   } finally {
     pkcs8.fill(0);
+    material.fill(0);
   }
 }
 
