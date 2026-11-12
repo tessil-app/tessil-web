@@ -34,6 +34,8 @@
 
   interface Row {
     file: File;
+    /** The requested item this file answers, when the portal asks for specific things. */
+    itemId: string | null;
     status: RowStatus;
     percent: number;
   }
@@ -124,10 +126,38 @@
     }
   });
 
-  function addFiles(files: File[]) {
+  function addFiles(files: File[], itemId: string | null = null) {
     failure = null;
-    rows = [...rows, ...files.map((file) => ({ file, status: "idle" as RowStatus, percent: 0 }))];
+    rows = [
+      ...rows,
+      ...files.map((file) => ({ file, itemId, status: "idle" as RowStatus, percent: 0 })),
+    ];
   }
+
+  // One hidden picker serves every checklist item; this remembers which.
+  let itemInput = $state<HTMLInputElement | null>(null);
+  let pickingFor: string | null = null;
+
+  function pickFor(itemId: string) {
+    pickingFor = itemId;
+    itemInput?.click();
+  }
+
+  function addItemFiles(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    if (input.files && input.files.length > 0) addFiles(Array.from(input.files), pickingFor);
+    input.value = "";
+    pickingFor = null;
+  }
+
+  const checklist = $derived(portal?.checklist ?? []);
+  const providedIds = $derived(new Set(rows.map((r) => r.itemId).filter((id) => id !== null)));
+  const missingItems = $derived(checklist.filter((item) => !providedIds.has(item.id)));
+  const otherRows = $derived(
+    rows
+      .map((row, index) => ({ row, index }))
+      .filter(({ row }) => row.itemId === null || !checklist.some((i) => i.id === row.itemId)),
+  );
 
   function removeRow(index: number) {
     rows = rows.filter((_, i) => i !== index);
@@ -142,7 +172,7 @@
     try {
       const result = await sendDeposit(
         portal,
-        rows.map((r) => r.file),
+        rows.map((r) => ({ file: r.file, itemId: r.itemId })),
         note,
         {
           signal: controller.signal,
@@ -266,10 +296,82 @@
       <Frame.Root>
         <Frame.Panel>
           <div class="space-y-5">
+            {#snippet fileRow(row: Row, index: number)}
+              <FileRow
+                name={row.file.name}
+                size={formatSize(row.file.size)}
+                status={phase === "sending" && row.status === "idle" ? "uploading" : row.status}
+                kind="upload"
+                percent={row.percent}
+                onRemove={phase === "sending" ? undefined : () => removeRow(index)}
+                removeLabel={t.remove(row.file.name)}
+              />
+            {/snippet}
+
+            {#if checklist.length > 0}
+              <!-- The owner asked for specific things: one row each, so the
+                   sender can see what is still missing before sending. -->
+              <input
+                bind:this={itemInput}
+                type="file"
+                multiple
+                class="hidden"
+                onchange={addItemFiles}
+                disabled={phase === "sending"}
+              />
+              <section class="space-y-3" aria-labelledby="checklist-heading">
+                <div class="flex items-baseline justify-between gap-3">
+                  <h2 id="checklist-heading" class="text-sm font-medium text-foreground">
+                    {t.checklistHeading}
+                  </h2>
+                  <span class="text-xs text-muted-foreground">
+                    {t.checklistProgress(checklist.length - missingItems.length, checklist.length)}
+                  </span>
+                </div>
+                <ul class="space-y-2">
+                  {#each checklist as item (item.id)}
+                    {@const itemRows = rows
+                      .map((row, index) => ({ row, index }))
+                      .filter(({ row }) => row.itemId === item.id)}
+                    <li class="rounded-md border border-border p-3 space-y-2">
+                      <!-- Stacked on a phone: a long label and a button do not fit side by side. -->
+                      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                        <span class="flex min-w-0 items-center gap-2 text-sm text-foreground">
+                          <span
+                            class="inline-flex size-5 shrink-0 items-center justify-center rounded-full {itemRows.length >
+                            0
+                              ? 'bg-success/15 text-success-foreground'
+                              : 'border border-border'}"
+                            aria-hidden="true"
+                          >
+                            {#if itemRows.length > 0}<IconCheckRegular class="size-3.5" />{/if}
+                          </span>
+                          <span class="break-words">{item.label}</span>
+                        </span>
+                        <Button
+                          variant="secondary"
+                          fullWidth={false}
+                          class="w-full shrink-0 whitespace-nowrap sm:w-auto"
+                          onclick={() => pickFor(item.id)}
+                          disabled={phase === "sending"}
+                        >
+                          {itemRows.length > 0 ? t.addAnother : t.chooseFile}
+                        </Button>
+                      </div>
+                      {#each itemRows as { row, index } (row.file)}
+                        {@render fileRow(row, index)}
+                      {/each}
+                    </li>
+                  {/each}
+                </ul>
+              </section>
+              <h2 class="text-sm font-medium text-foreground">{t.otherFiles}</h2>
+            {/if}
+
             <DropZone
               onFilesSelect={addFiles}
               disabled={phase === "sending"}
-              compact={rows.length > 0}
+              compact={rows.length > 0 || checklist.length > 0}
               maxTotalSize={portal.maxTotalSize}
               labels={{ prompt: t.dropPrompt, addMore: t.addMore, maxTotal: t.maxTotal }}
             />
@@ -296,22 +398,15 @@
               </Button>
             </div>
 
-            {#if rows.length > 0}
+            {#if otherRows.length > 0}
               <ul class="space-y-2">
-                {#each rows as row, index (row.file)}
-                  <li>
-                    <FileRow
-                      name={row.file.name}
-                      size={formatSize(row.file.size)}
-                      status={phase === "sending" && row.status === "idle" ? "uploading" : row.status}
-                      kind="upload"
-                      percent={row.percent}
-                      onRemove={phase === "sending" ? undefined : () => removeRow(index)}
-                      removeLabel={t.remove(row.file.name)}
-                    />
-                  </li>
+                {#each otherRows as { row, index } (row.file)}
+                  <li>{@render fileRow(row, index)}</li>
                 {/each}
               </ul>
+            {/if}
+
+            {#if rows.length > 0}
               <p class="text-xs text-muted-foreground">
                 {t.filesCount(rows.length, formatSize(totalBytes))}
               </p>
@@ -325,6 +420,12 @@
                 bind:value={note}
                 disabled={phase === "sending"}
               />
+
+              {#if missingItems.length > 0}
+                <p class="text-sm text-muted-foreground">
+                  {t.checklistMissing(missingItems.map((i) => i.label))}
+                </p>
+              {/if}
             {/if}
 
             {#if errorMessage}

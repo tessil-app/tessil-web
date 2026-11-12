@@ -10,7 +10,12 @@ import { blockedKind } from "$lib/upload/fileTypeCheck";
 import { uploadEncryptedStreamMultipart } from "$lib/upload/multipart";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
 import type { Locale } from "$lib/i18n/locale";
-import { depositTokenFor, linkKeyFromFragment, openPortalBundle } from "./keys";
+import {
+  depositTokenFor,
+  linkKeyFromFragment,
+  openPortalBundle,
+  type ChecklistItem,
+} from "./keys";
 
 export const DEPOSIT_NOTE_MAX = 200;
 // Shown until the API reports the owner's real limit.
@@ -26,6 +31,8 @@ export interface OpenedPortal {
   maxTotalSize: number;
   /** The language the owner chose for this page, if any. */
   lang: Locale | null;
+  /** What the owner asks for. Empty: anything goes. */
+  checklist: ChecklistItem[];
 }
 
 export type OpenPortalResult =
@@ -65,8 +72,31 @@ export async function openPortalFromLink(
       accepting: res.accepting,
       maxTotalSize: res.maxTotalSize ?? DEFAULT_MAX_TOTAL_SIZE,
       lang: info.lang ?? null,
+      checklist: info.checklist ?? [],
     },
   };
+}
+
+// A file sent for a checklist item carries the item's ID inside its
+// encrypted name, ahead of a separator that cannot occur in a file name.
+// The server stores the name as ciphertext and learns nothing new.
+const ITEM_SEPARATOR = "\u001f";
+const TAGGED_NAME = /^([a-z0-9]{6})\u001f([\s\S]*)$/;
+
+export function encodeDepositFileName(name: string, itemId: string | null): string {
+  const clean = name.replaceAll(ITEM_SEPARATOR, "");
+  return itemId ? `${itemId}${ITEM_SEPARATOR}${clean}` : clean;
+}
+
+export function decodeDepositFileName(stored: string): { name: string; itemId: string | null } {
+  const match = TAGGED_NAME.exec(stored);
+  return match ? { name: match[2], itemId: match[1] } : { name: stored, itemId: null };
+}
+
+export interface DepositFileInput {
+  file: File;
+  /** The checklist item this file answers, if any. */
+  itemId?: string | null;
 }
 
 /** Ties a deposit's sealed key to its portal and transfer. The owner uses the same string to open it. */
@@ -127,12 +157,13 @@ function codeFor(err: unknown): DepositErrorCode {
  */
 export async function sendDeposit(
   portal: OpenedPortal,
-  files: File[],
+  entries: DepositFileInput[],
   note: string,
   options: { signal?: AbortSignal; onProgress?: FileProgress } = {},
 ): Promise<{ transferId: string; sentAt: Date }> {
   const { signal, onProgress } = options;
   const aborted = () => new DOMException("aborted", "AbortError");
+  const files = entries.map((e) => e.file);
 
   for (const file of files) {
     const blocked = await blockedKind(file);
@@ -163,7 +194,10 @@ export async function sendDeposit(
       if (signal?.aborted) throw aborted();
       const file = files[i];
       try {
-        const { encryptedName, iv } = await encryptFilename(file.name, key);
+        const { encryptedName, iv } = await encryptFilename(
+          encodeDepositFileName(file.name, entries[i].itemId ?? null),
+          key,
+        );
         const encryptor = encryptFileStream(file, key);
         onProgress?.(i, "uploading", 0);
         const init = await api.initMultipartUpload({

@@ -124,6 +124,12 @@ export interface DepositStrings {
   onlyRecipientOne: (title: string) => string;
   onlyRecipientMany: (title: string) => string;
   sendMore: string;
+  checklistHeading: string;
+  chooseFile: string;
+  addAnother: string;
+  otherFiles: string;
+  checklistProgress: (provided: number, total: number) => string;
+  checklistMissing: (labels: string[]) => string;
   reference: string;
   saveConfirmation: string;
   confirmationFilename: (reference: string) => string;
@@ -167,6 +173,13 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     onlyRecipientOne: (title) => `Only ${title} can open it. You can close this page.`,
     onlyRecipientMany: (title) => `Only ${title} can open them. You can close this page.`,
     sendMore: "Send more files",
+    checklistHeading: "What's needed from you",
+    chooseFile: "Choose file",
+    addAnother: "Add another",
+    otherFiles: "Anything else to send along",
+    checklistProgress: (provided, total) => `${provided} of ${total} added`,
+    checklistMissing: (labels) =>
+      `Not added yet: ${labels.join(", ")}. You can send now and the rest later.`,
     reference: "Reference",
     saveConfirmation: "Save confirmation",
     confirmationFilename: (reference) => `tessil-confirmation-${reference}.txt`,
@@ -227,6 +240,13 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     onlyRecipientOne: (title) => `Alleen ${title} kan het openen. Je kunt deze pagina sluiten.`,
     onlyRecipientMany: (title) => `Alleen ${title} kan ze openen. Je kunt deze pagina sluiten.`,
     sendMore: "Meer bestanden versturen",
+    checklistHeading: "Wat er van je nodig is",
+    chooseFile: "Bestand kiezen",
+    addAnother: "Nog een toevoegen",
+    otherFiles: "Nog iets anders meesturen",
+    checklistProgress: (provided, total) => `${provided} van ${total} toegevoegd`,
+    checklistMissing: (labels) =>
+      `Nog niet toegevoegd: ${labels.join(", ")}. Je kunt nu versturen en de rest later.`,
     reference: "Referentie",
     saveConfirmation: "Bevestiging opslaan",
     confirmationFilename: (reference) => `tessil-bevestiging-${reference}.txt`,
