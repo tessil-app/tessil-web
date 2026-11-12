@@ -183,8 +183,14 @@
       align="left"
     >
       {#snippet actions()}
-        {#if maxPortals > 0}
-          <Button fullWidth={false} onclick={openCreate} disabled={!canCreate}>
+        <!-- The empty state has its own button; two would be one too many. -->
+        {#if maxPortals > 0 && portals.length > 0}
+          <Button
+            fullWidth={false}
+            class="whitespace-nowrap"
+            onclick={openCreate}
+            disabled={!canCreate}
+          >
             New portal
           </Button>
         {/if}
