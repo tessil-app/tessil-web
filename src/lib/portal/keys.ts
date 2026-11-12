@@ -12,7 +12,7 @@
 // the ID before anything is sent.
 
 import { openSealed, sealTo, type RecipientKeypair } from "$lib/crypto/seal";
-import { base64UrlToBytes, bytesToBase64Url } from "$lib/vault/crypto";
+import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
 import { openVaultItem, sealVaultItem } from "$lib/vault/keypair";
 
 const ECDH = { name: "ECDH", namedCurve: "P-256" } as const;

@@ -82,6 +82,16 @@ export interface PortalRow {
   createdAt: string;
 }
 
+export interface PortalPublic {
+  id: string;
+  publicBundle: string;
+  keyVersion: number;
+  /** False when the owner switched it off or left the paid plans. */
+  accepting: boolean;
+  /** Most that one deposit may hold. */
+  maxTotalSize?: number;
+}
+
 export interface ListPortalsResponse {
   /** 0 on plans without portals. */
   maxPortals: number;
@@ -379,14 +389,15 @@ class ApiClient {
     });
   }
 
+  // `wrappedKey` keeps the key in the sender's vault; `sealedKey` is a
+  // deposit's key sealed to its portal. A transfer has one or neither.
   async completeTransfer(
     transferId: string,
-    vaultWrap?: { wrappedKey: string },
+    keys?: { wrappedKey?: string; sealedKey?: string },
   ): Promise<{ success: boolean; shareUrl: string }> {
-    const body: { transferId: string; wrappedKey?: string } = { transferId };
-    if (vaultWrap) {
-      body.wrappedKey = vaultWrap.wrappedKey;
-    }
+    const body: { transferId: string; wrappedKey?: string; sealedKey?: string } = { transferId };
+    if (keys?.wrappedKey) body.wrappedKey = keys.wrappedKey;
+    if (keys?.sealedKey) body.sealedKey = keys.sealedKey;
     // The call is idempotent on the server, so a response lost to a
     // dropped connection is retried instead of failing a finished upload.
     const delays = [1000, 3000, 8000];
@@ -631,6 +642,21 @@ class ApiClient {
     return this.request(`/api/portals/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(changes),
+    });
+  }
+
+  /** What a depositor's browser needs. No session involved. */
+  async getPortalPublic(id: string): Promise<PortalPublic> {
+    return this.request(`/api/portals/${encodeURIComponent(id)}/public`);
+  }
+
+  async startDeposit(
+    portalId: string,
+    body: { depositToken: string; encryptedTitle?: string; encryptedTitleIv?: string },
+  ): Promise<{ transferId: string; expiresAt: string; maxFileSize: number; maxTotalSize: number }> {
+    return this.request(`/api/portals/${encodeURIComponent(portalId)}/deposits`, {
+      method: "POST",
+      body: JSON.stringify(body),
     });
   }
 

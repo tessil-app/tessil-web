@@ -3,7 +3,7 @@
 // the server only ever sees opaque blobs.
 
 import { api, type PortalRow } from "$lib/api/client";
-import { base64UrlToBytes, bytesToBase64Url } from "$lib/vault/crypto";
+import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
 import { ensureUserKeypair } from "$lib/vault/client";
 import { readVaultDerivationKey } from "$lib/vault/session";
 import {
