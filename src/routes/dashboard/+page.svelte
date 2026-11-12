@@ -7,6 +7,7 @@
   import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
+  import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
@@ -649,6 +650,16 @@
   onClose={closeUnlockPrompt}
 >
   <form onsubmit={handleUnlock} class="space-y-4" novalidate>
+    <!-- Rows decrypt via the vault-state subscription, as with a password. -->
+    <PasskeyUnlockButton
+      active={promptOpen}
+      disabled={isUnlocking}
+      onUnlocked={() => {
+        promptOpen = false;
+        unlockPassword = "";
+        unlockPhrase = "";
+      }}
+    />
     {#if unlockMode === "password"}
       <PasswordInput
         id="unlock-vault-password"

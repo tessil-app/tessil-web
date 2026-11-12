@@ -16,6 +16,7 @@
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import DropdownMenuItem from "$lib/components/DropdownMenuItem.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -299,6 +300,7 @@
     onClose={closeUnlock}
   >
     <form onsubmit={submitUnlock} class="space-y-4" novalidate>
+      <PasskeyUnlockButton active={unlockOpen} disabled={isUnlockingVault} onUnlocked={closeUnlock} />
       {#if unlockMode === "password"}
         <PasswordInput
           id="nav-unlock-password"

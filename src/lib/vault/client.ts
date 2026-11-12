@@ -1,7 +1,13 @@
 // High-level vault client. Server is blind: all KDF + AES-GCM happens in-browser.
 // Wrap blobs are 60 bytes (iv|ct|tag), base64url over the wire.
 
-import { api, type VaultStatus } from "$lib/api/client";
+import { api, type VaultPasskeyWrap, type VaultStatus } from "$lib/api/client";
+import {
+  evaluatePrf,
+  newPrfSalt,
+  unwrapVaultKeyWithPasskey,
+  wrapVaultKeyForPasskey,
+} from "./passkeyUnlock";
 import {
   KDF_VERSION,
   WRAP_BYTES,
@@ -263,6 +269,101 @@ export async function unlockWithPhrase(
   await rememberVault(userId, kVaultBytes);
   kVaultBytes.fill(0);
   return { ok: true };
+}
+
+// ─── passkey unlock ─────────────────────────────────────────────────────────
+
+/** Passkeys that can unlock this account's vault. Empty when there are none or the vault is not set up. */
+export async function passkeysThatUnlock(force = false): Promise<VaultPasskeyWrap[]> {
+  const status = await getVaultStatus(force);
+  return status.isSetup ? (status.passkeyWraps ?? []) : [];
+}
+
+export type PasskeyUnlockResult =
+  | { ok: true }
+  | { ok: false; reason: "none_enrolled" | "cancelled" | "no_prf" | "unsupported" | "wrong_passkey" };
+
+/** Unlocks with any enrolled passkey on this device. One prompt, no typing. */
+export async function unlockWithPasskey(userId: string): Promise<PasskeyUnlockResult> {
+  const wraps = await passkeysThatUnlock(true);
+  if (wraps.length === 0) return { ok: false, reason: "none_enrolled" };
+
+  const evaluated = await evaluatePrf(wraps);
+  if (!evaluated.ok) return { ok: false, reason: evaluated.reason };
+
+  const used = wraps.find((w) => w.credentialId === evaluated.result.credentialId);
+  const kVaultBytes = used
+    ? await unwrapVaultKeyWithPasskey(
+        evaluated.result.output,
+        userId,
+        used.authenticatorId,
+        base64UrlToBytes(used.wrap),
+      )
+    : null;
+  evaluated.result.output.fill(0);
+  if (!kVaultBytes) return { ok: false, reason: "wrong_passkey" };
+
+  await rememberVault(userId, kVaultBytes);
+  kVaultBytes.fill(0);
+  return { ok: true };
+}
+
+export type EnablePasskeyUnlockResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "not_setup" | "wrong_password" | "malformed" | "cancelled" | "no_prf" | "unsupported";
+    };
+
+/**
+ * Lets one of the user's passkeys unlock the vault. Needs the vault
+ * password once: the raw vault key has to be in hand to wrap it, and an
+ * unlocked session deliberately cannot give it back.
+ */
+export async function enablePasskeyUnlock(
+  userId: string,
+  passkey: { id: string; credentialId: string },
+  password: string,
+): Promise<EnablePasskeyUnlockResult> {
+  const status = await getVaultStatus(true);
+  if (!status.isSetup) return { ok: false, reason: "not_setup" };
+  const wrapPassword = base64UrlToBytes(status.wrapPassword);
+  if (wrapPassword.byteLength !== WRAP_BYTES) return { ok: false, reason: "malformed" };
+
+  const kek = await deriveKekFromPassword(
+    password,
+    base64UrlToBytes(status.saltPassword),
+    status.kdfVersion,
+  );
+  const kVaultBytes = await unwrapSecret(await importKek(kek), wrapPassword);
+  kek.fill(0);
+  if (!kVaultBytes) return { ok: false, reason: "wrong_password" };
+
+  try {
+    const prfSalt = newPrfSalt();
+    const evaluated = await evaluatePrf([
+      { credentialId: passkey.credentialId, prfSalt: bytesToBase64Url(prfSalt) },
+    ]);
+    if (!evaluated.ok) return { ok: false, reason: evaluated.reason };
+
+    const wrap = await wrapVaultKeyForPasskey(evaluated.result.output, userId, passkey.id, kVaultBytes);
+    evaluated.result.output.fill(0);
+    await api.setVaultPasskeyWrap(passkey.id, {
+      prfSalt: bytesToBase64Url(prfSalt),
+      wrap: bytesToBase64Url(wrap),
+    });
+    // The password was right, so this is also an unlock.
+    await rememberVault(userId, kVaultBytes);
+    invalidateStatusCache();
+    return { ok: true };
+  } finally {
+    kVaultBytes.fill(0);
+  }
+}
+
+export async function disablePasskeyUnlock(authenticatorId: string): Promise<void> {
+  await api.deleteVaultPasskeyWrap(authenticatorId);
+  invalidateStatusCache();
 }
 
 // ─── change password / regenerate phrase ────────────────────────────────────

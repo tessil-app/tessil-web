@@ -9,6 +9,7 @@
   import FileRow from "$lib/components/FileRow.svelte";
   import HowItWorks from "$lib/components/HowItWorks.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import SegmentedControl from "$lib/components/SegmentedControl.svelte";
   import Seo from "$lib/components/Seo.svelte";
@@ -1178,6 +1179,11 @@
   <!-- The footer is a snippet of the Modal, so it sits outside the form and
        its submit button points back at the form by id. -->
   <form id="home-unlock-form" onsubmit={submitUnlock} class="space-y-4" novalidate>
+    <PasskeyUnlockButton
+      active={unlockOpen}
+      disabled={isUnlockingVault}
+      onUnlocked={() => closeUnlockModal("unlocked")}
+    />
     {#if unlockMode === "password"}
       <PasswordInput
         id="home-unlock-password"

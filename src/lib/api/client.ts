@@ -198,6 +198,16 @@ export interface PasskeySummary {
   transports: string[];
   createdAt: string;
   lastUsedAt: string | null;
+  /** base64url WebAuthn credential ID. */
+  credentialId: string;
+}
+
+/** A passkey that can unlock the vault. */
+export interface VaultPasskeyWrap {
+  authenticatorId: string;
+  credentialId: string;
+  prfSalt: string;
+  wrap: string;
 }
 
 // Vault wire format: salt* = 16-byte Argon2id salt, wrap* = iv(12)||ct(32)||tag(16), base64url-encoded.
@@ -208,6 +218,8 @@ export type VaultStatus =
       /** ECDH P-256 public key and its vault-sealed private half; null until generated. */
       publicKey: string | null;
       wrappedPrivateKey: string | null;
+      /** Absent from an API that predates passkey unlock. */
+      passkeyWraps?: VaultPasskeyWrap[];
       kdfVersion: number;
       saltPassword: string;
       saltPhrase: string;
@@ -734,6 +746,22 @@ class ApiClient {
     return this.request("/api/me/vault/keypair", {
       method: "POST",
       body: JSON.stringify(body),
+    });
+  }
+
+  async setVaultPasskeyWrap(
+    authenticatorId: string,
+    body: { prfSalt: string; wrap: string },
+  ): Promise<{ ok: true }> {
+    return this.request(`/api/me/vault/passkeys/${encodeURIComponent(authenticatorId)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deleteVaultPasskeyWrap(authenticatorId: string): Promise<{ ok: true }> {
+    return this.request(`/api/me/vault/passkeys/${encodeURIComponent(authenticatorId)}`, {
+      method: "DELETE",
     });
   }
 
