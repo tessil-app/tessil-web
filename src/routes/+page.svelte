@@ -148,7 +148,7 @@
   let unlockPhrase = $state("");
   let unlockError = $state<string | null>(null);
   let isUnlockingVault = $state(false);
-  let pendingResume: ((unlocked: boolean) => void) | null = null;
+  let pendingResume: ((choice: VaultChoice) => void) | null = null;
 
   // Gates the modal out of the prerendered homepage; its copy would
   // otherwise ship in a closed <dialog> on the primary SEO target.
@@ -310,27 +310,34 @@
     return { message: "The upload didn't finish. Please try again." };
   }
 
-  async function ensureVaultUnlocked(): Promise<boolean> {
-    if (!auth.user) return false;
-    if (await isUnlocked(auth.user.id)) return true;
+  // A vault is never required to send. With one, the transfer's key is
+  // kept so the dashboard can show its name and give the link again.
+  //   unlocked   keep the key
+  //   skipped    send anyway, without keeping the key
+  //   cancelled  do not send
+  type VaultChoice = "unlocked" | "skipped" | "cancelled";
+
+  async function askToUnlockVault(): Promise<VaultChoice> {
+    if (!auth.user || auth.needsVaultSetup) return "skipped";
+    if (await isUnlocked(auth.user.id)) return "unlocked";
     unlockMode = "password";
     unlockPassword = "";
     unlockPhrase = "";
     unlockError = null;
     unlockOpen = true;
-    return await new Promise<boolean>((resolve) => {
+    return await new Promise<VaultChoice>((resolve) => {
       pendingResume = resolve;
     });
   }
 
-  function closeUnlockModal() {
+  function closeUnlockModal(choice: VaultChoice = "cancelled") {
     unlockOpen = false;
     unlockError = null;
     unlockPassword = "";
     unlockPhrase = "";
     const resume = pendingResume;
     pendingResume = null;
-    resume?.(false);
+    resume?.(choice);
   }
 
   async function submitUnlock(e: SubmitEvent) {
@@ -359,7 +366,7 @@
       unlockPhrase = "";
       const resume = pendingResume;
       pendingResume = null;
-      resume?.(true);
+      resume?.("unlocked");
     } catch (err) {
       unlockError = err instanceof Error ? err.message : "Couldn't unlock.";
     } finally {
@@ -391,15 +398,12 @@
         }
       }
 
-      if (auth.isAuthenticated && auth.user) {
-        const unlocked = await ensureVaultUnlocked();
-        if (!unlocked) {
-          uploadStore.setError(
-            "Vault stays locked - sign in or unlock to keep this transfer in your dashboard.",
-          );
-          return;
-        }
+      const vaultChoice = await askToUnlockVault();
+      if (vaultChoice === "cancelled") {
+        returnToSettings();
+        return;
       }
+      const keepKey = vaultChoice === "unlocked";
 
       const key = await generateKey();
       const password =
@@ -519,7 +523,7 @@
 
       let vaultWrap: { wrappedKey: string } | undefined;
       lastUploadVaulted = false;
-      if (auth.isAuthenticated && auth.user) {
+      if (keepKey && auth.user) {
         const rawTransferKey = await crypto.subtle.exportKey("raw", key);
         const wrapped = await wrapTransferKey(auth.user.id, rawTransferKey);
         vaultWrap = { wrappedKey: wrapped };
@@ -734,6 +738,8 @@
                 {formatDownloads(uploadStore.maxDownloads)}.
                 {#if lastUploadVaulted}
                   Saved to your dashboard.
+                {:else if auth.isAuthenticated}
+                  Keep this link: without a vault it can't be shown again.
                 {/if}
               </p>
             </div>
@@ -817,15 +823,17 @@
                 </div>
               {:else}
                 {#if auth.isAuthenticated && auth.needsVaultSetup}
-                <Alert tone="warning" title="Set up your vault first">
-                  Signed-in uploads save filenames to your dashboard.
-                  {#snippet action()}
-                    <Button variant="secondary" fullWidth={false} onclick={goToSetup}>
-                      Set up vault
-                    </Button>
-                  {/snippet}
-                </Alert>
-              {/if}
+                  <p class="text-xs text-muted-foreground">
+                    You can send right away. To keep names and links in your dashboard,
+                    <button
+                      type="button"
+                      onclick={goToSetup}
+                      class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+                    >
+                      set up a vault
+                    </button>.
+                  </p>
+                {/if}
 
               {#if isProcessing}
                 <div class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
@@ -950,7 +958,7 @@
                   fullWidth={false}
                   class="flex-1"
                   onclick={handleUpload}
-                  disabled={passwordTooShort || (auth.isAuthenticated && auth.needsVaultSetup)}
+                  disabled={passwordTooShort}
                 >
                   Create share link
                 </Button>
@@ -1163,11 +1171,13 @@
 
 <Modal
   open={unlockOpen}
-  title="Unlock your vault to upload"
-  description="Signed-in transfers are saved to your dashboard. Unlock your vault so we can wrap this transfer for later."
-  onClose={closeUnlockModal}
+  title="Keep this transfer in your dashboard?"
+  description="Unlock your vault and the dashboard can show this transfer's name and give you its link again. Or send without unlocking and keep the link yourself."
+  onClose={() => closeUnlockModal("cancelled")}
 >
-  <form onsubmit={submitUnlock} class="space-y-4" novalidate>
+  <!-- The footer is a snippet of the Modal, so it sits outside the form and
+       its submit button points back at the form by id. -->
+  <form id="home-unlock-form" onsubmit={submitUnlock} class="space-y-4" novalidate>
     {#if unlockMode === "password"}
       <PasswordInput
         id="home-unlock-password"
@@ -1206,26 +1216,27 @@
         : "Have your password? Use it instead."}
     </button>
 
-    {#snippet footer()}
-      <Button
-        type="button"
-        variant="ghost"
-        fullWidth={false}
-        onclick={closeUnlockModal}
-        disabled={isUnlockingVault}
-      >
-        Cancel
-      </Button>
-      <Button type="submit" fullWidth={false} disabled={!canSubmitUnlock}>
-        {#if isUnlockingVault}
-          <Spinner aria-hidden="true" />
-          Unlocking…
-        {:else}
-          Unlock and upload
-        {/if}
-      </Button>
-    {/snippet}
   </form>
+
+  {#snippet footer()}
+    <Button
+      type="button"
+      variant="ghost"
+      fullWidth={false}
+      onclick={() => closeUnlockModal("skipped")}
+      disabled={isUnlockingVault}
+    >
+      Send without unlocking
+    </Button>
+    <Button type="submit" form="home-unlock-form" fullWidth={false} disabled={!canSubmitUnlock}>
+      {#if isUnlockingVault}
+        <Spinner aria-hidden="true" />
+        Unlocking…
+      {:else}
+        Unlock and send
+      {/if}
+    </Button>
+  {/snippet}
 </Modal>
 
 {#if supportMounted}

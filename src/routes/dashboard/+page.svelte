@@ -431,6 +431,20 @@
         <Alert tone="destructive">{errorMessage}</Alert>
       {/if}
 
+      {#if auth.needsVaultSetup}
+        <div
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
+        >
+          <p class="text-sm text-muted-foreground">
+            Without a vault, transfers are listed without their names and their links can't be
+            shown again. A vault keeps both, encrypted so only you can read them.
+          </p>
+          <div class="sm:shrink-0">
+            <Button variant="secondary" fullWidth={false} href="/setup/vault">Set up vault</Button>
+          </div>
+        </div>
+      {/if}
+
       {#if !vaultUnlocked && lockedVaultedCount > 0 && skipped}
         <div
           class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
@@ -503,7 +517,9 @@
                       {#if t.hasPassword}
                         · password-protected
                       {/if}
-                      {#if vs?.status === "locked"}
+                      {#if !isVaulted}
+                        · name not kept
+                      {:else if vs?.status === "locked"}
                         · vault locked
                       {:else if vs?.status === "unlocking"}
                         · decrypting…

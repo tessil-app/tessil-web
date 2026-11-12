@@ -138,11 +138,22 @@ export interface VaultSetupResult {
   recoveryPhrase: string;
 }
 
-/** One-shot setup. Returned phrase MUST be shown to the user exactly once. */
-export async function setupVault(
+export interface PreparedVaultSetup {
+  recoveryPhrase: string;
+  /** Saves the vault. Until this is called nothing exists on the server. */
+  commit: () => Promise<void>;
+}
+
+/**
+ * Builds a new vault in the browser without saving it. The caller shows
+ * the recovery phrase and calls `commit` once the user has it, so a vault
+ * never exists whose phrase nobody saw: leaving before then just means
+ * starting again.
+ */
+export async function prepareVaultSetup(
   userId: string,
   password: string,
-): Promise<VaultSetupResult> {
+): Promise<PreparedVaultSetup> {
   const phrase = generateRecoveryPhrase();
   const kVault = randomKVault();
   const saltPassword = randomSalt();
@@ -156,31 +167,43 @@ export async function setupVault(
     importKek(kekPassword),
     importKek(kekPhrase),
   ]);
-
   const [wrapPassword, wrapPhrase] = await Promise.all([
     wrapSecret(kekPasswordKey, kVault),
     wrapSecret(kekPhraseKey, kVault),
   ]);
-
-  await api.setupVault({
-    kdfVersion: KDF_VERSION,
-    saltPassword: bytesToBase64Url(saltPassword),
-    saltPhrase: bytesToBase64Url(saltPhrase),
-    wrapPassword: bytesToBase64Url(wrapPassword),
-    wrapPhrase: bytesToBase64Url(wrapPhrase),
-  });
-
-  // The cached status still says "not set up"; the keypair step reads it.
-  invalidateStatusCache();
-  await rememberVault(userId, kVault);
-
-  // Zero raw KEK + K_vault bytes; WebCrypto already holds its own copies.
   kekPassword.fill(0);
   kekPhrase.fill(0);
-  kVault.fill(0);
 
-  invalidateStatusCache();
-  return { recoveryPhrase: phrase };
+  let committed = false;
+  return {
+    recoveryPhrase: phrase,
+    commit: async () => {
+      if (committed) return;
+      await api.setupVault({
+        kdfVersion: KDF_VERSION,
+        saltPassword: bytesToBase64Url(saltPassword),
+        saltPhrase: bytesToBase64Url(saltPhrase),
+        wrapPassword: bytesToBase64Url(wrapPassword),
+        wrapPhrase: bytesToBase64Url(wrapPhrase),
+      });
+      committed = true;
+      // The cached status still says "not set up"; the keypair step reads it.
+      invalidateStatusCache();
+      await rememberVault(userId, kVault);
+      kVault.fill(0);
+      invalidateStatusCache();
+    },
+  };
+}
+
+/** Creates and saves a vault in one go. Returned phrase MUST be shown to the user. */
+export async function setupVault(
+  userId: string,
+  password: string,
+): Promise<VaultSetupResult> {
+  const prepared = await prepareVaultSetup(userId, password);
+  await prepared.commit();
+  return { recoveryPhrase: prepared.recoveryPhrase };
 }
 
 // ─── unlock ─────────────────────────────────────────────────────────────────
