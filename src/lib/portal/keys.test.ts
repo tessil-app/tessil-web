@@ -1,32 +1,43 @@
 import { describe, expect, it } from "bun:test";
 import type { RecipientKeypair } from "$lib/crypto/seal";
 import { openSealed, sealTo } from "$lib/crypto/seal";
+import { importVaultDerivationKey } from "$lib/vault/keypair";
 import {
+  acceptPortalKeys,
   createPortalKeys,
+  handPortalKeys,
   linkKeyFromFragment,
   newPortalId,
   openPortalBundle,
   openPortalKeys,
   portalLink,
-  resealPortalKeys,
   sealPortalBundle,
+  type MemberVault,
 } from "./keys";
 
 const ECDH = { name: "ECDH", namedCurve: "P-256" } as const;
 
-async function member(): Promise<RecipientKeypair> {
+type Member = MemberVault & { keypair: RecipientKeypair };
+
+async function member(userId: string): Promise<Member> {
   const pair = await crypto.subtle.generateKey(ECDH, true, ["deriveBits"]);
   const pkcs8 = await crypto.subtle.exportKey("pkcs8", pair.privateKey);
   return {
-    privateKey: await crypto.subtle.importKey("pkcs8", pkcs8, ECDH, false, ["deriveBits"]),
-    publicKey: new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey)),
+    userId,
+    derivationKey: await importVaultDerivationKey(crypto.getRandomValues(new Uint8Array(32))),
+    keypair: {
+      privateKey: await crypto.subtle.importKey("pkcs8", pkcs8, ECDH, false, ["deriveBits"]),
+      publicKey: new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey)),
+    },
   };
 }
 
+const publicOf = (m: Member) => ({ userId: m.userId, publicKey: m.keypair.publicKey });
+
 describe("creating a portal", () => {
   it("gives the owner keys that open what a depositor seals", async () => {
-    const owner = await member();
-    const portal = await createPortalKeys("Jansen Administratie", "owner-1", owner.publicKey);
+    const owner = await member("owner-1");
+    const portal = await createPortalKeys("Jansen Administratie", owner);
     expect(portal.id).toMatch(/^[A-Za-z0-9_-]{21}$/);
 
     // Depositor: has only the link.
@@ -36,8 +47,8 @@ describe("creating a portal", () => {
     const depositKey = crypto.getRandomValues(new Uint8Array(32));
     const sealedDeposit = await sealTo(info!.publicKey, depositKey, "deposit-key|x");
 
-    // Owner: opens their member keys, then the deposit.
-    const keys = await openPortalKeys(owner, portal.id, "owner-1", 1, portal.sealedKeys);
+    // Owner: opens their kept keys, then the deposit.
+    const keys = await openPortalKeys(owner, portal.id, 1, portal.sealedKeys);
     expect(keys?.linkKey).toEqual(portal.linkKey);
     const opened = await openSealed(
       { privateKey: keys!.privateKey, publicKey: info!.publicKey },
@@ -54,7 +65,7 @@ describe("creating a portal", () => {
 });
 
 describe("the public bundle", () => {
-  const publicKeyOf = async () => (await member()).publicKey;
+  const publicKeyOf = async () => (await member("x")).keypair.publicKey;
 
   it("does not open with another link key or for another portal", async () => {
     const linkKey = crypto.getRandomValues(new Uint8Array(32));
@@ -116,59 +127,88 @@ describe("the public bundle", () => {
 });
 
 describe("member keys", () => {
-  it("open only for the member, portal and version they were sealed for", async () => {
-    const owner = await member();
-    const other = await member();
-    const portal = await createPortalKeys("T", "owner-1", owner.publicKey);
+  it("open only for the member, portal and version they were kept for", async () => {
+    const owner = await member("owner-1");
+    const portal = await createPortalKeys("T", owner);
 
-    expect(await openPortalKeys(other, portal.id, "owner-1", 1, portal.sealedKeys)).toBeNull();
-    expect(await openPortalKeys(owner, "another-portal", "owner-1", 1, portal.sealedKeys)).toBeNull();
-    expect(await openPortalKeys(owner, portal.id, "someone-else", 1, portal.sealedKeys)).toBeNull();
-    expect(await openPortalKeys(owner, portal.id, "owner-1", 2, portal.sealedKeys)).toBeNull();
+    expect(await openPortalKeys(await member("owner-1"), portal.id, 1, portal.sealedKeys)).toBeNull();
+    expect(await openPortalKeys(owner, "another-portal", 1, portal.sealedKeys)).toBeNull();
+    expect(await openPortalKeys({ ...owner, userId: "x" }, portal.id, 1, portal.sealedKeys)).toBeNull();
+    expect(await openPortalKeys(owner, portal.id, 2, portal.sealedKeys)).toBeNull();
   });
 
-  it("can be handed to a second member, who then opens deposits too", async () => {
-    const owner = await member();
-    const invited = await member();
-    const portal = await createPortalKeys("T", "owner-1", owner.publicKey);
+  // The server knows the owner's public key. It must not be able to plant
+  // keys of its own in the owner's portal list.
+  it("cannot be planted by someone who only knows the member's public key", async () => {
+    const owner = await member("owner-1");
+    const portal = await createPortalKeys("T", owner);
+
+    const pair = await crypto.subtle.generateKey(ECDH, true, ["deriveBits"]);
+    const forgedMaterial = new Uint8Array([
+      ...crypto.getRandomValues(new Uint8Array(32)),
+      ...new Uint8Array(await crypto.subtle.exportKey("pkcs8", pair.privateKey)),
+    ]);
+    const anonymous = await sealTo(owner.keypair.publicKey, forgedMaterial, "anything");
+    for (const form of [0x4b, 0x48]) {
+      const planted = new Uint8Array([form, ...anonymous]);
+      expect(await openPortalKeys(owner, portal.id, 1, planted)).toBeNull();
+      expect(
+        await acceptPortalKeys(owner, publicOf(await member("someone")), portal.id, 1, planted),
+      ).toBeNull();
+    }
+  });
+});
+
+describe("handing keys to a second member", () => {
+  it("lets the invited member open deposits and keep their own copy", async () => {
+    const owner = await member("owner-1");
+    const invited = await member("member-2");
+    const portal = await createPortalKeys("T", owner);
     const info = await openPortalBundle(portal.id, portal.linkKey, portal.publicBundle);
     const depositKey = crypto.getRandomValues(new Uint8Array(32));
     const sealedDeposit = await sealTo(info!.publicKey, depositKey, "deposit-key|x");
 
-    const forInvited = await resealPortalKeys(
-      { keypair: owner, userId: "owner-1" },
-      { publicKey: invited.publicKey, userId: "member-2" },
-      portal.id,
-      1,
-      portal.sealedKeys,
-    );
-    expect(forInvited).not.toBeNull();
+    const handed = await handPortalKeys(owner, publicOf(invited), portal.id, 1, portal.sealedKeys);
+    expect(handed).not.toBeNull();
+    // A handed copy is not a kept one: it cannot be opened without checking the sender.
+    expect(await openPortalKeys(invited, portal.id, 1, handed!)).toBeNull();
 
-    const keys = await openPortalKeys(invited, portal.id, "member-2", 1, forInvited!);
-    expect(keys?.linkKey).toEqual(portal.linkKey);
+    const accepted = await acceptPortalKeys(invited, publicOf(owner), portal.id, 1, handed!);
+    expect(accepted?.keys.linkKey).toEqual(portal.linkKey);
     const opened = await openSealed(
-      { privateKey: keys!.privateKey, publicKey: info!.publicKey },
+      { privateKey: accepted!.keys.privateKey, publicKey: info!.publicKey },
       sealedDeposit,
       "deposit-key|x",
     );
     expect(opened).toEqual(depositKey);
 
-    // Sealed for member-2 only: the owner's copy does not open as theirs.
-    expect(await openPortalKeys(invited, portal.id, "owner-1", 1, forInvited!)).toBeNull();
+    // From now on the invited member opens their own kept copy.
+    const later = await openPortalKeys(invited, portal.id, 1, accepted!.kept);
+    expect(later?.linkKey).toEqual(portal.linkKey);
   });
 
-  it("cannot be handed over by someone who is not a member", async () => {
-    const owner = await member();
-    const stranger = await member();
-    const portal = await createPortalKeys("T", "owner-1", owner.publicKey);
-    const result = await resealPortalKeys(
-      { keypair: stranger, userId: "owner-1" },
-      { publicKey: stranger.publicKey, userId: "stranger" },
-      portal.id,
-      1,
-      portal.sealedKeys,
-    );
-    expect(result).toBeNull();
+  it("is refused when it did not come from the named sender", async () => {
+    const owner = await member("owner-1");
+    const invited = await member("member-2");
+    const impostor = await member("owner-1");
+    const portal = await createPortalKeys("T", owner);
+    const handed = await handPortalKeys(owner, publicOf(invited), portal.id, 1, portal.sealedKeys);
+
+    expect(await acceptPortalKeys(invited, publicOf(impostor), portal.id, 1, handed!)).toBeNull();
+    // Nor for a different recipient, portal or version.
+    const third = await member("member-3");
+    expect(await acceptPortalKeys(third, publicOf(owner), portal.id, 1, handed!)).toBeNull();
+    expect(await acceptPortalKeys(invited, publicOf(owner), "another-portal", 1, handed!)).toBeNull();
+    expect(await acceptPortalKeys(invited, publicOf(owner), portal.id, 2, handed!)).toBeNull();
+  });
+
+  it("cannot be done by someone who does not hold the keys", async () => {
+    const owner = await member("owner-1");
+    const stranger = await member("stranger");
+    const portal = await createPortalKeys("T", owner);
+    expect(
+      await handPortalKeys(stranger, publicOf(stranger), portal.id, 1, portal.sealedKeys),
+    ).toBeNull();
   });
 });
 

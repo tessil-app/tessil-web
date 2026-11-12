@@ -58,7 +58,7 @@ describe("sealing to a public key", () => {
     expect(await openSealed(me, wire.slice(0, 40), "ctx")).toBeNull();
 
     const future = wire.slice();
-    future[0] = 2;
+    future[0] = 9;
     expect(await openSealed(me, future, "ctx")).toBeNull();
   });
 
@@ -73,6 +73,36 @@ describe("sealing to a public key", () => {
     const offCurve = new Uint8Array(65).fill(1);
     offCurve[0] = 0x04;
     await expect(sealTo(offCurve, secret, "ctx")).rejects.toThrow();
+  });
+});
+
+describe("sealing with a known sender", () => {
+  it("opens only when the named sender sealed it", async () => {
+    const me = await recipient();
+    const sender = await recipient();
+    const impostor = await recipient();
+    const wire = await sealTo(me.publicKey, secret, "ctx", sender);
+    expect(wire[0]).toBe(2);
+
+    expect(await openSealed(me, wire, "ctx", sender.publicKey)).toEqual(secret);
+    expect(await openSealed(me, wire, "ctx", impostor.publicKey)).toBeNull();
+  });
+
+  // The server knows every public key. Without sender authentication it
+  // could seal contents of its own to any user.
+  it("refuses an anonymous seal where a sender is required, and the reverse", async () => {
+    const me = await recipient();
+    const sender = await recipient();
+
+    const anonymous = await sealTo(me.publicKey, secret, "ctx");
+    expect(await openSealed(me, anonymous, "ctx", sender.publicKey)).toBeNull();
+
+    const relabelled = anonymous.slice();
+    relabelled[0] = 2;
+    expect(await openSealed(me, relabelled, "ctx", sender.publicKey)).toBeNull();
+
+    const authenticated = await sealTo(me.publicKey, secret, "ctx", sender);
+    expect(await openSealed(me, authenticated, "ctx")).toBeNull();
   });
 });
 
