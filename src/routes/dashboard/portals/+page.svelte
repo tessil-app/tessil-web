@@ -299,8 +299,13 @@
                 </div>
               {/if}
 
-              {#if portal.role === "owner"}
-                <div class="flex flex-wrap items-center gap-2 pt-1">
+              <div class="flex flex-wrap items-center gap-2 pt-1">
+                {#if portal.state === "open"}
+                  <Button variant="secondary" fullWidth={false} href="/dashboard/portals/{portal.id}">
+                    View files
+                  </Button>
+                {/if}
+                {#if portal.role === "owner"}
                   <Button
                     variant="ghost"
                     fullWidth={false}
@@ -317,8 +322,8 @@
                   >
                     Delete
                   </Button>
-                </div>
-              {/if}
+                {/if}
+              </div>
             </li>
           {/each}
         </ul>
