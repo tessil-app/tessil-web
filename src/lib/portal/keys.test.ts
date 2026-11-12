@@ -5,6 +5,7 @@ import { importVaultDerivationKey } from "$lib/vault/keypair";
 import {
   acceptPortalKeys,
   createPortalKeys,
+  depositTokenFor,
   handPortalKeys,
   linkKeyFromFragment,
   newPortalId,
@@ -56,6 +57,16 @@ describe("creating a portal", () => {
       "deposit-key|x",
     );
     expect(opened).toEqual(depositKey);
+  });
+
+  it("derives a deposit token that is stable and does not expose the link key", async () => {
+    const owner = await member("owner-1");
+    const portal = await createPortalKeys("T", owner);
+    expect(portal.depositToken).toHaveLength(32);
+    expect(await depositTokenFor(portal.linkKey)).toEqual(portal.depositToken);
+    expect(portal.depositToken).not.toEqual(portal.linkKey);
+    // The token must not work as the link key.
+    expect(await openPortalBundle(portal.id, portal.depositToken, portal.publicBundle)).toBeNull();
   });
 
   it("makes distinct IDs", () => {
