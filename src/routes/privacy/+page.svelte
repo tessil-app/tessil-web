@@ -54,7 +54,7 @@
               <li>Encrypted file names (we cannot decrypt this)</li>
               <li>File size, MIME type, and upload timestamp</li>
               <li>Expiration date you selected</li>
-              <li>Download counter and optional password hash (if you set one)</li>
+              <li>Download counter and, if you set a password, a hash of a value derived from it in your browser (never the password itself)</li>
             </ul>
             <p class="text-muted-foreground">
               The encryption key is generated in your browser and lives only in the

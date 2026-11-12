@@ -10,6 +10,12 @@
   import { decryptFilename, decryptString, downloadAndDecrypt } from "$lib/crypto/decrypt";
   import { importKey, isWrappedKey, unwrapKey } from "$lib/crypto/key";
   import {
+    deriveTransferPassword,
+    isProtectedFragment,
+    saltFromFragment,
+    unwrapTransferKey,
+  } from "$lib/crypto/transferPassword";
+  import {
     canStreamToDisk,
     StreamInterruptedError,
     streamingDownloadToDisk,
@@ -97,7 +103,7 @@
       const meta = await api.getTransferMetadata(id);
       transfer = meta;
 
-      if (isWrappedKey(hash)) {
+      if (isWrappedKey(hash) || isProtectedFragment(hash)) {
         pageStatus = "password_required";
         return;
       }
@@ -197,12 +203,32 @@
     isVerifyingPassword = true;
 
     try {
-      const meta = await api.verifyTransferPassword(transferId, password);
+      // The link's own salt wins; a link rebuilt from the dashboard has
+      // none and uses the server's copy. No salt at all means an older
+      // transfer, whose server check still expects the typed password.
+      const protectedFragment =
+        rawFragment && isProtectedFragment(rawFragment) ? rawFragment : null;
+      const salt = protectedFragment
+        ? saltFromFragment(protectedFragment)
+        : (transfer?.passwordSalt ?? null);
+      const derived = salt ? await deriveTransferPassword(password, salt) : null;
+
+      const meta = await api.verifyTransferPassword(
+        transferId,
+        derived ? derived.verifier : password,
+      );
       transfer = meta;
       accessToken = meta.accessToken ?? null;
 
       let cryptoKey: CryptoKey;
-      if (rawFragment && isWrappedKey(rawFragment)) {
+      if (protectedFragment && derived) {
+        try {
+          cryptoKey = await unwrapTransferKey(protectedFragment, derived.wrappingKey);
+        } catch {
+          passwordError = "Incorrect password";
+          return;
+        }
+      } else if (rawFragment && isWrappedKey(rawFragment)) {
         try {
           cryptoKey = await unwrapKey(rawFragment, password);
         } catch {
