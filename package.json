@@ -30,6 +30,8 @@
 		"vite": "^8"
 	},
 	"dependencies": {
+		"@hpke/common": "1.10.1",
+		"@hpke/core": "1.9.0",
 		"@scure/bip39": "^2.2.0",
 		"@simplewebauthn/browser": "^13.3.0",
 		"@zxcvbn-ts/core": "^3.0.4",
