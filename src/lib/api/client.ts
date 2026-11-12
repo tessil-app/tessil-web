@@ -74,11 +74,6 @@ export interface DownloadUrlResponse {
   size: number;
 }
 
-export interface ValidationResponse {
-  valid: boolean;
-  reason?: string;
-}
-
 export interface MeResponse {
   user: {
     id: string;
@@ -298,13 +293,6 @@ class ApiClient {
     return data as T;
   }
 
-  async validateMagicBytes(magicBytes: string): Promise<ValidationResponse> {
-    return this.request("/api/validate", {
-      method: "POST",
-      body: JSON.stringify({ magicBytes }),
-    });
-  }
-
   async createTransfer(
     expiresInHours: number,
     password?: string,
@@ -372,10 +360,21 @@ class ApiClient {
     if (vaultWrap) {
       body.wrappedKey = vaultWrap.wrappedKey;
     }
-    return this.request("/api/upload/complete", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    // The call is idempotent on the server, so a response lost to a
+    // dropped connection is retried instead of failing a finished upload.
+    const delays = [1000, 3000, 8000];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.request("/api/upload/complete", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+      } catch (err) {
+        const dropped = err instanceof Error && err.message.startsWith("Network error");
+        if (!dropped || attempt >= delays.length) throw err;
+        await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+      }
+    }
   }
 
   async abortTransfer(transferId: string): Promise<void> {
