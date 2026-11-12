@@ -48,7 +48,9 @@ function base64UrlToArrayBuffer(base64Url: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// PBKDF2 + AES-KW. Wrapped fragment format: "w.{salt}.{wrappedKey}".
+// Older share links: PBKDF2 + AES-KW, fragment "w.{salt}.{wrappedKey}".
+// Read-only. New links are made by transferPassword.ts ("w2." prefix).
+// Remove once every transfer created before that change has expired.
 const PBKDF2_ITERATIONS = 300_000;
 
 async function deriveWrappingKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
@@ -67,15 +69,6 @@ async function deriveWrappingKey(password: string, salt: Uint8Array): Promise<Cr
     false,
     ['wrapKey', 'unwrapKey']
   );
-}
-
-export async function wrapKey(key: CryptoKey, password: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const wrappingKey = await deriveWrappingKey(password, salt);
-  const wrappedKeyBuffer = await crypto.subtle.wrapKey('raw', key, wrappingKey, 'AES-KW');
-  const saltB64 = arrayBufferToBase64Url(salt.buffer as ArrayBuffer);
-  const wrappedB64 = arrayBufferToBase64Url(wrappedKeyBuffer);
-  return `w.${saltB64}.${wrappedB64}`;
 }
 
 export async function unwrapKey(fragment: string, password: string): Promise<CryptoKey> {

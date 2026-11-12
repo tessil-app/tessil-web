@@ -59,6 +59,8 @@ export interface TransferMetadata {
   id: string;
   expiresAt: string;
   passwordRequired: boolean;
+  /** Salt for deriving the password verifier; null on older transfers. */
+  passwordSalt?: string | null;
   fileCount?: number;
   files?: FileInfo[];
   /** Issued by /transfer/:id/verify; presented as X-Transfer-Token on later /file calls. */
@@ -293,23 +295,27 @@ class ApiClient {
     return data as T;
   }
 
+  // `protection.verifier` is derived from the password in the browser;
+  // the password itself is never sent.
   async createTransfer(
     expiresInHours: number,
-    password?: string,
+    protection?: { verifier: string; salt: string },
     maxDownloads?: number | null,
     encryptedTitle?: { encryptedTitle: string; encryptedTitleIv: string } | null,
   ): Promise<CreateTransferResponse> {
     const body: {
       expiresInHours: number;
       password?: string;
+      passwordSalt?: string;
       maxDownloads?: number;
       encryptedTitle?: string;
       encryptedTitleIv?: string;
     } = {
       expiresInHours,
     };
-    if (password) {
-      body.password = password;
+    if (protection) {
+      body.password = protection.verifier;
+      body.passwordSalt = protection.salt;
     }
     if (maxDownloads != null) {
       body.maxDownloads = maxDownloads;
@@ -388,6 +394,8 @@ class ApiClient {
     return this.request(`/api/download/transfer/${id}`);
   }
 
+  // `password` is the derived verifier, or the typed password for a
+  // transfer old enough to have no salt.
   async verifyTransferPassword(
     id: string,
     password: string

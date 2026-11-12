@@ -47,7 +47,7 @@
               <li>Files, filenames, and the optional transfer title are encrypted in your browser with AES-256-GCM before upload</li>
               <li>The encryption key is generated client-side and lives in the URL fragment (the part after <code>#</code>)</li>
               <li>Browsers don't send URL fragments to servers - the key stays in your browser</li>
-              <li>An optional transfer password gates server-side access, independent of the encryption key</li>
+              <li>An optional transfer password locks the key inside the link and gates server-side access. The password stays in your browser; we receive only a value derived from it, which cannot unlock the link</li>
               <li>Transfers are deleted automatically when they expire</li>
             </ul>
           </section>

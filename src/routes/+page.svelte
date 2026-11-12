@@ -24,7 +24,8 @@
     encryptString,
   } from "$lib/crypto/encrypt";
   import { encryptFileStream } from "$lib/crypto/streaming";
-  import { exportKey, generateKey, wrapKey } from "$lib/crypto/key";
+  import { exportKey, generateKey } from "$lib/crypto/key";
+  import { protectTransferKey } from "$lib/crypto/transferPassword";
   import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
   import type { FileUploadState } from "$lib/stores/upload.types";
@@ -418,17 +419,19 @@
         };
       }
 
+      // With a password the link carries the key wrapped under it, and
+      // the server gets a derived verifier instead of the password.
+      const protectedKey = password ? await protectTransferKey(key, password) : null;
+
       const transfer = await api.createTransfer(
         uploadStore.expiresInHours,
-        password,
+        protectedKey ?? undefined,
         uploadStore.maxDownloads,
         encryptedTitlePayload,
       );
       createdTransferId = transfer.transferId;
 
-      const keyString = password
-        ? await wrapKey(key, password)
-        : await exportKey(key);
+      const keyString = protectedKey ? protectedKey.fragment : await exportKey(key);
 
       uploadStore.setStatus("encrypting");
 
