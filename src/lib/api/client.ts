@@ -160,6 +160,9 @@ export type VaultStatus =
   | { isSetup: false }
   | {
       isSetup: true;
+      /** ECDH P-256 public key and its vault-sealed private half; null until generated. */
+      publicKey: string | null;
+      wrappedPrivateKey: string | null;
       kdfVersion: number;
       saltPassword: string;
       saltPhrase: string;
@@ -596,6 +599,16 @@ class ApiClient {
 
   async setupVault(body: VaultSetupRequest): Promise<{ ok: true }> {
     return this.request("/api/me/vault/setup", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async createVaultKeypair(body: {
+    publicKey: string;
+    wrappedPrivateKey: string;
+  }): Promise<{ ok: true }> {
+    return this.request("/api/me/vault/keypair", {
       method: "POST",
       body: JSON.stringify(body),
     });

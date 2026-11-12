@@ -20,7 +20,16 @@ import {
   wrapSecret,
 } from "./crypto";
 import {
+  USER_PRIVATE_KEY_KIND,
+  generateUserKeypair,
+  importUserPrivateKey,
+  importVaultDerivationKey,
+  openVaultItem,
+  sealVaultItem,
+} from "./keypair";
+import {
   clearVaultKey,
+  readVaultDerivationKey,
   readVaultKey,
   storeVaultKey,
   subscribeToVaultState,
@@ -65,6 +74,64 @@ export async function lock(): Promise<void> {
 
 export { subscribeToVaultState };
 
+// Caches both forms of K_vault, then makes sure the user has a keypair.
+// Every unlock path ends here, while the raw bytes are still in hand.
+async function rememberVault(userId: string, kVaultBytes: Uint8Array): Promise<void> {
+  const [key, derivationKey] = await Promise.all([
+    importKVault(kVaultBytes),
+    importVaultDerivationKey(kVaultBytes),
+  ]);
+  await storeVaultKey(userId, key, derivationKey);
+  try {
+    await ensureUserKeypair(userId);
+  } catch (err) {
+    // The vault is open either way; the next unlock tries again.
+    console.warn("[vault] could not create the user keypair:", err);
+  }
+}
+
+// ─── user keypair ───────────────────────────────────────────────────────────
+
+/** Generates and stores the keypair once. No-op when one exists or the vault is locked. */
+export async function ensureUserKeypair(userId: string): Promise<void> {
+  const status = await getVaultStatus();
+  if (!status.isSetup || status.publicKey) return;
+  const derivationKey = await readVaultDerivationKey(userId);
+  if (!derivationKey) return;
+
+  const pair = await generateUserKeypair();
+  const sealed = await sealVaultItem(derivationKey, userId, USER_PRIVATE_KEY_KIND, pair.privateKey);
+  pair.privateKey.fill(0);
+  try {
+    await api.createVaultKeypair({
+      publicKey: bytesToBase64Url(pair.publicKey),
+      wrappedPrivateKey: bytesToBase64Url(sealed),
+    });
+  } finally {
+    // Also on a 409 from another tab winning the race: re-read what was stored.
+    invalidateStatusCache();
+  }
+}
+
+/** The user's private key, usable for key agreement only. Null when locked or absent. */
+export async function getUserPrivateKey(userId: string): Promise<CryptoKey | null> {
+  const status = await getVaultStatus();
+  if (!status.isSetup || !status.wrappedPrivateKey) return null;
+  const derivationKey = await readVaultDerivationKey(userId);
+  if (!derivationKey) return null;
+
+  const pkcs8 = await openVaultItem(
+    derivationKey,
+    userId,
+    USER_PRIVATE_KEY_KIND,
+    base64UrlToBytes(status.wrappedPrivateKey),
+  );
+  if (!pkcs8) return null;
+  const key = await importUserPrivateKey(pkcs8);
+  pkcs8.fill(0);
+  return key;
+}
+
 // ─── setup (first-time) ─────────────────────────────────────────────────────
 
 export interface VaultSetupResult {
@@ -103,8 +170,9 @@ export async function setupVault(
     wrapPhrase: bytesToBase64Url(wrapPhrase),
   });
 
-  const kVaultKey = await importKVault(kVault);
-  await storeVaultKey(userId, kVaultKey);
+  // The cached status still says "not set up"; the keypair step reads it.
+  invalidateStatusCache();
+  await rememberVault(userId, kVault);
 
   // Zero raw KEK + K_vault bytes; WebCrypto already holds its own copies.
   kekPassword.fill(0);
@@ -140,8 +208,7 @@ export async function unlockWithPassword(
   kek.fill(0);
   if (!kVaultBytes) return { ok: false, reason: "wrong_password" };
 
-  const kVaultKey = await importKVault(kVaultBytes);
-  await storeVaultKey(userId, kVaultKey);
+  await rememberVault(userId, kVaultBytes);
   kVaultBytes.fill(0);
   return { ok: true };
 }
@@ -170,8 +237,7 @@ export async function unlockWithPhrase(
   kek.fill(0);
   if (!kVaultBytes) return { ok: false, reason: "wrong_phrase" };
 
-  const kVaultKey = await importKVault(kVaultBytes);
-  await storeVaultKey(userId, kVaultKey);
+  await rememberVault(userId, kVaultBytes);
   kVaultBytes.fill(0);
   return { ok: true };
 }
@@ -214,8 +280,7 @@ export async function changePassword(
   });
 
   // Stay unlocked across the password change.
-  const kVaultKey = await importKVault(kVaultBytes);
-  await storeVaultKey(userId, kVaultKey);
+  await rememberVault(userId, kVaultBytes);
   kVaultBytes.fill(0);
 
   invalidateStatusCache();
@@ -258,8 +323,7 @@ export async function regeneratePhrase(
   });
 
   // K_vault unchanged; stay unlocked through the regen UI.
-  const kVaultKey = await importKVault(kVaultBytes);
-  await storeVaultKey(userId, kVaultKey);
+  await rememberVault(userId, kVaultBytes);
   kVaultBytes.fill(0);
 
   invalidateStatusCache();

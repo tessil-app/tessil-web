@@ -10,6 +10,8 @@ const TTL_MS = 24 * 60 * 60 * 1000;
 
 interface StoredVaultKey {
   key: CryptoKey;
+  /** K_vault as HKDF input, for vault items. Absent on entries cached before items existed. */
+  derivationKey?: CryptoKey;
   expiresAt: number;
   userId: string;
 }
@@ -66,10 +68,15 @@ export function subscribeToVaultState(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
-/** CryptoKey MUST be non-extractable; TTL is 24h. */
-export async function storeVaultKey(userId: string, key: CryptoKey): Promise<void> {
+/** Both keys MUST be non-extractable; TTL is 24h. */
+export async function storeVaultKey(
+  userId: string,
+  key: CryptoKey,
+  derivationKey: CryptoKey,
+): Promise<void> {
   const entry: StoredVaultKey = {
     key,
+    derivationKey,
     expiresAt: Date.now() + TTL_MS,
     userId,
   };
@@ -78,21 +85,26 @@ export async function storeVaultKey(userId: string, key: CryptoKey): Promise<voi
 }
 
 /** Returns null when missing, expired, or stale (different user). */
-export async function readVaultKey(userId: string): Promise<CryptoKey | null> {
+async function readEntry(userId: string): Promise<StoredVaultKey | null> {
   const entry = await withStore<StoredVaultKey | undefined>(
     "readonly",
     (store) => store.get(KEY_ID),
   );
   if (!entry) return null;
-  if (entry.userId !== userId) {
+  if (entry.userId !== userId || Date.now() >= entry.expiresAt) {
     await clearVaultKey();
     return null;
   }
-  if (Date.now() >= entry.expiresAt) {
-    await clearVaultKey();
-    return null;
-  }
-  return entry.key;
+  return entry;
+}
+
+export async function readVaultKey(userId: string): Promise<CryptoKey | null> {
+  return (await readEntry(userId))?.key ?? null;
+}
+
+/** Null when locked, and for a session unlocked before vault items existed. */
+export async function readVaultDerivationKey(userId: string): Promise<CryptoKey | null> {
+  return (await readEntry(userId))?.derivationKey ?? null;
 }
 
 /** Drop the cached K_vault. Idempotent - safe to call when nothing is stored. */
