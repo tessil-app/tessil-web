@@ -10,7 +10,7 @@
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import { auth } from "$lib/stores/auth.svelte";
-  import { setupVault } from "$lib/vault/client";
+  import { prepareVaultSetup, type PreparedVaultSetup } from "$lib/vault/client";
   import {
     evaluatePassword,
     MIN_PASSWORD_LENGTH,
@@ -41,6 +41,10 @@
   let isSubmittingSetup = $state(false);
 
   let recoveryPhrase = $state<string | null>(null);
+  // Nothing is saved until the user confirms they have the phrase.
+  let prepared: PreparedVaultSetup | null = null;
+  let isFinishing = $state(false);
+  let finishError = $state<string | null>(null);
   let phraseRevealed = $state(false);
   let phraseCopied = $state(false);
   let confirmOpen = $state(false);
@@ -92,9 +96,8 @@
     setupError = null;
     isSubmittingSetup = true;
     try {
-      const { recoveryPhrase: phrase } = await setupVault(auth.user.id, password);
-      recoveryPhrase = phrase;
-      // Defer auth refresh to finishSetup() so the phrase view actually paints before the guard redirects.
+      prepared = await prepareVaultSetup(auth.user.id, password);
+      recoveryPhrase = prepared.recoveryPhrase;
       step = "phrase";
     } catch (err) {
       setupError =
@@ -132,10 +135,21 @@
     URL.revokeObjectURL(url);
   }
 
-  function finishSetup() {
-    confirmOpen = false;
-    auth.markVaultSetupComplete(new Date().toISOString());
-    goto("/dashboard", { replaceState: true });
+  async function finishSetup() {
+    if (!prepared || isFinishing) return;
+    isFinishing = true;
+    finishError = null;
+    try {
+      await prepared.commit();
+      confirmOpen = false;
+      auth.markVaultSetupComplete(new Date().toISOString());
+      goto("/dashboard", { replaceState: true });
+    } catch (err) {
+      finishError =
+        err instanceof Error ? err.message : "Couldn't save the vault. Try again.";
+    } finally {
+      isFinishing = false;
+    }
   }
 
   const words = $derived(recoveryPhrase ? recoveryPhrase.split(" ") : []);
@@ -157,7 +171,7 @@
   <PageHeader
     title={step === "password" ? "Set up your vault" : "Save your recovery phrase"}
     tagline={step === "password"
-      ? "Your vault password unlocks the encryption key that protects everything you upload. Pick something long and memorable - we can't reset it."
+      ? "A vault keeps the names and links of what you send, encrypted so only you can read them. Pick a long password you'll remember: we can't reset it."
       : "Write these 12 words down somewhere safe. They're the only way back in if you forget your password."}
   />
 
@@ -239,6 +253,15 @@
               Continue
             {/if}
           </Button>
+          <p class="text-center text-xs text-muted-foreground">
+            <a
+              href="/dashboard"
+              class="underline underline-offset-2 hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+            >
+              Not now
+            </a>
+            · you can send without a vault and set one up later.
+          </p>
         </form>
       {:else if recoveryPhrase}
         <div class="space-y-5">
@@ -312,7 +335,7 @@
   open={confirmOpen}
   title="Have you saved your recovery phrase?"
   description="We won't show it again. Without it, a forgotten password means losing access to every file in your vault."
-  dismissible={!isSubmittingSetup}
+  dismissible={!isFinishing}
   onClose={() => {
     confirmOpen = false;
     confirmChecked = false;
@@ -330,10 +353,17 @@
     </span>
   </label>
 
+  {#if finishError}
+    <div class="mt-4">
+      <Alert tone="destructive">{finishError}</Alert>
+    </div>
+  {/if}
+
   {#snippet footer()}
     <Button
       variant="ghost"
       fullWidth={false}
+      disabled={isFinishing}
       onclick={() => {
         confirmOpen = false;
         confirmChecked = false;
@@ -341,8 +371,13 @@
     >
       Not yet
     </Button>
-    <Button fullWidth={false} disabled={!confirmChecked} onclick={finishSetup}>
-      Continue to dashboard
+    <Button fullWidth={false} disabled={!confirmChecked || isFinishing} onclick={finishSetup}>
+      {#if isFinishing}
+        <Spinner aria-hidden="true" />
+        Saving…
+      {:else}
+        Continue to dashboard
+      {/if}
     </Button>
   {/snippet}
 </Modal>
