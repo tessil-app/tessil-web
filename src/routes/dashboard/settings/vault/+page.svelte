@@ -1,5 +1,8 @@
 <script lang="ts">
-  // Both operations re-auth against current password; phrase is never accepted here.
+  // Both operations ask for proof again. The password can be set with the
+  // old password, the recovery phrase (a forgotten password) or a passkey
+  // (a vault that has none yet). A new phrase needs the password or a
+  // passkey, not the phrase it replaces.
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import * as Frame from "$lib/components/frame";
@@ -7,10 +10,15 @@
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import { auth } from "$lib/stores/auth.svelte";
+  import VaultProof from "$lib/components/VaultProof.svelte";
   import {
-    changePassword,
     regeneratePhrase,
+    setVaultPassword,
+    vaultHasPassword,
+    type VaultAccess,
   } from "$lib/vault/client";
+  import { vaultFailureMessage } from "$lib/vault/messages";
+  import { onMount } from "svelte";
   import {
     evaluatePassword,
     MIN_PASSWORD_LENGTH,
@@ -26,8 +34,14 @@
 
   // ─── Change password ──────────────────────────────────────────────────────
 
-  let pwCurrent = $state("");
+  let hasPassword = $state(true);
+  let pwProof = $state<VaultAccess | null>(null);
+  let pwProofField = $state<{ reset: () => void } | null>(null);
   let pwNew = $state("");
+
+  onMount(async () => {
+    hasPassword = await vaultHasPassword(true).catch(() => true);
+  });
   let pwConfirm = $state("");
   let pwStrength = $state<PasswordStrength>({
     score: 0,
@@ -62,10 +76,12 @@
   });
 
   const pwMatches = $derived(pwNew.length > 0 && pwNew === pwConfirm);
-  const pwSameAsCurrent = $derived(pwNew.length > 0 && pwNew === pwCurrent);
+  const pwSameAsCurrent = $derived(
+    pwNew.length > 0 && pwProof?.kind === "password" && pwNew === pwProof.password,
+  );
   const canChangePassword = $derived(
     !isChangingPassword &&
-      pwCurrent.length > 0 &&
+      pwProof !== null &&
       pwStrength.acceptable &&
       pwMatches &&
       !pwSameAsCurrent,
@@ -78,18 +94,14 @@
     changePwSuccess = false;
     isChangingPassword = true;
     try {
-      const result = await changePassword(auth.user.id, pwCurrent, pwNew);
+      const result = await setVaultPassword(auth.user.id, pwNew, pwProof!);
       if (!result.ok) {
-        changePwError =
-          result.reason === "wrong_password"
-            ? "Current password is incorrect."
-            : result.reason === "not_setup"
-              ? "Vault isn't set up yet."
-              : "Something went wrong. Try again.";
+        changePwError = vaultFailureMessage(result.reason);
         return;
       }
       changePwSuccess = true;
-      pwCurrent = "";
+      hasPassword = true;
+      pwProofField?.reset();
       pwNew = "";
       pwConfirm = "";
     } catch (err) {
@@ -115,7 +127,8 @@
 
   // ─── Regenerate recovery phrase ───────────────────────────────────────────
 
-  let regenPassword = $state("");
+  let regenProof = $state<VaultAccess | null>(null);
+  let regenProofField = $state<{ reset: () => void } | null>(null);
   let isRegenerating = $state(false);
   let regenError = $state<string | null>(null);
   let regenNewPhrase = $state<string | null>(null);
@@ -125,7 +138,7 @@
   let regenDoneChecked = $state(false);
 
   const canRegenerate = $derived(
-    !isRegenerating && regenPassword.length > 0 && regenNewPhrase === null,
+    !isRegenerating && regenProof !== null && regenNewPhrase === null,
   );
 
   async function handleRegenerate(e: SubmitEvent) {
@@ -134,18 +147,13 @@
     regenError = null;
     isRegenerating = true;
     try {
-      const result = await regeneratePhrase(auth.user.id, regenPassword);
+      const result = await regeneratePhrase(auth.user.id, regenProof!);
       if (!result.ok) {
-        regenError =
-          result.reason === "wrong_password"
-            ? "Current password is incorrect."
-            : result.reason === "not_setup"
-              ? "Vault isn't set up yet."
-              : "Something went wrong. Try again.";
+        regenError = vaultFailureMessage(result.reason);
         return;
       }
       regenNewPhrase = result.recoveryPhrase;
-      regenPassword = "";
+      regenProofField?.reset();
       regenRevealed = false;
     } catch (err) {
       regenError =
@@ -195,21 +203,27 @@
 
 <Frame.Root>
   <Frame.Header>
-    <Frame.Title class="text-base">Change vault password</Frame.Title>
+    <Frame.Title class="text-base">
+      {hasPassword ? "Change vault password" : "Add a vault password"}
+    </Frame.Title>
     <Frame.Description class="mt-1 block">
-      Your old recovery phrase still works after this - it's tied to a
-      different key inside the vault.
+      {#if hasPassword}
+        Your recovery phrase and any passkeys keep working after this. Forgot the
+        password? Use your recovery phrase below to set a new one.
+      {:else}
+        Your vault opens with a passkey and your recovery phrase. A password is
+        optional: it gives you another way in on a device without your passkey.
+      {/if}
     </Frame.Description>
   </Frame.Header>
 
   <Frame.Panel>
     <form onsubmit={handleChangePassword} class="space-y-5" novalidate>
-      <PasswordInput
-        id="vault-current-password"
-        label="Current password"
-        autocomplete="current-password"
-        required
-        bind:value={pwCurrent}
+      <VaultProof
+        bind:this={pwProofField}
+        bind:access={pwProof}
+        idPrefix="vault-current"
+        passwordLabel="Current password"
         disabled={isChangingPassword}
       />
 
@@ -286,7 +300,7 @@
           <Spinner aria-hidden="true" />
           Updating password…
         {:else}
-          Update password
+          {hasPassword ? "Update password" : "Add password"}
         {/if}
       </Button>
     </form>
@@ -305,12 +319,12 @@
   <Frame.Panel>
     {#if regenNewPhrase === null}
       <form onsubmit={handleRegenerate} class="space-y-4" novalidate>
-        <PasswordInput
-          id="regen-current-password"
-          label="Confirm your password"
-          autocomplete="current-password"
-          required
-          bind:value={regenPassword}
+        <VaultProof
+          bind:this={regenProofField}
+          bind:access={regenProof}
+          allow={["password", "passkey"]}
+          idPrefix="regen-current"
+          passwordLabel="Confirm your password"
           disabled={isRegenerating}
         />
         {#if regenError}

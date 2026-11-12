@@ -28,7 +28,9 @@
     unlockWithPassword,
     unlockWithPhrase,
     unwrapTransferKey,
+    vaultHasPassword,
   } from "$lib/vault/client";
+  import { vaultFailureMessage } from "$lib/vault/messages";
   import { onDestroy, onMount } from "svelte";
 
   let transfers = $state<OwnedTransferSummary[]>([]);
@@ -48,6 +50,18 @@
   let promptOpen = $state(false);
   let skipped = $state(false);
   let unlockMode = $state<"password" | "phrase">("password");
+  // A vault can exist without a password. Then the dialog offers the
+  // passkey and the recovery phrase, and no password field.
+  let hasVaultPassword = $state(true);
+  $effect(() => {
+    if (!promptOpen) return;
+    vaultHasPassword()
+      .then((has) => {
+        hasVaultPassword = has;
+        if (!has) unlockMode = "phrase";
+      })
+      .catch(() => {});
+  });
   let unlockPassword = $state("");
   let unlockPhrase = $state("");
   let isUnlocking = $state(false);
@@ -218,7 +232,7 @@
           ? await unlockWithPassword(auth.user.id, unlockPassword)
           : await unlockWithPhrase(auth.user.id, unlockPhrase);
       if (!result.ok) {
-        unlockError = unlockErrorMessage(result.reason);
+        unlockError = vaultFailureMessage(result.reason);
         return;
       }
       // Rows decrypt via the vault-state subscription (single decrypt path).
@@ -232,20 +246,6 @@
     }
   }
 
-  function unlockErrorMessage(
-    reason: "not_setup" | "wrong_password" | "wrong_phrase" | "malformed",
-  ): string {
-    switch (reason) {
-      case "wrong_password":
-        return "That password didn't unlock the vault.";
-      case "wrong_phrase":
-        return "That recovery phrase doesn't match. Check spelling and word order.";
-      case "not_setup":
-        return "Vault isn't set up yet. Finish setup first.";
-      case "malformed":
-        return "We couldn't read your vault. Try again - contact support if this keeps happening.";
-    }
-  }
 
   async function copyRowLink(t: OwnedTransferSummary, e: Event) {
     e.stopPropagation();
@@ -687,6 +687,7 @@
       <Alert tone="destructive">{unlockError}</Alert>
     {/if}
 
+    {#if hasVaultPassword}
     <button
       type="button"
       onclick={() => {
@@ -700,6 +701,7 @@
         ? "Forgot your password? Use your recovery phrase instead."
         : "Have your password? Use it instead."}
     </button>
+    {/if}
 
     {#snippet footerActions()}
       <Button

@@ -95,6 +95,14 @@ async function readEntry(userId: string): Promise<StoredVaultKey | null> {
     await clearVaultKey();
     return null;
   }
+  // A session unlocked by an older version of the app holds only half of
+  // what is needed now. Treat it as locked, so the user is asked to unlock
+  // once and everything works, instead of some pages seeing an open vault
+  // and others a locked one.
+  if (!entry.derivationKey) {
+    await clearVaultKey();
+    return null;
+  }
   return entry;
 }
 

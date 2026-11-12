@@ -212,7 +212,8 @@ export interface VaultPasskeyWrap {
 
 // Vault wire format: salt* = 16-byte Argon2id salt, wrap* = iv(12)||ct(32)||tag(16), base64url-encoded.
 export type VaultStatus =
-  | { isSetup: false }
+  /** `passkeyOnlySetup` is set by an API that can create a vault without a password. */
+  | { isSetup: false; passkeyOnlySetup?: boolean }
   | {
       isSetup: true;
       /** ECDH P-256 public key and its vault-sealed private half; null until generated. */
@@ -221,9 +222,10 @@ export type VaultStatus =
       /** Absent from an API that predates passkey unlock. */
       passkeyWraps?: VaultPasskeyWrap[];
       kdfVersion: number;
-      saltPassword: string;
+      /** Both null for a vault opened by passkey and recovery phrase only. */
+      saltPassword: string | null;
       saltPhrase: string;
-      wrapPassword: string;
+      wrapPassword: string | null;
       wrapPhrase: string;
       passwordChangedAt: string | null;
       phraseRegeneratedAt: string | null;
@@ -231,10 +233,12 @@ export type VaultStatus =
 
 export interface VaultSetupRequest {
   kdfVersion: number;
-  saltPassword: string;
   saltPhrase: string;
-  wrapPassword: string;
   wrapPhrase: string;
+  /** A vault needs a password, a passkey, or both. */
+  saltPassword?: string;
+  wrapPassword?: string;
+  passkey?: { authenticatorId: string; prfSalt: string; wrap: string };
 }
 
 export interface VaultPasswordChangeRequest {

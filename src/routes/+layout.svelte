@@ -9,6 +9,7 @@
     subscribeToVaultState,
     unlockWithPassword,
     unlockWithPhrase,
+    vaultHasPassword,
   } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import { cn } from "$lib/utils";
@@ -34,6 +35,18 @@
 
   let unlockOpen = $state(false);
   let unlockMode = $state<"password" | "phrase">("password");
+  // A vault can exist without a password. Then the dialog offers the
+  // passkey and the recovery phrase, and no password field.
+  let hasVaultPassword = $state(true);
+  $effect(() => {
+    if (!unlockOpen) return;
+    vaultHasPassword()
+      .then((has) => {
+        hasVaultPassword = has;
+        if (!has) unlockMode = "phrase";
+      })
+      .catch(() => {});
+  });
   let unlockPassword = $state("");
   let unlockPhrase = $state("");
   let unlockError = $state<string | null>(null);
@@ -325,6 +338,7 @@
         <Alert tone="destructive">{unlockError}</Alert>
       {/if}
 
+      {#if hasVaultPassword}
       <button
         type="button"
         onclick={() => {
@@ -338,6 +352,7 @@
           ? "Forgot your password? Use your recovery phrase instead."
           : "Have your password? Use it instead."}
       </button>
+      {/if}
     </form>
 
     {#snippet footer()}

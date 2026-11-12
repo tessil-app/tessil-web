@@ -42,6 +42,7 @@
     unlockWithPassword,
     unlockWithPhrase,
     wrapTransferKey,
+    vaultHasPassword,
   } from "$lib/vault/client";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconCopyRegular from "phosphor-icons-svelte/IconCopyRegular.svelte";
@@ -145,6 +146,18 @@
 
   let unlockOpen = $state(false);
   let unlockMode = $state<"password" | "phrase">("password");
+  // A vault can exist without a password. Then the dialog offers the
+  // passkey and the recovery phrase, and no password field.
+  let hasVaultPassword = $state(true);
+  $effect(() => {
+    if (!unlockOpen) return;
+    vaultHasPassword()
+      .then((has) => {
+        hasVaultPassword = has;
+        if (!has) unlockMode = "phrase";
+      })
+      .catch(() => {});
+  });
   let unlockPassword = $state("");
   let unlockPhrase = $state("");
   let unlockError = $state<string | null>(null);
@@ -1208,6 +1221,7 @@
       <Alert tone="destructive">{unlockError}</Alert>
     {/if}
 
+    {#if hasVaultPassword}
     <button
       type="button"
       onclick={() => {
@@ -1221,6 +1235,7 @@
         ? "Forgot your password? Use your recovery phrase instead."
         : "Have your password? Use it instead."}
     </button>
+    {/if}
 
   </form>
 

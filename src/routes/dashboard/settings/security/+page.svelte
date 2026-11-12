@@ -8,7 +8,7 @@
   import * as Frame from "$lib/components/frame";
   import Modal from "$lib/components/Modal.svelte";
   import PasskeyRow from "$lib/components/PasskeyRow.svelte";
-  import PasswordInput from "$lib/components/PasswordInput.svelte";
+  import VaultProof from "$lib/components/VaultProof.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import IconPlusRegular from "phosphor-icons-svelte/IconPlusRegular.svelte";
@@ -23,7 +23,9 @@
     disablePasskeyUnlock,
     enablePasskeyUnlock,
     passkeysThatUnlock,
+    type VaultAccess,
   } from "$lib/vault/client";
+  import { vaultFailureMessage } from "$lib/vault/messages";
   import { onMount } from "svelte";
 
   let passkeySupported = $state(false);
@@ -47,7 +49,7 @@
   let vaultBusyId = $state<string | null>(null);
   let vaultError = $state<string | null>(null);
   let enableFor = $state<PasskeySummary | null>(null);
-  let enablePassword = $state("");
+  let enableProof = $state<VaultAccess | null>(null);
   let isEnabling = $state(false);
   let enableError = $state<string | null>(null);
 
@@ -61,31 +63,24 @@
 
   function askVaultUnlock(p: PasskeySummary) {
     enableFor = p;
-    enablePassword = "";
+    enableProof = null;
     enableError = null;
     vaultError = null;
   }
 
   async function submitEnable(e?: Event) {
     e?.preventDefault();
-    if (!auth.user || !enableFor || isEnabling || enablePassword.length === 0) return;
+    if (!auth.user || !enableFor || isEnabling || !enableProof) return;
     isEnabling = true;
     enableError = null;
     try {
-      const result = await enablePasskeyUnlock(auth.user.id, enableFor, enablePassword);
+      const result = await enablePasskeyUnlock(auth.user.id, enableFor, enableProof);
       if (result.ok) {
         unlocksVault = new Set([...unlocksVault, enableFor.id]);
         enableFor = null;
-        enablePassword = "";
-      } else if (result.reason === "wrong_password") {
-        enableError = "That isn't your vault password.";
-      } else if (result.reason === "no_prf") {
-        enableError =
-          "This sign-in key can't do this. If you added it a while ago, remove it and add it again. Some password managers don't support it at all. Your password still works.";
-      } else if (result.reason === "cancelled") {
-        enableError = "The prompt was dismissed, or this sign-in key isn't on this device.";
+        enableProof = null;
       } else {
-        enableError = "Couldn't set this up. Your password still works.";
+        enableError = vaultFailureMessage(result.reason);
       }
     } catch (err) {
       enableError = err instanceof Error ? err.message : "Couldn't set this up.";
@@ -509,20 +504,15 @@
 <Modal
   open={enableFor !== null}
   title="Unlock your vault with this sign-in key"
-  description="Enter your vault password once. After that, this sign-in key opens your vault with a touch or a glance. Your password and recovery phrase keep working."
+  description="Confirm it's you once. After that, this sign-in key opens your vault with a touch or a glance. Every other way in keeps working."
   onClose={() => {
     if (!isEnabling) enableFor = null;
   }}
 >
   <form id="enable-passkey-unlock" onsubmit={submitEnable} class="space-y-4" novalidate>
-    <PasswordInput
-      id="enable-passkey-password"
-      label="Vault password"
-      autocomplete="current-password"
-      required
-      bind:value={enablePassword}
-      disabled={isEnabling}
-    />
+    {#if enableFor}
+      <VaultProof bind:access={enableProof} idPrefix="enable-passkey" disabled={isEnabling} />
+    {/if}
     {#if enableError}
       <Alert tone="destructive">{enableError}</Alert>
     {/if}
@@ -542,7 +532,7 @@
       type="submit"
       form="enable-passkey-unlock"
       fullWidth={false}
-      disabled={isEnabling || enablePassword.length === 0}
+      disabled={isEnabling || !enableProof}
     >
       {#if isEnabling}
         <Spinner aria-hidden="true" />
