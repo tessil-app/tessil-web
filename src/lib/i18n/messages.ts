@@ -124,6 +124,9 @@ export interface DepositStrings {
   onlyRecipientOne: (title: string) => string;
   onlyRecipientMany: (title: string) => string;
   sendMore: string;
+  reference: string;
+  saveConfirmation: string;
+  confirmationFilename: (reference: string) => string;
   closedTitle: string;
   closedBody: (title: string) => string;
   footnote: (title: string) => string;
@@ -164,6 +167,9 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     onlyRecipientOne: (title) => `Only ${title} can open it. You can close this page.`,
     onlyRecipientMany: (title) => `Only ${title} can open them. You can close this page.`,
     sendMore: "Send more files",
+    reference: "Reference",
+    saveConfirmation: "Save confirmation",
+    confirmationFilename: (reference) => `tessil-confirmation-${reference}.txt`,
     closedTitle: "Not accepting files right now",
     closedBody: (title) =>
       `This portal has been switched off. Let ${title} know, and they can switch it back on.`,
@@ -221,6 +227,9 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     onlyRecipientOne: (title) => `Alleen ${title} kan het openen. Je kunt deze pagina sluiten.`,
     onlyRecipientMany: (title) => `Alleen ${title} kan ze openen. Je kunt deze pagina sluiten.`,
     sendMore: "Meer bestanden versturen",
+    reference: "Referentie",
+    saveConfirmation: "Bevestiging opslaan",
+    confirmationFilename: (reference) => `tessil-bevestiging-${reference}.txt`,
     closedTitle: "Neemt nu geen bestanden aan",
     closedBody: (title) =>
       `Dit portaal is uitgezet. Laat het ${title} weten, dan kan het weer worden aangezet.`,

@@ -10,6 +10,7 @@ import { plaintextSize } from "$lib/crypto/streaming";
 import { readVaultDerivationKey } from "$lib/vault/session";
 import { depositKeyContext } from "./deposit";
 import { openPortalBundle, openPortalKeys, portalLink } from "./keys";
+import { depositReference } from "./receipt";
 
 export interface OpenedMemberPortal {
   id: string;
@@ -70,6 +71,8 @@ export interface DepositFile extends FileInfo {
 
 export interface OpenedDeposit {
   id: string;
+  /** The short code the sender got on their confirmation. */
+  reference: string;
   createdAt: string;
   expiresAt: string;
   /** The depositor's note, if they left one. */
@@ -119,6 +122,7 @@ async function openDeposit(
     }
     return {
       id: row.id,
+      reference: await depositReference(row.id),
       createdAt: row.createdAt,
       expiresAt: row.expiresAt,
       note: note && note.length > 0 ? note : null,

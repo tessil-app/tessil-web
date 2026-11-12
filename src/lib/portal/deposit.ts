@@ -122,15 +122,15 @@ function codeFor(err: unknown): DepositErrorCode {
 }
 
 /**
- * Encrypts and uploads `files` as one deposit. Throws DepositError with a
- * message fit to show, or an AbortError when cancelled.
+ * Encrypts and uploads `files` as one deposit. Throws DepositError, or an
+ * AbortError when cancelled. Returns what a confirmation needs.
  */
 export async function sendDeposit(
   portal: OpenedPortal,
   files: File[],
   note: string,
   options: { signal?: AbortSignal; onProgress?: FileProgress } = {},
-): Promise<void> {
+): Promise<{ transferId: string; sentAt: Date }> {
   const { signal, onProgress } = options;
   const aborted = () => new DOMException("aborted", "AbortError");
 
@@ -202,6 +202,7 @@ export async function sendDeposit(
     } catch (err) {
       throw new DepositError(codeFor(err));
     }
+    return { transferId, sentAt: new Date() };
   } catch (err) {
     api.abortTransfer(transferId).catch(() => {});
     throw err;

@@ -21,6 +21,7 @@
     type OpenedMemberPortal,
   } from "$lib/portal/deposits";
   import { auth } from "$lib/stores/auth.svelte";
+  import { buildReceiptText, saveTextFile } from "$lib/portal/receipt";
   import { formatSize } from "$lib/utils";
   import { subscribeToVaultState } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
@@ -125,6 +126,41 @@
     }
   }
 
+  // One file after another: browsers allow a page to save several files
+  // once the first has been allowed, and each still streams to disk.
+  let downloadingAll = $state<string | null>(null);
+
+  async function downloadAll(deposit: OpenedDeposit) {
+    if (downloadingAll) return;
+    downloadingAll = deposit.id;
+    try {
+      for (const file of deposit.files) {
+        if (fileStates[file.id]?.status === "complete") continue;
+        await download(deposit, file.id);
+        if (fileStates[file.id]?.status === "error") break;
+      }
+    } finally {
+      downloadingAll = null;
+    }
+  }
+
+  function saveRecord(deposit: OpenedDeposit) {
+    if (!portal) return;
+    saveTextFile(
+      `tessil-${deposit.reference}.txt`,
+      buildReceiptText({
+        kind: "received",
+        locale: "en",
+        portalTitle: portal.title,
+        reference: deposit.reference,
+        at: new Date(deposit.createdAt),
+        note: deposit.note,
+        files: deposit.files.map((f) => ({ name: f.name, size: formatSize(f.plainSize) })),
+        deletedOn: new Date(deposit.expiresAt),
+      }),
+    );
+  }
+
   async function confirmDelete() {
     if (!portal || !confirmDeleteId || isDeleting) return;
     isDeleting = true;
@@ -219,7 +255,7 @@
       title={portal.title}
       tagline={portal.isDisabled
         ? "Switched off. Nobody can send files here until you switch it back on."
-        : "Files people sent through this portal."}
+        : "Files people sent through this portal. They are deleted automatically, so download what you need to keep."}
       align="left"
     >
       {#snippet actions()}
@@ -268,15 +304,10 @@
                     {deposit.files.length === 1 ? "file" : "files"} · {formatSize(deposit.totalBytes)}
                     · deleted automatically {daysLeft(deposit.expiresAt)}
                   </p>
+                  <p class="text-xs text-muted-foreground">
+                    Reference <span class="font-mono">{deposit.reference}</span>
+                  </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  fullWidth={false}
-                  class="shrink-0"
-                  onclick={() => (confirmDeleteId = deposit.id)}
-                >
-                  Delete
-                </Button>
               </div>
 
               <ul class="space-y-2">
@@ -296,6 +327,31 @@
                   </li>
                 {/each}
               </ul>
+
+              <div class="flex flex-wrap items-center gap-2 pt-1">
+                <Button
+                  variant="secondary"
+                  fullWidth={false}
+                  onclick={() => downloadAll(deposit)}
+                  disabled={downloadingAll !== null}
+                >
+                  {downloadingAll === deposit.id
+                    ? "Downloading…"
+                    : deposit.files.length > 1
+                      ? `Download all ${deposit.files.length}`
+                      : "Download"}
+                </Button>
+                <Button variant="ghost" fullWidth={false} onclick={() => saveRecord(deposit)}>
+                  Save record
+                </Button>
+                <Button
+                  variant="ghost"
+                  fullWidth={false}
+                  onclick={() => (confirmDeleteId = deposit.id)}
+                >
+                  Delete
+                </Button>
+              </div>
             </li>
           {/each}
         </ul>

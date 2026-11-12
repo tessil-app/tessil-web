@@ -22,6 +22,7 @@
   } from "$lib/portal/deposit";
   import { DEFAULT_LOCALE, HTML_LANG, LOCALES, type Locale } from "$lib/i18n/locale";
   import { depositStrings } from "$lib/i18n/messages";
+  import { buildReceiptText, depositReference, saveTextFile } from "$lib/portal/receipt";
   import { formatSize } from "$lib/utils";
   import IconCameraRegular from "phosphor-icons-svelte/IconCameraRegular.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
@@ -65,6 +66,13 @@
   let rows = $state<Row[]>([]);
   let note = $state("");
   let failure = $state<DepositError | "failed" | null>(null);
+  // What the confirmation needs, kept after the files themselves are cleared.
+  let sent = $state<{
+    reference: string;
+    at: Date;
+    note: string | null;
+    files: { name: string; size: string }[];
+  } | null>(null);
   let cameraInput = $state<HTMLInputElement | null>(null);
   let controller: AbortController | null = null;
 
@@ -132,7 +140,7 @@
     phase = "sending";
     controller = new AbortController();
     try {
-      await sendDeposit(
+      const result = await sendDeposit(
         portal,
         rows.map((r) => r.file),
         note,
@@ -144,6 +152,12 @@
           },
         },
       );
+      sent = {
+        reference: await depositReference(result.transferId),
+        at: result.sentAt,
+        note: note.trim() || null,
+        files: rows.map((row) => ({ name: row.file.name, size: formatSize(row.file.size) })),
+      };
       phase = "done";
     } catch (err) {
       phase = "ready";
@@ -160,7 +174,24 @@
     input.value = "";
   }
 
+  function saveConfirmation() {
+    if (!portal || !sent) return;
+    saveTextFile(
+      t.confirmationFilename(sent.reference),
+      buildReceiptText({
+        kind: "sent",
+        locale,
+        portalTitle: portal.title,
+        reference: sent.reference,
+        at: sent.at,
+        note: sent.note,
+        files: sent.files,
+      }),
+    );
+  }
+
   function sendMore() {
+    sent = null;
     rows = [];
     note = "";
     failure = null;
@@ -208,7 +239,15 @@
             <p class="text-sm text-muted-foreground">
               {sentCount === 1 ? t.onlyRecipientOne(portal.title) : t.onlyRecipientMany(portal.title)}
             </p>
-            <div class="flex justify-center pt-2">
+            {#if sent}
+              <p class="text-sm text-muted-foreground">
+                {t.reference}: <span class="font-mono text-foreground">{sent.reference}</span>
+              </p>
+            {/if}
+            <div class="flex flex-wrap justify-center gap-2 pt-2">
+              {#if sent}
+                <Button fullWidth={false} onclick={saveConfirmation}>{t.saveConfirmation}</Button>
+              {/if}
               <Button variant="secondary" fullWidth={false} onclick={sendMore}>{t.sendMore}</Button>
             </div>
           </div>
