@@ -82,6 +82,23 @@ export interface PortalRow {
   createdAt: string;
 }
 
+export interface DepositRow {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+  /** The deposit's key, sealed to the portal's public key. */
+  sealedKey: string;
+  /** The depositor's optional note, encrypted under the deposit's key. */
+  encryptedTitle: string | null;
+  encryptedTitleIv: string | null;
+  files: FileInfo[];
+}
+
+export interface ListDepositsResponse {
+  deposits: DepositRow[];
+  nextCursor: string | null;
+}
+
 export interface PortalPublic {
   id: string;
   publicBundle: string;
@@ -658,6 +675,30 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(body),
     });
+  }
+
+  async listDeposits(portalId: string, cursor: string | null = null): Promise<ListDepositsResponse> {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    return this.request(`/api/portals/${encodeURIComponent(portalId)}/deposits${qs}`);
+  }
+
+  async getDepositFileUrl(portalId: string, fileId: string): Promise<DownloadUrlResponse> {
+    return this.request(
+      `/api/portals/${encodeURIComponent(portalId)}/deposits/files/${encodeURIComponent(fileId)}/url`,
+    );
+  }
+
+  async deleteDeposit(portalId: string, transferId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/portals/${encodeURIComponent(portalId)}/deposits/${encodeURIComponent(transferId)}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    if (!response.ok) {
+      throw new ApiError(
+        response.status === 404 ? "Not found." : `Request failed: ${response.status}`,
+        response.status,
+      );
+    }
   }
 
   async deletePortal(id: string): Promise<void> {
