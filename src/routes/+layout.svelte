@@ -10,6 +10,7 @@
     unlockWithPassword,
     unlockWithPhrase,
   } from "$lib/vault/client";
+  import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import { cn } from "$lib/utils";
   import Wordmark from "$lib/components/brand/Wordmark.svelte";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
@@ -93,6 +94,13 @@
       active = false;
       unsub();
     };
+  });
+
+  $effect(() => {
+    if (unlockPrompt.requested) {
+      unlockPrompt.requested = false;
+      openUnlock();
+    }
   });
 
   function openUnlock() {
@@ -189,6 +197,16 @@
             >
               Dashboard
             </a>
+            <!-- Only for accounts whose plan includes portals. -->
+            {#if auth.user.tier === "pro" || auth.user.tier === "max"}
+              <a
+                href="/dashboard/portals"
+                aria-current={isActive("/dashboard/portals") ? "page" : undefined}
+                class={cn(navLinkBase, isActive("/dashboard/portals") ? navLinkActive : navLinkInactive)}
+              >
+                Portals
+              </a>
+            {/if}
             <DropdownMenu
               align="end"
               label="Account menu"
@@ -277,7 +295,7 @@
   <Modal
     open={unlockOpen}
     title="Unlock your vault"
-    description="Unlock to decrypt your transfer names on the dashboard."
+    description="Unlock to read your transfer names and your portals."
     onClose={closeUnlock}
   >
     <form onsubmit={submitUnlock} class="space-y-4" novalidate>

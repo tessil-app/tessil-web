@@ -70,6 +70,24 @@ export interface TransferMetadata {
   encryptedTitleIv?: string | null;
 }
 
+export interface PortalRow {
+  id: string;
+  role: "owner" | "member";
+  /** Encrypted under the link key; holds the title and public key. */
+  publicBundle: string;
+  /** This member's copy of the portal's keys. */
+  sealedKeys: string;
+  keyVersion: number;
+  isDisabled: boolean;
+  createdAt: string;
+}
+
+export interface ListPortalsResponse {
+  /** 0 on plans without portals. */
+  maxPortals: number;
+  portals: PortalRow[];
+}
+
 export interface DownloadUrlResponse {
   downloadUrl: string;
   expiresAt: string;
@@ -589,6 +607,44 @@ class ApiClient {
     await this.request<{ ok: true }>(`/api/auth/passkey/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
+  }
+
+  // ── Portals ─────────────────────────────────────────────────────────────
+
+  async listPortals(): Promise<ListPortalsResponse> {
+    return this.request("/api/portals");
+  }
+
+  async createPortal(body: {
+    id: string;
+    publicBundle: string;
+    sealedKeys: string;
+    depositToken: string;
+  }): Promise<{ id: string; createdAt: string }> {
+    return this.request("/api/portals", { method: "POST", body: JSON.stringify(body) });
+  }
+
+  async updatePortal(
+    id: string,
+    changes: { isDisabled?: boolean; publicBundle?: string },
+  ): Promise<{ ok: true }> {
+    return this.request(`/api/portals/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(changes),
+    });
+  }
+
+  async deletePortal(id: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/portals/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      throw new ApiError(
+        response.status === 404 ? "Portal not found." : `Request failed: ${response.status}`,
+        response.status,
+      );
+    }
   }
 
   // ── Vault ───────────────────────────────────────────────────────────────

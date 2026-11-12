@@ -21,6 +21,7 @@ const IV_BYTES = 12;
 const BUNDLE_VERSION = 1;
 const BUNDLE_CONTEXT = "tessil/portal-bundle/v1";
 const BUNDLE_PAD = 128;
+const TOKEN_CONTEXT = "tessil/portal-deposit-token/v1";
 const ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
 
 export const PORTAL_TITLE_MAX = 80;
@@ -36,6 +37,23 @@ function buffer(bytes: Uint8Array): ArrayBuffer {
 export function newPortalId(): string {
   // 64 symbols, so masking six bits is unbiased.
   return Array.from(crypto.getRandomValues(new Uint8Array(21)), (b) => ID_ALPHABET[b & 63]).join("");
+}
+
+// ─── deposit token ──────────────────────────────────────────────────────────
+
+/**
+ * Shown to the server when depositing, to prove the caller holds the link
+ * and not just the portal's ID. Derived one-way from the link key, so the
+ * server learning it does not reveal the key.
+ */
+export async function depositTokenFor(linkKey: Uint8Array): Promise<Uint8Array> {
+  const master = await crypto.subtle.importKey("raw", buffer(linkKey), "HKDF", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: encoder.encode(TOKEN_CONTEXT) },
+    master,
+    256,
+  );
+  return new Uint8Array(bits);
 }
 
 // ─── public bundle ──────────────────────────────────────────────────────────
@@ -310,9 +328,10 @@ export async function acceptPortalKeys(
 export interface NewPortal {
   id: string;
   linkKey: Uint8Array;
-  /** Send these two to the server. */
+  /** Send these three to the server. */
   publicBundle: Uint8Array;
   sealedKeys: Uint8Array;
+  depositToken: Uint8Array;
 }
 
 /** Everything for a new portal, with its owner as the only member. */
@@ -327,11 +346,12 @@ export async function createPortalKeys(title: string, owner: MemberVault): Promi
   material.set(linkKey, 0);
   material.set(pkcs8, LINK_KEY_BYTES);
   try {
-    const [publicBundle, sealedKeys] = await Promise.all([
+    const [publicBundle, sealedKeys, depositToken] = await Promise.all([
       sealPortalBundle(id, linkKey, { publicKey, title, keyVersion }),
       keep(owner, id, keyVersion, material),
+      depositTokenFor(linkKey),
     ]);
-    return { id, linkKey, publicBundle, sealedKeys };
+    return { id, linkKey, publicBundle, sealedKeys, depositToken };
   } finally {
     pkcs8.fill(0);
     material.fill(0);
