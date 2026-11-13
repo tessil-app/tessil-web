@@ -104,11 +104,15 @@
     { href: "/security", label: "Security" },
   ];
 
+  // Header links are plain text; the current page is the darker one.
   const navLinkBase =
-    "px-3 py-2 rounded-md focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-  const navLinkInactive =
-    "text-muted-foreground hover:text-foreground hover:bg-accent";
-  const navLinkActive = "bg-accent text-foreground";
+    "px-3 py-2 rounded-md transition-colors duration-150 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  const navLinkInactive = "text-muted-foreground hover:text-foreground";
+  const navLinkActive = "text-foreground font-medium";
+
+  // A page with a dark top gets a dark header, or the light glass bar
+  // sits on it like a strip of paper.
+  const isDarkTop = $derived($page.url.pathname === "/portals");
 
   function isActive(path: string, exact = false) {
     const current = $page.url.pathname;
@@ -222,7 +226,15 @@
   Skip to main content
 </a>
 <div class="min-h-screen bg-background text-foreground">
-  <header class="sticky top-0 z-40 border-b border-border/40 bg-background/40 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/30">
+  <header
+    class={cn(
+      "sticky top-0 z-40 border-b",
+      // Solid, matching the page's own black: glass over it turns grey.
+      isDarkTop
+        ? "dark border-white/10 bg-[#07080d]"
+        : "border-border/40 bg-background/40 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/30",
+    )}
+  >
     <div
       class={cn(
         "mx-auto py-3 flex items-center justify-between gap-4",

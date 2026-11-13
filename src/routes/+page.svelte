@@ -736,7 +736,7 @@
   ondragleave={handlePageDragLeave}
   ondrop={handlePageDrop}
   class={cn(
-    "relative min-h-screen -mt-14 overflow-hidden transition-colors duration-200 ease-out",
+    "relative -mt-14 overflow-hidden transition-colors duration-200 ease-out",
     isDraggingOver && "bg-primary/5",
   )}
 >
@@ -747,8 +747,15 @@
     ></div>
   {/if}
 
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-12 sm:pb-16">
-    <div class="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+  <!-- Empty, the whole hero is one screen: words, wall and label, no scrolling.
+       With files queued the panel is taller and the page may grow. -->
+  <div
+    class={cn(
+      "relative max-w-7xl mx-auto px-4 sm:px-6 pt-[4.5rem] sm:pt-20 pb-3 flex flex-col min-h-[100svh]",
+      !hasFiles && !isSuccess && "sm:h-[100svh] sm:min-h-[38rem]",
+    )}
+  >
+    <div class="mx-auto flex max-w-2xl shrink-0 flex-col items-center gap-2.5 sm:gap-3 text-center">
         {#if PORTALS_ANNOUNCED}
           <a
             href="/portals"
@@ -770,23 +777,26 @@
             </button>
           </div>
         {/if}
-        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-tight text-foreground leading-none" style="letter-spacing: -0.035em">
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground leading-none" style="letter-spacing: -0.035em">
           Send anything.
           <br />
           We see nothing.
         </h1>
-        <p class="max-w-lg text-base sm:text-lg text-muted-foreground leading-relaxed">
+        <p class="max-w-lg text-base text-muted-foreground leading-snug">
           End-to-end encrypted in your browser. The key never
           reaches our server.
         </p>
-        <p class="text-sm text-muted-foreground/80 leading-relaxed">
+        <p class="hidden sm:block text-sm text-muted-foreground/80">
           Drop a file in the panel - or anywhere on this page.
         </p>
     </div>
 
     <!-- The wall: this month's artwork, with the panel hung on it. -->
     <div
-      class="relative mt-10 sm:mt-14 flex flex-wrap items-start justify-between gap-6 rounded-2xl bg-muted bg-cover bg-center p-3 pb-44 sm:p-8 lg:p-10 sm:min-h-[41.25rem]"
+      class={cn(
+        "relative mt-5 sm:mt-6 flex flex-1 flex-wrap items-start justify-between gap-4 sm:gap-6 rounded-2xl bg-muted bg-cover bg-center p-3 sm:p-6 lg:p-8",
+        (hasFiles || isSuccess) && "sm:min-h-[39rem]",
+      )}
       style={featured ? `background-image: url('${featured.src}')` : undefined}
     >
 
@@ -794,7 +804,7 @@
       <aside
         class={cn(
           "relative w-full sm:w-auto sm:flex sm:items-stretch",
-          isSuccess ? "sm:h-auto" : hasFiles ? "sm:h-[580px]" : "sm:h-[420px]",
+          isSuccess ? "sm:h-auto" : hasFiles ? "sm:h-[580px]" : "panel-empty",
         )}
         style="transition: height 450ms cubic-bezier(0.16, 1, 0.3, 1);"
       >
@@ -1121,7 +1131,7 @@
     </div>
 
     {#if featured}
-      <div class="mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1 px-1 text-xs text-muted-foreground">
+      <div class="mt-2 flex shrink-0 flex-wrap justify-between gap-x-6 gap-y-0.5 px-1 text-xs text-muted-foreground">
         <p>
           <span class="font-medium text-foreground">{featured.artist}</span>, from
           {#if featured.artistUrl}
@@ -1429,5 +1439,13 @@
 
   :global(.ease-liquid) {
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* The empty panel takes what the screen leaves after the words and the
+     label, up to its full size, so the hero fits without scrolling. */
+  @media (min-width: 640px) {
+    .panel-empty {
+      height: min(420px, max(240px, 100svh - 29.5rem));
+    }
   }
 </style>
