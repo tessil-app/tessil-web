@@ -339,27 +339,39 @@ export async function uploadEncryptedStreamMultipart(
   // Sequential reader over the ciphertext stream. Only this loop reads, so the
   // single reader is never touched concurrently; uploads run in parallel.
   const reader = source.getReader();
-  let leftover: Uint8Array<ArrayBuffer> = new Uint8Array(0);
+  // Chunks read but not yet handed to a Part. They are passed to the Blob
+  // as they are, so a Part is assembled with one copy instead of several.
+  const pending: Uint8Array[] = [];
+  let pendingBytes = 0;
   let streamDone = false;
-  async function readExact(n: number): Promise<Uint8Array<ArrayBuffer>> {
-    while (leftover.length < n && !streamDone) {
+  async function readPart(n: number): Promise<Blob> {
+    while (pendingBytes < n && !streamDone) {
       const { done, value } = await reader.read();
       if (done) {
         streamDone = true;
         break;
       }
       if (value && value.length) {
-        const merged = new Uint8Array(leftover.length + value.length);
-        merged.set(leftover, 0);
-        merged.set(value, leftover.length);
-        leftover = merged;
+        pending.push(value);
+        pendingBytes += value.length;
       }
     }
-    const take = Math.min(n, leftover.length);
-    const out = new Uint8Array(take);
-    out.set(leftover.subarray(0, take));
-    leftover = leftover.slice(take);
-    return out;
+    const pieces: Uint8Array[] = [];
+    let need = Math.min(n, pendingBytes);
+    pendingBytes -= need;
+    while (need > 0) {
+      const head = pending[0]!;
+      if (head.length <= need) {
+        pieces.push(head);
+        pending.shift();
+        need -= head.length;
+      } else {
+        pieces.push(head.subarray(0, need));
+        pending[0] = head.subarray(need);
+        need = 0;
+      }
+    }
+    return new Blob(pieces as BlobPart[]);
   }
 
   const results: CompleteMultipartUploadPart[] = new Array(partUrls.length);
@@ -372,15 +384,15 @@ export async function uploadEncryptedStreamMultipart(
       if (controller.signal.aborted) throw new DOMException("aborted", "AbortError");
 
       const p = partUrls[i]!;
-      const bytes = await readExact(p.contentLength);
-      if (bytes.length !== p.contentLength) {
+      const body = await readPart(p.contentLength);
+      if (body.size !== p.contentLength) {
         throw new Error("Ciphertext stream ended before all Parts were filled");
       }
       const task: PartTask = {
         partNumber: p.partNumber,
         url: p.url,
         contentLength: p.contentLength,
-        body: new Blob([bytes]),
+        body,
       };
       const idx = i;
 

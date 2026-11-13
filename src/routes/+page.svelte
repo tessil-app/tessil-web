@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { api, ApiError } from "$lib/api/client";
   import { checkFileType } from "$lib/upload/fileTypeCheck";
+  import { holdWhileUploading } from "$lib/upload/keepAwake";
   import { uploadEncryptedStreamMultipart } from "$lib/upload/multipart";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -581,6 +582,12 @@
       uploadStore.status === "encrypting" ||
       uploadStore.status === "uploading",
   );
+
+  // A locked phone or a closed tab ends the upload; prevent the first, ask before the second.
+  $effect(() => {
+    if (!isProcessing) return;
+    return holdWhileUploading();
+  });
 
   const totalSize = $derived(
     uploadStore.files.reduce((sum, f) => sum + f.file.size, 0),

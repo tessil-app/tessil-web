@@ -20,7 +20,7 @@ class FakeXhr {
   abort() {
     queueMicrotask(() => this.onabort?.());
   }
-  send() {
+  send(_body?: Blob) {
     puts += 1;
     const outcome = script.shift() ?? "ok";
     queueMicrotask(() => {
@@ -98,6 +98,40 @@ beforeEach(() => {
 
 afterEach(() => {
   Object.assign(timing, original);
+});
+
+describe("cutting the stream into parts", () => {
+  it("keeps every byte in order when chunks and parts do not line up", async () => {
+    const sent: Uint8Array[] = [];
+    class Capturing extends FakeXhr {
+      send(body?: Blob) {
+        void body!.arrayBuffer().then((b) => sent.push(new Uint8Array(b)));
+        super.send();
+      }
+    }
+    (globalThis as unknown as { XMLHttpRequest: unknown }).XMLHttpRequest = Capturing;
+
+    const all = Uint8Array.from({ length: 30 }, (_, i) => i);
+    const chunks = [all.slice(0, 7), all.slice(7, 8), all.slice(8, 23), all.slice(23, 30)];
+    await uploadEncryptedStreamMultipart({
+      uploadId: "u",
+      fileId: "f",
+      transferId: "t",
+      r2Key: "k",
+      source: new ReadableStream({
+        start(c) {
+          for (const chunk of chunks) c.enqueue(chunk);
+          c.close();
+        },
+      }),
+      partUrls: [1, 2, 3].map((n) => ({ partNumber: n, url: `http://s/${n}`, contentLength: 10 })),
+    });
+    await new Promise((r) => setTimeout(r, 5));
+
+    const joined = sent.sort((a, b) => a[0]! - b[0]!).flatMap((p) => Array.from(p));
+    expect(sent.map((p) => p.length)).toEqual([10, 10, 10]);
+    expect(joined).toEqual(Array.from(all));
+  });
 });
 
 describe("an upload on a bad connection", () => {

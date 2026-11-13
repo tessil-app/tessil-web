@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { holdWhileUploading } from "$lib/upload/keepAwake";
   // A portal's deposit page: what someone sees when they open a portal
   // link. No account. Files are encrypted here, to the portal's public
   // key, before anything is uploaded.
@@ -70,6 +71,12 @@
   let rows = $state<Row[]>([]);
   let note = $state("");
   let stalled = $state(false);
+
+  // A locked phone or a closed tab ends the upload; prevent the first, ask before the second.
+  $effect(() => {
+    if (phase !== "sending") return;
+    return holdWhileUploading();
+  });
   let failure = $state<DepositError | "failed" | null>(null);
   // What the confirmation needs, kept after the files themselves are cleared.
   let sent = $state<{
