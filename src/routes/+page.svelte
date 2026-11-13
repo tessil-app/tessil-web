@@ -217,8 +217,10 @@
   // transfer, never on top of the share link the user came to copy.
   onMount(() => {
     supportMounted = true;
-    supportOpen = shouldAutoOpenPrompt();
-    supportPillVisible = hasDismissedPrompt();
+    // Asking for support and offering paid plans at once sends two
+    // messages. Once the plans are announced, the ask moves to the footer.
+    supportOpen = !PORTALS_ANNOUNCED && shouldAutoOpenPrompt();
+    supportPillVisible = !PORTALS_ANNOUNCED && hasDismissedPrompt();
   });
 
   // Dismissing and clicking through both mean "do not ask again"; the pill
@@ -747,6 +749,15 @@
 
   <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-12 sm:pb-16">
     <div class="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+        {#if PORTALS_ANNOUNCED}
+          <a
+            href="#portals"
+            class="inline-flex items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3.5 text-sm text-foreground transition-colors duration-200 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <span class="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">New</span>
+            Now you can receive files too
+          </a>
+        {/if}
         {#if supportPillVisible}
           <div class="flex justify-center">
             <button

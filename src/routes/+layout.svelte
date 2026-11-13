@@ -25,6 +25,10 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import Alert from "$lib/components/Alert.svelte";
   import IconGearRegular from "phosphor-icons-svelte/IconGearRegular.svelte";
+  import IconListRegular from "phosphor-icons-svelte/IconListRegular.svelte";
+  import IconTrayRegular from "phosphor-icons-svelte/IconTrayRegular.svelte";
+  import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
   import IconLockOpenRegular from "phosphor-icons-svelte/IconLockOpenRegular.svelte";
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
@@ -86,6 +90,19 @@
       setMode("light");
     }
   });
+
+  // For plans that include portals, and accounts someone shared one with.
+  const showPortals = $derived(
+    auth.user?.tier === "pro" || auth.user?.tier === "max" || hasSharedPortals,
+  );
+
+  // Signed-out visitors get the pages that help them decide. Signed-in
+  // people get their own pages instead; these stay in the footer for them.
+  const publicLinks = [
+    ...(PORTALS_ANNOUNCED ? [{ href: "/#portals", label: "Portals" }] : []),
+    { href: "/pricing", label: "Pricing" },
+    { href: "/security", label: "Security" },
+  ];
 
   const navLinkBase =
     "px-3 py-2 rounded-md focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
@@ -226,16 +243,15 @@
             <a
               href="/dashboard"
               aria-current={isActive("/dashboard", true) ? "page" : undefined}
-              class={cn(navLinkBase, isActive("/dashboard", true) ? navLinkActive : navLinkInactive)}
+              class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard", true) ? navLinkActive : navLinkInactive)}
             >
               Dashboard
             </a>
-            <!-- For plans that include portals, and accounts someone shared one with. -->
-            {#if auth.user.tier === "pro" || auth.user.tier === "max" || hasSharedPortals}
+            {#if showPortals}
               <a
                 href="/dashboard/portals"
                 aria-current={isActive("/dashboard/portals") ? "page" : undefined}
-                class={cn(navLinkBase, isActive("/dashboard/portals") ? navLinkActive : navLinkInactive)}
+                class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard/portals") ? navLinkActive : navLinkInactive)}
               >
                 Portals
               </a>
@@ -262,6 +278,34 @@
                   </p>
                   <p class="text-sm text-foreground truncate" title={email}>{email}</p>
                 </div>
+                <!-- On a phone the page links live here; there is no room for them beside the logo. -->
+                <DropdownMenuItem
+                  href="/"
+                  onSelect={() => { goto("/"); close(); }}
+                  class="sm:hidden"
+                >
+                  <IconUploadRegular class="size-4 opacity-70" />
+                  New transfer
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  href="/dashboard"
+                  onSelect={() => { goto("/dashboard"); close(); }}
+                  class={cn("sm:hidden", isActive("/dashboard", true) && "bg-accent")}
+                >
+                  <IconListRegular class="size-4 opacity-70" />
+                  Dashboard
+                </DropdownMenuItem>
+                {#if showPortals}
+                  <DropdownMenuItem
+                    href="/dashboard/portals"
+                    onSelect={() => { goto("/dashboard/portals"); close(); }}
+                    class={cn("sm:hidden", isActive("/dashboard/portals") && "bg-accent")}
+                  >
+                    <IconTrayRegular class="size-4 opacity-70" />
+                    Portals
+                  </DropdownMenuItem>
+                {/if}
+                <div class="my-1 h-px bg-border sm:hidden" role="separator"></div>
                 <DropdownMenuItem
                   href="/dashboard/settings/account"
                   onSelect={() => { goto("/dashboard/settings/account"); close(); }}
@@ -303,6 +347,37 @@
               {/snippet}
             </DropdownMenu>
           {:else}
+            {#each publicLinks as link (link.href)}
+              <a
+                href={link.href}
+                aria-current={isActive(link.href, true) ? "page" : undefined}
+                class={cn(navLinkBase, "hidden sm:inline-flex", isActive(link.href, true) ? navLinkActive : navLinkInactive)}
+              >
+                {link.label}
+              </a>
+            {/each}
+            <div class="sm:hidden">
+              <DropdownMenu
+                align="end"
+                label="Menu"
+                triggerClass="p-2 hover:bg-accent text-muted-foreground hover:text-foreground"
+              >
+                {#snippet trigger()}
+                  <IconListRegular class="size-5" />
+                {/snippet}
+                {#snippet children(close)}
+                  {#each publicLinks as link (link.href)}
+                    <DropdownMenuItem
+                      href={link.href}
+                      onSelect={() => { goto(link.href); close(); }}
+                      class={isActive(link.href, true) ? "bg-accent" : ""}
+                    >
+                      {link.label}
+                    </DropdownMenuItem>
+                  {/each}
+                {/snippet}
+              </DropdownMenu>
+            </div>
             <a
               href="/login"
               aria-current={isActive("/login", true) ? "page" : undefined}
