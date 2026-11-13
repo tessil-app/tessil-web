@@ -80,6 +80,20 @@ export interface PortalRow {
   keyVersion: number;
   isDisabled: boolean;
   createdAt: string;
+  /** Who made the portal. Their public key is what a handed copy is checked against. */
+  owner?: { userId: string; email: string; publicKey: string | null };
+}
+
+export interface PortalSharingResponse {
+  maxGuests: number;
+  guests: { userId: string; email: string; publicKey: string | null }[];
+  invites: {
+    id: string;
+    email: string;
+    createdAt: string;
+    /** Null until the invitee has an account with a keypair. */
+    ready: { userId: string; publicKey: string } | null;
+  }[];
 }
 
 export interface DepositRow {
@@ -719,6 +733,58 @@ class ApiClient {
         response.status,
       );
     }
+  }
+
+  // ── Sharing a portal ────────────────────────────────────────────────────
+
+  async getPortalSharing(portalId: string): Promise<PortalSharingResponse> {
+    return this.request(`/api/portals/${encodeURIComponent(portalId)}/sharing`);
+  }
+
+  async invitePortalGuest(portalId: string, email: string): Promise<{ id: string }> {
+    return this.request(`/api/portals/${encodeURIComponent(portalId)}/invites`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async admitPortalInvitee(
+    portalId: string,
+    body: { inviteId: string; sealedKeys: string; sealedTo: string },
+  ): Promise<{ userId: string }> {
+    return this.request(`/api/portals/${encodeURIComponent(portalId)}/members`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async replaceMyPortalKeys(portalId: string, sealedKeys: string): Promise<{ ok: true }> {
+    return this.request(`/api/portals/${encodeURIComponent(portalId)}/members/me`, {
+      method: "PUT",
+      body: JSON.stringify({ sealedKeys }),
+    });
+  }
+
+  private async deletePortalPart(portalId: string, part: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/portals/${encodeURIComponent(portalId)}/${part}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      throw new ApiError(
+        response.status === 404 ? "Not found." : `Request failed: ${response.status}`,
+        response.status,
+      );
+    }
+  }
+
+  deletePortalInvite(portalId: string, inviteId: string): Promise<void> {
+    return this.deletePortalPart(portalId, `invites/${encodeURIComponent(inviteId)}`);
+  }
+
+  /** The owner removes their guest, or a guest leaves. */
+  removePortalMember(portalId: string, userId: string): Promise<void> {
+    return this.deletePortalPart(portalId, `members/${encodeURIComponent(userId)}`);
   }
 
   async deletePortal(id: string): Promise<void> {

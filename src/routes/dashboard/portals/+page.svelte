@@ -8,6 +8,8 @@
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
+  import DetailItem from "$lib/components/DetailItem.svelte";
+  import DetailList from "$lib/components/DetailList.svelte";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import DropdownMenuItem from "$lib/components/DropdownMenuItem.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
@@ -28,6 +30,7 @@
     loadMyPortals,
     type MyPortal,
   } from "$lib/portal/client";
+  import { acceptShare, myFingerprint } from "$lib/portal/sharing";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
   import { isUnlocked, subscribeToVaultState } from "$lib/vault/client";
@@ -170,6 +173,69 @@
     }
   }
 
+  // ─── portals shared with this account ─────────────────────────────────────
+  let acceptId = $state<string | null>(null);
+  let isAccepting = $state(false);
+  let acceptError = $state<string | null>(null);
+  let ownFingerprint = $state<string | null>(null);
+  let leaveId = $state<string | null>(null);
+  let isLeaving = $state(false);
+
+  const acceptPortal = $derived(acceptId ? (portals.find((p) => p.id === acceptId) ?? null) : null);
+  const leavePortal = $derived(leaveId ? (portals.find((p) => p.id === leaveId) ?? null) : null);
+
+  async function openAccept(portal: MyPortal) {
+    // Accepting stores the keys in the vault.
+    if (auth.needsVaultSetup) {
+      goto("/setup/vault");
+      return;
+    }
+    if (!vaultUnlocked) {
+      unlockPrompt.request();
+      return;
+    }
+    acceptError = null;
+    ownFingerprint = await myFingerprint();
+    acceptId = portal.id;
+  }
+
+  async function confirmAccept() {
+    if (!auth.user || !acceptId || isAccepting) return;
+    isAccepting = true;
+    acceptError = null;
+    try {
+      const result = await acceptShare(auth.user.id, acceptId);
+      if (!result.ok) {
+        acceptError =
+          result.reason === "locked"
+            ? "Your vault is locked. Unlock it and try again."
+            : "These keys were not sealed by the person who shared the portal, so they were refused. Ask them to remove you and invite you again.";
+        return;
+      }
+      acceptId = null;
+      await load();
+    } catch (err) {
+      acceptError = err instanceof Error ? err.message : "Couldn't accept. Try again.";
+    } finally {
+      isAccepting = false;
+    }
+  }
+
+  async function confirmLeave() {
+    if (!auth.user || !leaveId || isLeaving) return;
+    isLeaving = true;
+    errorMessage = null;
+    try {
+      await api.removePortalMember(leaveId, auth.user.id);
+      portals = portals.filter((p) => p.id !== leaveId);
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : "Couldn't leave the portal.";
+    } finally {
+      leaveId = null;
+      isLeaving = false;
+    }
+  }
+
   async function confirmDelete() {
     if (!confirmDeleteId || isDeleting) return;
     isDeleting = true;
@@ -272,6 +338,8 @@
             <div class="font-medium text-foreground truncate">
               {#if portal.state === "open"}
                 {portal.title}
+              {:else if portal.state === "invited"}
+                Portal from {portal.sharedBy?.email ?? "someone"}
               {:else if portal.state === "locked"}
                 Locked portal
               {:else}
@@ -280,19 +348,27 @@
             </div>
             <div class="text-xs text-muted-foreground">
               {#if portal.state === "unreadable"}
-                Its keys did not open with your vault. It can only be deleted.
+                Its keys did not open with your vault. It can only be {portal.role === "owner"
+                  ? "deleted"
+                  : "left"}.
+              {:else if portal.state === "invited"}
+                Shared with you. Accept to open it.
               {:else}
                 Created {dateFmt.format(new Date(portal.createdAt))}
                 {#if portal.role === "member"}
-                  · shared with you
+                  · shared by {portal.sharedBy?.email ?? "someone else"}
                 {/if}
               {/if}
             </div>
           </div>
         {/snippet}
         {#snippet statusBadge(portal: MyPortal)}
-          <Badge tone={portal.isDisabled ? "muted" : "success"}>
-            {portal.isDisabled ? "Switched off" : "Accepting files"}
+          <Badge tone={portal.state === "invited" ? "info" : portal.isDisabled ? "muted" : "success"}>
+            {portal.state === "invited"
+              ? "Waiting for you"
+              : portal.isDisabled
+                ? "Switched off"
+                : "Accepting files"}
           </Badge>
         {/snippet}
 
@@ -318,6 +394,16 @@
                 </div>
               {/snippet}
               {#snippet actions()}
+                {#if portal.state === "invited"}
+                  <Button
+                    variant="secondary"
+                    fullWidth={false}
+                    class="py-2 px-3 text-sm"
+                    onclick={() => openAccept(portal)}
+                  >
+                    Accept
+                  </Button>
+                {/if}
                 {#if portal.link}
                   <button
                     type="button"
@@ -328,7 +414,7 @@
                     {copiedId === portal.id ? "Copied" : "Copy link"}
                   </button>
                 {/if}
-                {#if portal.link || portal.role === "owner"}
+                {#if portal.link || portal.role === "owner" || portal.role === "member"}
                   <DropdownMenu
                     label="More for {portal.title ?? 'this portal'}"
                     triggerClass="p-2 text-muted-foreground hover:text-foreground hover:bg-background"
@@ -345,6 +431,18 @@
                           }}
                         >
                           Copy link
+                        </DropdownMenuItem>
+                      {/if}
+                      {#if portal.role === "member"}
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={busyId === portal.id}
+                          onSelect={() => {
+                            close();
+                            leaveId = portal.id;
+                          }}
+                        >
+                          {portal.state === "invited" ? "Decline" : "Leave"}
                         </DropdownMenuItem>
                       {/if}
                       {#if portal.role === "owner"}
@@ -486,6 +584,61 @@
       {:else}
         Delete portal
       {/if}
+    </Button>
+  {/snippet}
+</Modal>
+
+<Modal
+  open={acceptPortal !== null}
+  title="Accept this portal?"
+  description="{acceptPortal?.sharedBy?.email ?? 'Someone'} shared a portal with you. You will be able to see, download and delete the files people send to it."
+  onClose={() => (acceptId = null)}
+>
+  <div class="space-y-3">
+    <DetailList>
+      <DetailItem label="Their key">
+        <span class="font-mono text-xs">{acceptPortal?.sharedBy?.fingerprint ?? "unknown"}</span>
+      </DetailItem>
+      <DetailItem label="Your key">
+        <span class="font-mono text-xs">{ownFingerprint ?? "unknown"}</span>
+      </DetailItem>
+    </DetailList>
+    <p class="text-xs text-muted-foreground">
+      To be certain nobody sits in between, compare these two codes with them by phone or in
+      person. They see the same two on their side. If you skip this, you trust our server for
+      this one step.
+    </p>
+    {#if acceptError}
+      <Alert tone="destructive">{acceptError}</Alert>
+    {/if}
+  </div>
+  {#snippet footer()}
+    <Button type="button" variant="ghost" fullWidth={false} onclick={() => (acceptId = null)} disabled={isAccepting}>
+      Not now
+    </Button>
+    <Button type="button" fullWidth={false} onclick={confirmAccept} disabled={isAccepting}>
+      {#if isAccepting}
+        <Spinner aria-hidden="true" />
+        Accepting…
+      {:else}
+        Accept
+      {/if}
+    </Button>
+  {/snippet}
+</Modal>
+
+<Modal
+  open={leavePortal !== null}
+  title={leavePortal?.state === "invited" ? "Decline this portal?" : "Leave this portal?"}
+  description="You will no longer see it or the files sent to it. Its owner can invite you again."
+  onClose={() => (leaveId = null)}
+>
+  {#snippet footer()}
+    <Button type="button" variant="ghost" fullWidth={false} onclick={() => (leaveId = null)} disabled={isLeaving}>
+      Cancel
+    </Button>
+    <Button type="button" fullWidth={false} onclick={confirmLeave} disabled={isLeaving}>
+      {isLeaving ? "Leaving…" : leavePortal?.state === "invited" ? "Decline" : "Leave"}
     </Button>
   {/snippet}
 </Modal>

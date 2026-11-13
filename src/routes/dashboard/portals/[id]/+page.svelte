@@ -15,7 +15,9 @@
   import EmptyState from "$lib/components/EmptyState.svelte";
   import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
+  import Notice from "$lib/components/Notice.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
+  import PortalSharingDrawer from "$lib/components/PortalSharingDrawer.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import { api } from "$lib/api/client";
@@ -39,6 +41,7 @@
   } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
   import { buildReceiptText, saveTextFile } from "$lib/portal/receipt";
+  import { loadSharing, type PortalSharing } from "$lib/portal/sharing";
   import { formatSize } from "$lib/utils";
   import { subscribeToVaultState } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
@@ -165,6 +168,25 @@
     }
   }
 
+  // ─── sharing with one other account ───────────────────────────────────────
+  let sharing = $state<PortalSharing | null>(null);
+  let sharingOpen = $state(false);
+
+  const readyInvite = $derived(sharing?.invites.find((i) => i.ready) ?? null);
+  const sharingLabel = $derived(
+    sharing?.guests.length ? "Shared with 1" : sharing?.invites.length ? "Sharing (invited)" : "Sharing",
+  );
+
+  async function reloadSharing() {
+    if (portal?.role !== "owner") return;
+    try {
+      sharing = await loadSharing(portal.id);
+    } catch {
+      // The drawer shows its own loading state; the page works without it.
+      sharing = null;
+    }
+  }
+
   async function load() {
     if (!auth.user) return;
     errorMessage = null;
@@ -178,6 +200,7 @@
       }
       portal = opened.portal;
       draft = opened.portal.checklist;
+      void reloadSharing();
       const first = await loadDeposits(opened.portal);
       deposits = first.deposits;
       unreadable = first.unreadable;
@@ -371,7 +394,9 @@
   {:else if portal}
     <PageHeader
       title={portal.title}
-      tagline="Files are deleted automatically, so download what you need to keep."
+      tagline={portal.role === "member"
+        ? "Shared with you. Files are deleted automatically, so download what you need to keep."
+        : "Files are deleted automatically, so download what you need to keep."}
       back={{ href: "/dashboard/portals", label: "All portals" }}
       align="left"
     >
@@ -390,6 +415,14 @@
           >
             What you ask for{checklist.length > 0 ? ` (${checklist.length})` : ""}
           </Button>
+          <Button
+            variant="secondary"
+            fullWidth={false}
+            class="whitespace-nowrap"
+            onclick={() => (sharingOpen = true)}
+          >
+            {sharingLabel}
+          </Button>
         {/if}
         <Button fullWidth={false} class="whitespace-nowrap" onclick={copyLink}>
           {copied ? "Copied" : "Copy link"}
@@ -400,6 +433,17 @@
     <div class="space-y-4">
       {#if errorMessage}
         <Alert tone="destructive">{errorMessage}</Alert>
+      {/if}
+
+      {#if readyInvite}
+        <Notice>
+          {readyInvite.email} has signed in and is ready. Give them access to share this portal.
+          {#snippet action()}
+            <Button variant="secondary" fullWidth={false} onclick={() => (sharingOpen = true)}>
+              Give access
+            </Button>
+          {/snippet}
+        </Notice>
       {/if}
 
       {#if unreadable > 0}
@@ -574,6 +618,17 @@
   onSaveRecord={() => openDeposit && saveRecord(openDeposit)}
   onDelete={() => (confirmDeleteId = openDepositId)}
 />
+
+{#if auth.user && portal?.role === "owner"}
+  <PortalSharingDrawer
+    open={sharingOpen}
+    userId={auth.user.id}
+    portalId={portal.id}
+    {sharing}
+    onClose={() => (sharingOpen = false)}
+    onChanged={reloadSharing}
+  />
+{/if}
 
 <Drawer open={listOpen} title="What you ask for" onClose={closeList}>
   <div class="space-y-3">

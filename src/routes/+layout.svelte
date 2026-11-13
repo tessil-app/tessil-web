@@ -3,6 +3,7 @@
   import { page } from "$app/stores";
   import { ModeWatcher, setMode } from "mode-watcher";
   import { auth } from "$lib/stores/auth.svelte";
+  import { api } from "$lib/api/client";
   import {
     lock as lockVault,
     isUnlocked,
@@ -38,6 +39,24 @@
   // A vault can exist without a password. Then the dialog offers the
   // passkey and the recovery phrase, and no password field.
   let hasVaultPassword = $state(true);
+  // A free account has no portals of its own but can be given one.
+  let hasSharedPortals = $state(false);
+  let sharedCheckedFor: string | null = null;
+  $effect(() => {
+    const user = auth.user;
+    if (!user) {
+      hasSharedPortals = false;
+      sharedCheckedFor = null;
+      return;
+    }
+    if (user.tier === "pro" || user.tier === "max" || sharedCheckedFor === user.id) return;
+    sharedCheckedFor = user.id;
+    api
+      .listPortals()
+      .then((res) => (hasSharedPortals = res.portals.length > 0))
+      .catch(() => {});
+  });
+
   $effect(() => {
     if (!unlockOpen) return;
     vaultHasPassword()
@@ -211,8 +230,8 @@
             >
               Dashboard
             </a>
-            <!-- Only for accounts whose plan includes portals. -->
-            {#if auth.user.tier === "pro" || auth.user.tier === "max"}
+            <!-- For plans that include portals, and accounts someone shared one with. -->
+            {#if auth.user.tier === "pro" || auth.user.tier === "max" || hasSharedPortals}
               <a
                 href="/dashboard/portals"
                 aria-current={isActive("/dashboard/portals") ? "page" : undefined}
