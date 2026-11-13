@@ -52,7 +52,7 @@
   <Frame.Panel>
     <div class="space-y-4">
       <div class="flex items-center justify-between gap-3 flex-wrap">
-        <h2 class="text-xl font-semibold text-foreground">This period</h2>
+        <h2 class="text-xl font-semibold text-foreground">Usage</h2>
       </div>
 
       {#if usageError}
@@ -66,6 +66,24 @@
         {@const monthlyPct = percent(usage.monthlyVolume.usedBytes, usage.monthlyVolume.capBytes)}
         {@const dailyPct = percent(usage.dailyTransfers.used, usage.dailyTransfers.cap)}
 
+        {#if usage.storage}
+          {@const storagePct = percent(usage.storage.usedBytes, usage.storage.quotaBytes)}
+          <section class="space-y-2">
+            <div class="flex items-baseline justify-between gap-2 flex-wrap">
+              <span class="text-sm font-medium text-foreground">Storage</span>
+              <span class="text-sm text-muted-foreground">
+                {formatSize(usage.storage.usedBytes)} of {formatSize(usage.storage.quotaBytes)}
+                <span class="text-foreground">({storagePct}%)</span>
+              </span>
+            </div>
+            <ProgressBar progress={storagePct} />
+            <p class="text-xs text-muted-foreground">
+              Everything kept for you right now: transfers you sent and files people sent to
+              your portals. Space comes back when they are deleted or expire.
+            </p>
+          </section>
+        {/if}
+
         <section class="space-y-2">
           <div class="flex items-baseline justify-between gap-2 flex-wrap">
             <span class="text-sm font-medium text-foreground">Monthly upload volume</span>
@@ -77,6 +95,9 @@
           <ProgressBar progress={monthlyPct} />
           <p class="text-xs text-muted-foreground">
             Resets {relativeReset(usage.monthlyVolume.resetAt)} · {dateFmt.format(new Date(usage.monthlyVolume.resetAt))}
+            {#if usage.storage}
+              · Only what you send yourself. Files sent to your portals count toward storage.
+            {/if}
           </p>
         </section>
 

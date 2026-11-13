@@ -259,6 +259,8 @@ export interface BillingStatusResponse {
 
 export interface UsageResponse {
   tier: string;
+  /** Bytes kept right now, transfers and portal files together. Null without a quota. */
+  storage?: { usedBytes: number; quotaBytes: number } | null;
   monthlyVolume: {
     usedBytes: number;
     capBytes: number;
