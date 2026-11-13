@@ -3,6 +3,7 @@
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Seo from "$lib/components/Seo.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
 </script>
 
@@ -21,7 +22,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 12, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: November 13, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Introduction</h2>
@@ -77,7 +78,9 @@
                 session expiry timestamps.
               </li>
               <li>
-                <strong>Account tier.</strong> Currently always <code>free</code>.
+                <strong>Account tier.</strong> Which plan the account is on.{#if PORTALS_ANNOUNCED}
+                  {" "}For a paid plan, our payment provider tells us that a subscription exists and
+                  when it renews or ends. We never receive your card details.{/if}
               </li>
               <li>
                 <strong>Ownership link on transfers.</strong> Transfers you create while signed in are tagged with
@@ -88,6 +91,38 @@
               Signing in doesn't change how files are encrypted. Your encryption key
               never reaches our servers - signed in or not.
             </p>
+
+            {#if PORTALS_ANNOUNCED}
+              <h3 class="text-lg font-medium text-foreground">Portals</h3>
+              <p class="text-muted-foreground">
+                A portal is a link through which other people send files to an account holder.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li>
+                  <strong>If you own a portal.</strong> We store that it exists and belongs to your
+                  account, whether it is switched on, and when you last opened it. Its name, its
+                  language and the list of documents you ask for are stored only in encrypted form
+                  that we cannot read.
+                </li>
+                <li>
+                  <strong>If you send files through a portal.</strong> You need no account and we do
+                  not ask who you are. We store the encrypted files, their encrypted names, your
+                  encrypted note if you add one, their sizes and when they arrived. Only the
+                  portal's owner, and one person they may share it with, can decrypt them.
+                </li>
+                <li>
+                  <strong>If you are invited to a portal.</strong> The owner gives us your email
+                  address so we can send you the invitation and match it to your account. We keep
+                  it with the invitation until it is accepted, declined or withdrawn.
+                </li>
+              </ul>
+              <p class="text-muted-foreground">
+                What people send through a portal may contain personal data about them or others.
+                We cannot see it. The portal's owner decides what to ask for and what to do with
+                it, and is responsible for that under data protection law; we store it on their
+                behalf.
+              </p>
+            {/if}
 
             <h3 class="text-lg font-medium text-foreground">2.3 Security and Audit Data</h3>
             <p class="text-muted-foreground">
@@ -152,6 +187,16 @@
             <h2 class="text-xl font-semibold text-foreground">5. Data Retention</h2>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li><strong>Uploaded files:</strong> Automatically deleted after 1, 6, 12, 24, or 72 hours (your choice)</li>
+              {#if PORTALS_ANNOUNCED}
+                <li>
+                  <strong>Files sent through a portal:</strong> Automatically deleted 30 days after they
+                  arrive, or 90 days on the larger plan. The portal's owner can delete them sooner.
+                  Deleting a portal or its owner's account deletes them as well.
+                </li>
+                <li>
+                  <strong>Portal invitations:</strong> Deleted when accepted, declined or withdrawn.
+                </li>
+              {/if}
               <li>
                 <strong>Account record:</strong> Retained as long as your account exists. Deleted immediately and
                 irreversibly when you delete your account from the dashboard.
@@ -231,7 +276,8 @@
               </li>
               <li>
                 <strong>Scaleway Transactional Email (France):</strong> Sends one-time sign-in
-                links and account notifications. Receives your email address and the message
+                links and account notifications{#if PORTALS_ANNOUNCED}, including invitations to
+                  a portal{/if}. Receives your email address and the message
                 contents. Transactional mail only, never marketing.
               </li>
               <li>

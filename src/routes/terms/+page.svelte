@@ -3,6 +3,7 @@
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Seo from "$lib/components/Seo.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
 </script>
 
@@ -21,7 +22,7 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 6, 2026</p>
+          <p class="text-sm text-muted-foreground">Last updated: November 13, 2026</p>
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
@@ -37,12 +38,48 @@
               Tessil is an end-to-end encrypted file transfer service with
               temporary share links.
             </p>
-            <p class="text-muted-foreground">
-              Tessil is free to use. It works without an account; signing in adds
-              a dashboard and longer-lived transfers. There is no paid plan at
-              this time.
-            </p>
+            {#if PORTALS_ANNOUNCED}
+              <p class="text-muted-foreground">
+                Sending files is free. It works without an account; signing in adds
+                a dashboard and longer-lived transfers.
+              </p>
+              <p class="text-muted-foreground">
+                Paid plans add portals: links through which other people send
+                files to you. What a plan includes and costs is on the
+                <a href="/pricing" class="text-primary underline underline-offset-2">pricing page</a>.
+              </p>
+            {:else}
+              <p class="text-muted-foreground">
+                Tessil is free to use. It works without an account; signing in adds
+                a dashboard and longer-lived transfers. There is no paid plan at
+                this time.
+              </p>
+            {/if}
           </section>
+
+          {#if PORTALS_ANNOUNCED}
+            <section class="space-y-3">
+              <h2 class="text-xl font-semibold text-foreground">Portals</h2>
+              <p class="text-muted-foreground">
+                If you own a portal, you decide who gets its link, what you ask
+                people to send, and what you do with what arrives. You are
+                responsible for having a lawful reason to collect it and for
+                telling the people who send it how you will use it. We store
+                it for you in a form we cannot read.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li>Deliveries are deleted automatically after the period your plan sets. Download what you need to keep; we cannot restore it afterwards</li>
+                <li>If you lose every way into your vault, we cannot open your portals for you</li>
+                <li>Do not use a portal to collect content these terms prohibit. We may switch off a portal that is reported for abuse</li>
+                <li>If your plan ends, your portals stop accepting files. What they already hold stays until it expires</li>
+              </ul>
+              <p class="text-muted-foreground">
+                If you send files through someone's portal, you are sending
+                them to that person, not to us. Questions about what happens
+                to them go to the person who gave you the link.
+              </p>
+            </section>
+          {/if}
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">3. Acceptable Use</h2>
