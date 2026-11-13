@@ -261,6 +261,8 @@ export interface UsageResponse {
   tier: string;
   /** Bytes kept right now, transfers and portal files together. Null without a quota. */
   storage?: { usedBytes: number; quotaBytes: number } | null;
+  /** Received through all of the account's portals this month. Null without portals. */
+  portalVolume?: { usedBytes: number; capBytes: number; resetAt: string } | null;
   monthlyVolume: {
     usedBytes: number;
     capBytes: number;

@@ -86,7 +86,7 @@
 
         <section class="space-y-2">
           <div class="flex items-baseline justify-between gap-2 flex-wrap">
-            <span class="text-sm font-medium text-foreground">Monthly upload volume</span>
+            <span class="text-sm font-medium text-foreground">Sent by you this month</span>
             <span class="text-sm text-muted-foreground">
               {formatSize(usage.monthlyVolume.usedBytes)} of {formatSize(usage.monthlyVolume.capBytes)}
               <span class="text-foreground">({monthlyPct}%)</span>
@@ -96,10 +96,28 @@
           <p class="text-xs text-muted-foreground">
             Resets {relativeReset(usage.monthlyVolume.resetAt)} · {dateFmt.format(new Date(usage.monthlyVolume.resetAt))}
             {#if usage.storage}
-              · Only what you send yourself. Files sent to your portals count toward storage.
+              · Files sent to your portals are counted separately, below.
             {/if}
           </p>
         </section>
+
+        {#if usage.portalVolume}
+          {@const intakePct = percent(usage.portalVolume.usedBytes, usage.portalVolume.capBytes)}
+          <section class="space-y-2">
+            <div class="flex items-baseline justify-between gap-2 flex-wrap">
+              <span class="text-sm font-medium text-foreground">Received through portals</span>
+              <span class="text-sm text-muted-foreground">
+                {formatSize(usage.portalVolume.usedBytes)} of {formatSize(usage.portalVolume.capBytes)}
+                <span class="text-foreground">({intakePct}%)</span>
+              </span>
+            </div>
+            <ProgressBar progress={intakePct} />
+            <p class="text-xs text-muted-foreground">
+              Resets {relativeReset(usage.portalVolume.resetAt)} · {dateFmt.format(new Date(usage.portalVolume.resetAt))}
+              · All your portals together. It does not use up what you can send yourself.
+            </p>
+          </section>
+        {/if}
 
         <section class="space-y-2">
           <div class="flex items-baseline justify-between gap-2 flex-wrap">
