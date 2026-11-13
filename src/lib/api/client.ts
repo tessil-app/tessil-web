@@ -198,20 +198,34 @@ export interface PasskeySummary {
   transports: string[];
   createdAt: string;
   lastUsedAt: string | null;
+  /** base64url WebAuthn credential ID. */
+  credentialId: string;
+}
+
+/** A passkey that can unlock the vault. */
+export interface VaultPasskeyWrap {
+  authenticatorId: string;
+  credentialId: string;
+  prfSalt: string;
+  wrap: string;
 }
 
 // Vault wire format: salt* = 16-byte Argon2id salt, wrap* = iv(12)||ct(32)||tag(16), base64url-encoded.
 export type VaultStatus =
-  | { isSetup: false }
+  /** `passkeyOnlySetup` is set by an API that can create a vault without a password. */
+  | { isSetup: false; passkeyOnlySetup?: boolean }
   | {
       isSetup: true;
       /** ECDH P-256 public key and its vault-sealed private half; null until generated. */
       publicKey: string | null;
       wrappedPrivateKey: string | null;
+      /** Absent from an API that predates passkey unlock. */
+      passkeyWraps?: VaultPasskeyWrap[];
       kdfVersion: number;
-      saltPassword: string;
+      /** Both null for a vault opened by passkey and recovery phrase only. */
+      saltPassword: string | null;
       saltPhrase: string;
-      wrapPassword: string;
+      wrapPassword: string | null;
       wrapPhrase: string;
       passwordChangedAt: string | null;
       phraseRegeneratedAt: string | null;
@@ -219,10 +233,12 @@ export type VaultStatus =
 
 export interface VaultSetupRequest {
   kdfVersion: number;
-  saltPassword: string;
   saltPhrase: string;
-  wrapPassword: string;
   wrapPhrase: string;
+  /** A vault needs a password, a passkey, or both. */
+  saltPassword?: string;
+  wrapPassword?: string;
+  passkey?: { authenticatorId: string; prfSalt: string; wrap: string };
 }
 
 export interface VaultPasswordChangeRequest {
@@ -734,6 +750,22 @@ class ApiClient {
     return this.request("/api/me/vault/keypair", {
       method: "POST",
       body: JSON.stringify(body),
+    });
+  }
+
+  async setVaultPasskeyWrap(
+    authenticatorId: string,
+    body: { prfSalt: string; wrap: string },
+  ): Promise<{ ok: true }> {
+    return this.request(`/api/me/vault/passkeys/${encodeURIComponent(authenticatorId)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deleteVaultPasskeyWrap(authenticatorId: string): Promise<{ ok: true }> {
+    return this.request(`/api/me/vault/passkeys/${encodeURIComponent(authenticatorId)}`, {
+      method: "DELETE",
     });
   }
 

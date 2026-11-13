@@ -1,12 +1,14 @@
 <script lang="ts">
-  // Security sub-route: passkeys. Passkeys are login-factor only - they
-  // don't participate in vault key derivation, so removing one has no
-  // impact on a user's transfers or filenames.
+  // Security sub-route: passkeys. A passkey signs you in, and can also be
+  // set to unlock the vault. Removing one never loses data: the vault
+  // password and recovery phrase still open it.
 
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import * as Frame from "$lib/components/frame";
+  import Modal from "$lib/components/Modal.svelte";
   import PasskeyRow from "$lib/components/PasskeyRow.svelte";
+  import VaultProof from "$lib/components/VaultProof.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import IconPlusRegular from "phosphor-icons-svelte/IconPlusRegular.svelte";
@@ -17,6 +19,13 @@
     isPasskeySupported,
     PasskeyError,
   } from "$lib/auth/passkey";
+  import {
+    disablePasskeyUnlock,
+    enablePasskeyUnlock,
+    passkeysThatUnlock,
+    type VaultAccess,
+  } from "$lib/vault/client";
+  import { vaultFailureMessage } from "$lib/vault/messages";
   import { onMount } from "svelte";
 
   let passkeySupported = $state(false);
@@ -34,9 +43,71 @@
   let deleteConfirmId = $state<string | null>(null);
   let deleteError = $state<string | null>(null);
 
+  // Which passkeys can unlock the vault, and the dialog that enables one.
+  let vaultIsSetup = $derived(auth.user !== null && !auth.needsVaultSetup);
+  let unlocksVault = $state(new Set<string>());
+  let vaultBusyId = $state<string | null>(null);
+  let vaultError = $state<string | null>(null);
+  let enableFor = $state<PasskeySummary | null>(null);
+  let enableProof = $state<VaultAccess | null>(null);
+  let isEnabling = $state(false);
+  let enableError = $state<string | null>(null);
+
+  async function loadVaultPasskeys() {
+    try {
+      unlocksVault = new Set((await passkeysThatUnlock(true)).map((w) => w.authenticatorId));
+    } catch {
+      unlocksVault = new Set();
+    }
+  }
+
+  function askVaultUnlock(p: PasskeySummary) {
+    enableFor = p;
+    enableProof = null;
+    enableError = null;
+    vaultError = null;
+  }
+
+  async function submitEnable(e?: Event) {
+    e?.preventDefault();
+    if (!auth.user || !enableFor || isEnabling || !enableProof) return;
+    isEnabling = true;
+    enableError = null;
+    try {
+      const result = await enablePasskeyUnlock(auth.user.id, enableFor, enableProof);
+      if (result.ok) {
+        unlocksVault = new Set([...unlocksVault, enableFor.id]);
+        enableFor = null;
+        enableProof = null;
+      } else {
+        enableError = vaultFailureMessage(result.reason);
+      }
+    } catch (err) {
+      enableError = err instanceof Error ? err.message : "Couldn't set this up.";
+    } finally {
+      isEnabling = false;
+    }
+  }
+
+  async function stopVaultUnlock(p: PasskeySummary) {
+    vaultBusyId = p.id;
+    vaultError = null;
+    try {
+      await disablePasskeyUnlock(p.id);
+      const next = new Set(unlocksVault);
+      next.delete(p.id);
+      unlocksVault = next;
+    } catch (err) {
+      vaultError = err instanceof Error ? err.message : "Couldn't change that.";
+    } finally {
+      vaultBusyId = null;
+    }
+  }
+
   onMount(() => {
     passkeySupported = isPasskeySupported();
     void loadPasskeys();
+    void loadVaultPasskeys();
   });
 
   async function loadPasskeys() {
@@ -225,14 +296,18 @@
       {#if passkeysError}
         <Alert tone="destructive" class="mb-4">{passkeysError}</Alert>
       {/if}
+      {#if vaultError}
+        <Alert tone="destructive" class="mb-4">{vaultError}</Alert>
+      {/if}
       <ul class="flex flex-col divide-y divide-border">
         {#each passkeys as p (p.id)}
           {@const isCurrent = auth.user?.currentAuthenticatorId === p.id}
           {@const meta = passkeyMeta(p)}
           {@const isRenamingThis = renamingId === p.id}
           {@const isConfirmingThis = deleteConfirmId === p.id}
+          {@const showVaultLine = vaultIsSetup && !isRenamingThis && !isConfirmingThis}
           {@const showBelow =
-            (isRenamingThis && renameError !== null) || isConfirmingThis}
+            (isRenamingThis && renameError !== null) || isConfirmingThis || showVaultLine}
           <PasskeyRow
             nickname={p.nickname}
             {meta}
@@ -298,6 +373,24 @@
             {/snippet}
 
             {#snippet below()}
+              {#if showVaultLine}
+                <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                  <span>
+                    {unlocksVault.has(p.id)
+                      ? "Unlocks your vault."
+                      : "Can also unlock your vault, so you don't have to type its password."}
+                  </span>
+                  <button
+                    type="button"
+                    onclick={() => (unlocksVault.has(p.id) ? stopVaultUnlock(p) : askVaultUnlock(p))}
+                    disabled={vaultBusyId === p.id}
+                    class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer disabled:opacity-60 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+                  >
+                    {unlocksVault.has(p.id) ? "Stop" : "Set this up"}
+                  </button>
+                </p>
+              {/if}
+
               {#if isRenamingThis && renameError}
                 <Alert tone="destructive">{renameError}</Alert>
               {/if}
@@ -407,3 +500,46 @@
     </Frame.Footer>
   {/if}
 </Frame.Root>
+
+<Modal
+  open={enableFor !== null}
+  title="Unlock your vault with this sign-in key"
+  description="Confirm it's you once. After that, this sign-in key opens your vault with a touch or a glance. Every other way in keeps working."
+  onClose={() => {
+    if (!isEnabling) enableFor = null;
+  }}
+>
+  <form id="enable-passkey-unlock" onsubmit={submitEnable} class="space-y-4" novalidate>
+    {#if enableFor}
+      <VaultProof bind:access={enableProof} idPrefix="enable-passkey" disabled={isEnabling} />
+    {/if}
+    {#if enableError}
+      <Alert tone="destructive">{enableError}</Alert>
+    {/if}
+  </form>
+
+  {#snippet footer()}
+    <Button
+      type="button"
+      variant="ghost"
+      fullWidth={false}
+      onclick={() => (enableFor = null)}
+      disabled={isEnabling}
+    >
+      Cancel
+    </Button>
+    <Button
+      type="submit"
+      form="enable-passkey-unlock"
+      fullWidth={false}
+      disabled={isEnabling || !enableProof}
+    >
+      {#if isEnabling}
+        <Spinner aria-hidden="true" />
+        Waiting on your device
+      {:else}
+        Continue
+      {/if}
+    </Button>
+  {/snippet}
+</Modal>

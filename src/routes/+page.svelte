@@ -9,6 +9,7 @@
   import FileRow from "$lib/components/FileRow.svelte";
   import HowItWorks from "$lib/components/HowItWorks.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import SegmentedControl from "$lib/components/SegmentedControl.svelte";
   import Seo from "$lib/components/Seo.svelte";
@@ -41,6 +42,7 @@
     unlockWithPassword,
     unlockWithPhrase,
     wrapTransferKey,
+    vaultHasPassword,
   } from "$lib/vault/client";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconCopyRegular from "phosphor-icons-svelte/IconCopyRegular.svelte";
@@ -144,6 +146,18 @@
 
   let unlockOpen = $state(false);
   let unlockMode = $state<"password" | "phrase">("password");
+  // A vault can exist without a password. Then the dialog offers the
+  // passkey and the recovery phrase, and no password field.
+  let hasVaultPassword = $state(true);
+  $effect(() => {
+    if (!unlockOpen) return;
+    vaultHasPassword()
+      .then((has) => {
+        hasVaultPassword = has;
+        if (!has) unlockMode = "phrase";
+      })
+      .catch(() => {});
+  });
   let unlockPassword = $state("");
   let unlockPhrase = $state("");
   let unlockError = $state<string | null>(null);
@@ -1178,6 +1192,11 @@
   <!-- The footer is a snippet of the Modal, so it sits outside the form and
        its submit button points back at the form by id. -->
   <form id="home-unlock-form" onsubmit={submitUnlock} class="space-y-4" novalidate>
+    <PasskeyUnlockButton
+      active={unlockOpen}
+      disabled={isUnlockingVault}
+      onUnlocked={() => closeUnlockModal("unlocked")}
+    />
     {#if unlockMode === "password"}
       <PasswordInput
         id="home-unlock-password"
@@ -1202,6 +1221,7 @@
       <Alert tone="destructive">{unlockError}</Alert>
     {/if}
 
+    {#if hasVaultPassword}
     <button
       type="button"
       onclick={() => {
@@ -1215,6 +1235,7 @@
         ? "Forgot your password? Use your recovery phrase instead."
         : "Have your password? Use it instead."}
     </button>
+    {/if}
 
   </form>
 

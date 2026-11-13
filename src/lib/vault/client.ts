@@ -1,7 +1,14 @@
 // High-level vault client. Server is blind: all KDF + AES-GCM happens in-browser.
 // Wrap blobs are 60 bytes (iv|ct|tag), base64url over the wire.
 
-import { api, type VaultStatus } from "$lib/api/client";
+import { api, type VaultPasskeyWrap, type VaultStatus } from "$lib/api/client";
+import {
+  evaluatePrf,
+  newPrfSalt,
+  passkeyUnlockPossible,
+  unwrapVaultKeyWithPasskey,
+  wrapVaultKeyForPasskey,
+} from "./passkeyUnlock";
 import {
   KDF_VERSION,
   WRAP_BYTES,
@@ -144,56 +151,105 @@ export interface PreparedVaultSetup {
   commit: () => Promise<void>;
 }
 
+export type VaultSetupMethod =
+  | { kind: "password"; password: string }
+  /** Passkeys the account has; whichever one answers is used. */
+  | { kind: "passkey"; passkeys: { id: string; credentialId: string }[] };
+
+export type PrepareVaultSetupResult =
+  | { ok: true; prepared: PreparedVaultSetup }
+  | { ok: false; reason: "cancelled" | "no_prf" | "unsupported" };
+
+/** True when this browser and this API can create a vault without a password. */
+export async function canSetUpWithPasskey(): Promise<boolean> {
+  if (!passkeyUnlockPossible()) return false;
+  const status = await getVaultStatus(true);
+  return !status.isSetup && status.passkeyOnlySetup === true;
+}
+
 /**
  * Builds a new vault in the browser without saving it. The caller shows
  * the recovery phrase and calls `commit` once the user has it, so a vault
  * never exists whose phrase nobody saw: leaving before then just means
  * starting again.
  */
-export async function prepareVaultSetup(
+export async function prepareVaultSetupWith(
   userId: string,
-  password: string,
-): Promise<PreparedVaultSetup> {
-  const phrase = generateRecoveryPhrase();
+  method: VaultSetupMethod,
+): Promise<PrepareVaultSetupResult> {
   const kVault = randomKVault();
-  const saltPassword = randomSalt();
-  const saltPhrase = randomSalt();
 
-  const [kekPassword, kekPhrase] = await Promise.all([
-    deriveKekFromPassword(password, saltPassword, KDF_VERSION),
-    deriveKekFromPhrase(phrase, saltPhrase, KDF_VERSION),
-  ]);
-  const [kekPasswordKey, kekPhraseKey] = await Promise.all([
-    importKek(kekPassword),
-    importKek(kekPhrase),
-  ]);
-  const [wrapPassword, wrapPhrase] = await Promise.all([
-    wrapSecret(kekPasswordKey, kVault),
-    wrapSecret(kekPhraseKey, kVault),
-  ]);
-  kekPassword.fill(0);
+  let passwordPart: { saltPassword: string; wrapPassword: string } | undefined;
+  let passkeyPart: { authenticatorId: string; prfSalt: string; wrap: string } | undefined;
+
+  if (method.kind === "password") {
+    const salt = randomSalt();
+    const kek = await deriveKekFromPassword(method.password, salt, KDF_VERSION);
+    const wrap = await wrapSecret(await importKek(kek), kVault);
+    kek.fill(0);
+    passwordPart = { saltPassword: bytesToBase64Url(salt), wrapPassword: bytesToBase64Url(wrap) };
+  } else {
+    const prfSalt = newPrfSalt();
+    const evaluated = await evaluatePrf(
+      method.passkeys.map((p) => ({
+        credentialId: p.credentialId,
+        prfSalt: bytesToBase64Url(prfSalt),
+      })),
+    );
+    const used = evaluated.ok
+      ? method.passkeys.find((p) => p.credentialId === evaluated.result.credentialId)
+      : undefined;
+    if (!evaluated.ok || !used) {
+      kVault.fill(0);
+      return { ok: false, reason: evaluated.ok ? "no_prf" : evaluated.reason };
+    }
+    const wrap = await wrapVaultKeyForPasskey(evaluated.result.output, userId, used.id, kVault);
+    evaluated.result.output.fill(0);
+    passkeyPart = {
+      authenticatorId: used.id,
+      prfSalt: bytesToBase64Url(prfSalt),
+      wrap: bytesToBase64Url(wrap),
+    };
+  }
+
+  const phrase = generateRecoveryPhrase();
+  const saltPhrase = randomSalt();
+  const kekPhrase = await deriveKekFromPhrase(phrase, saltPhrase, KDF_VERSION);
+  const wrapPhrase = await wrapSecret(await importKek(kekPhrase), kVault);
   kekPhrase.fill(0);
 
   let committed = false;
   return {
-    recoveryPhrase: phrase,
-    commit: async () => {
-      if (committed) return;
-      await api.setupVault({
-        kdfVersion: KDF_VERSION,
-        saltPassword: bytesToBase64Url(saltPassword),
-        saltPhrase: bytesToBase64Url(saltPhrase),
-        wrapPassword: bytesToBase64Url(wrapPassword),
-        wrapPhrase: bytesToBase64Url(wrapPhrase),
-      });
-      committed = true;
-      // The cached status still says "not set up"; the keypair step reads it.
-      invalidateStatusCache();
-      await rememberVault(userId, kVault);
-      kVault.fill(0);
-      invalidateStatusCache();
+    ok: true,
+    prepared: {
+      recoveryPhrase: phrase,
+      commit: async () => {
+        if (committed) return;
+        await api.setupVault({
+          kdfVersion: KDF_VERSION,
+          saltPhrase: bytesToBase64Url(saltPhrase),
+          wrapPhrase: bytesToBase64Url(wrapPhrase),
+          ...passwordPart,
+          ...(passkeyPart ? { passkey: passkeyPart } : {}),
+        });
+        committed = true;
+        // The cached status still says "not set up"; the keypair step reads it.
+        invalidateStatusCache();
+        await rememberVault(userId, kVault);
+        kVault.fill(0);
+        invalidateStatusCache();
+      },
     },
   };
+}
+
+export async function prepareVaultSetup(
+  userId: string,
+  password: string,
+): Promise<PreparedVaultSetup> {
+  const result = await prepareVaultSetupWith(userId, { kind: "password", password });
+  if (!result.ok) throw new Error("Couldn't prepare the vault.");
+  return result.prepared;
 }
 
 /** Creates and saves a vault in one go. Returned phrase MUST be shown to the user. */
@@ -206,151 +262,241 @@ export async function setupVault(
   return { recoveryPhrase: prepared.recoveryPhrase };
 }
 
-// ─── unlock ─────────────────────────────────────────────────────────────────
+// ─── opening the vault ──────────────────────────────────────────────────────
+//
+// Three things can open a vault: its password (if it has one), its recovery
+// phrase, and any passkey set up for it. Each wraps the same K_vault.
 
-export type UnlockResult =
-  | { ok: true }
-  | { ok: false; reason: "not_setup" | "wrong_password" | "wrong_phrase" | "malformed" };
+export type VaultAccess =
+  | { kind: "password"; password: string }
+  | { kind: "phrase"; phrase: string }
+  | { kind: "passkey" };
 
-export async function unlockWithPassword(
+export type VaultAccessFailure =
+  | "not_setup"
+  | "no_password"
+  | "wrong_password"
+  | "wrong_phrase"
+  | "malformed"
+  | "none_enrolled"
+  | "cancelled"
+  | "no_prf"
+  | "unsupported"
+  | "wrong_passkey";
+
+type SetUpStatus = Extract<VaultStatus, { isSetup: true }>;
+
+/** The raw vault key, opened with whichever proof was given. Caller zeroes it. */
+async function openKVault(
   userId: string,
-  password: string,
-): Promise<UnlockResult> {
-  const status = await getVaultStatus(true);
-  if (!status.isSetup) return { ok: false, reason: "not_setup" };
-
-  const saltPassword = base64UrlToBytes(status.saltPassword);
-  const wrapPassword = base64UrlToBytes(status.wrapPassword);
-  if (wrapPassword.byteLength !== WRAP_BYTES) {
-    return { ok: false, reason: "malformed" };
+  status: SetUpStatus,
+  via: VaultAccess,
+): Promise<{ ok: true; kVault: Uint8Array } | { ok: false; reason: VaultAccessFailure }> {
+  if (via.kind === "password") {
+    if (!status.saltPassword || !status.wrapPassword) return { ok: false, reason: "no_password" };
+    const wrap = base64UrlToBytes(status.wrapPassword);
+    if (wrap.byteLength !== WRAP_BYTES) return { ok: false, reason: "malformed" };
+    const kek = await deriveKekFromPassword(
+      via.password,
+      base64UrlToBytes(status.saltPassword),
+      status.kdfVersion,
+    );
+    const kVault = await unwrapSecret(await importKek(kek), wrap);
+    kek.fill(0);
+    return kVault ? { ok: true, kVault } : { ok: false, reason: "wrong_password" };
   }
 
-  const kek = await deriveKekFromPassword(password, saltPassword, status.kdfVersion);
-  const kekKey = await importKek(kek);
-  const kVaultBytes = await unwrapSecret(kekKey, wrapPassword);
-  kek.fill(0);
-  if (!kVaultBytes) return { ok: false, reason: "wrong_password" };
+  if (via.kind === "phrase") {
+    if (!isValidRecoveryPhrase(via.phrase)) return { ok: false, reason: "wrong_phrase" };
+    const wrap = base64UrlToBytes(status.wrapPhrase);
+    if (wrap.byteLength !== WRAP_BYTES) return { ok: false, reason: "malformed" };
+    const kek = await deriveKekFromPhrase(
+      normaliseRecoveryPhrase(via.phrase),
+      base64UrlToBytes(status.saltPhrase),
+      status.kdfVersion,
+    );
+    const kVault = await unwrapSecret(await importKek(kek), wrap);
+    kek.fill(0);
+    return kVault ? { ok: true, kVault } : { ok: false, reason: "wrong_phrase" };
+  }
 
-  await rememberVault(userId, kVaultBytes);
-  kVaultBytes.fill(0);
+  const wraps = status.passkeyWraps ?? [];
+  if (wraps.length === 0) return { ok: false, reason: "none_enrolled" };
+  const evaluated = await evaluatePrf(wraps);
+  if (!evaluated.ok) return { ok: false, reason: evaluated.reason };
+  const used = wraps.find((w) => w.credentialId === evaluated.result.credentialId);
+  const kVault = used
+    ? await unwrapVaultKeyWithPasskey(
+        evaluated.result.output,
+        userId,
+        used.authenticatorId,
+        base64UrlToBytes(used.wrap),
+      )
+    : null;
+  evaluated.result.output.fill(0);
+  return kVault ? { ok: true, kVault } : { ok: false, reason: "wrong_passkey" };
+}
+
+async function openWith(
+  userId: string,
+  via: VaultAccess,
+): Promise<{ ok: true; kVault: Uint8Array } | { ok: false; reason: VaultAccessFailure }> {
+  const status = await getVaultStatus(true);
+  if (!status.isSetup) return { ok: false, reason: "not_setup" };
+  return openKVault(userId, status, via);
+}
+
+export type VaultResult = { ok: true } | { ok: false; reason: VaultAccessFailure };
+
+/** Unlocks the vault for this browser session. */
+export async function unlockVault(userId: string, via: VaultAccess): Promise<VaultResult> {
+  const opened = await openWith(userId, via);
+  if (!opened.ok) return opened;
+  await rememberVault(userId, opened.kVault);
+  opened.kVault.fill(0);
   return { ok: true };
 }
 
-export async function unlockWithPhrase(
-  userId: string,
-  rawPhrase: string,
-): Promise<UnlockResult> {
-  if (!isValidRecoveryPhrase(rawPhrase)) {
-    return { ok: false, reason: "wrong_phrase" };
-  }
-  const phrase = normaliseRecoveryPhrase(rawPhrase);
+export type UnlockResult = VaultResult;
+export type PasskeyUnlockResult = VaultResult;
 
-  const status = await getVaultStatus(true);
-  if (!status.isSetup) return { ok: false, reason: "not_setup" };
-
-  const saltPhrase = base64UrlToBytes(status.saltPhrase);
-  const wrapPhrase = base64UrlToBytes(status.wrapPhrase);
-  if (wrapPhrase.byteLength !== WRAP_BYTES) {
-    return { ok: false, reason: "malformed" };
-  }
-
-  const kek = await deriveKekFromPhrase(phrase, saltPhrase, status.kdfVersion);
-  const kekKey = await importKek(kek);
-  const kVaultBytes = await unwrapSecret(kekKey, wrapPhrase);
-  kek.fill(0);
-  if (!kVaultBytes) return { ok: false, reason: "wrong_phrase" };
-
-  await rememberVault(userId, kVaultBytes);
-  kVaultBytes.fill(0);
-  return { ok: true };
+export function unlockWithPassword(userId: string, password: string): Promise<VaultResult> {
+  return unlockVault(userId, { kind: "password", password });
 }
 
-// ─── change password / regenerate phrase ────────────────────────────────────
+export function unlockWithPhrase(userId: string, phrase: string): Promise<VaultResult> {
+  return unlockVault(userId, { kind: "phrase", phrase });
+}
 
-export type ChangePasswordResult =
-  | { ok: true }
-  | { ok: false; reason: "not_setup" | "wrong_password" | "malformed" };
+/** Unlocks with any passkey set up for the vault that is on this device. */
+export function unlockWithPasskey(userId: string): Promise<VaultResult> {
+  return unlockVault(userId, { kind: "passkey" });
+}
 
-/** Phrase wrap is untouched, so phrase recovery still works after a password change. */
-export async function changePassword(
+// ─── what opens this vault ──────────────────────────────────────────────────
+
+/** Passkeys that can unlock this account's vault. Empty when there are none or the vault is not set up. */
+export async function passkeysThatUnlock(force = false): Promise<VaultPasskeyWrap[]> {
+  const status = await getVaultStatus(force);
+  return status.isSetup ? (status.passkeyWraps ?? []) : [];
+}
+
+/** False for a vault opened by passkey and recovery phrase only. */
+export async function vaultHasPassword(force = false): Promise<boolean> {
+  const status = await getVaultStatus(force);
+  return status.isSetup && status.wrapPassword !== null;
+}
+
+// ─── changing what opens it ─────────────────────────────────────────────────
+//
+// Each of these needs the raw vault key, so each asks for a proof again
+// even in an unlocked session, which deliberately cannot give the key back.
+
+/** Lets one of the user's passkeys unlock the vault. */
+export async function enablePasskeyUnlock(
+  userId: string,
+  passkey: { id: string; credentialId: string },
+  via: VaultAccess,
+): Promise<VaultResult> {
+  const opened = await openWith(userId, via);
+  if (!opened.ok) return opened;
+  try {
+    const prfSalt = newPrfSalt();
+    const evaluated = await evaluatePrf([
+      { credentialId: passkey.credentialId, prfSalt: bytesToBase64Url(prfSalt) },
+    ]);
+    if (!evaluated.ok) return { ok: false, reason: evaluated.reason };
+
+    const wrap = await wrapVaultKeyForPasskey(evaluated.result.output, userId, passkey.id, opened.kVault);
+    evaluated.result.output.fill(0);
+    await api.setVaultPasskeyWrap(passkey.id, {
+      prfSalt: bytesToBase64Url(prfSalt),
+      wrap: bytesToBase64Url(wrap),
+    });
+    // The proof was good, so this is also an unlock.
+    await rememberVault(userId, opened.kVault);
+    invalidateStatusCache();
+    return { ok: true };
+  } finally {
+    opened.kVault.fill(0);
+  }
+}
+
+export async function disablePasskeyUnlock(authenticatorId: string): Promise<void> {
+  await api.deleteVaultPasskeyWrap(authenticatorId);
+  invalidateStatusCache();
+}
+
+/**
+ * Sets the vault password: changing it (proof: the old password), resetting
+ * a forgotten one (proof: the recovery phrase), or adding one to a vault
+ * that has none (proof: a passkey or the phrase). The other ways in are
+ * untouched.
+ */
+export async function setVaultPassword(
+  userId: string,
+  newPassword: string,
+  via: VaultAccess,
+): Promise<VaultResult> {
+  const opened = await openWith(userId, via);
+  if (!opened.ok) return opened;
+  try {
+    const salt = randomSalt();
+    const kek = await deriveKekFromPassword(newPassword, salt, KDF_VERSION);
+    const wrap = await wrapSecret(await importKek(kek), opened.kVault);
+    kek.fill(0);
+    await api.changeVaultPassword({
+      kdfVersion: KDF_VERSION,
+      saltPassword: bytesToBase64Url(salt),
+      wrapPassword: bytesToBase64Url(wrap),
+    });
+    await rememberVault(userId, opened.kVault);
+    invalidateStatusCache();
+    return { ok: true };
+  } finally {
+    opened.kVault.fill(0);
+  }
+}
+
+export type ChangePasswordResult = VaultResult;
+
+export function changePassword(
   userId: string,
   currentPassword: string,
   newPassword: string,
-): Promise<ChangePasswordResult> {
-  const status = await getVaultStatus(true);
-  if (!status.isSetup) return { ok: false, reason: "not_setup" };
-
-  const oldSalt = base64UrlToBytes(status.saltPassword);
-  const oldWrap = base64UrlToBytes(status.wrapPassword);
-  if (oldWrap.byteLength !== WRAP_BYTES) return { ok: false, reason: "malformed" };
-
-  const oldKek = await deriveKekFromPassword(currentPassword, oldSalt, status.kdfVersion);
-  const oldKekKey = await importKek(oldKek);
-  const kVaultBytes = await unwrapSecret(oldKekKey, oldWrap);
-  oldKek.fill(0);
-  if (!kVaultBytes) return { ok: false, reason: "wrong_password" };
-
-  const newSalt = randomSalt();
-  const newKek = await deriveKekFromPassword(newPassword, newSalt, KDF_VERSION);
-  const newKekKey = await importKek(newKek);
-  const newWrap = await wrapSecret(newKekKey, kVaultBytes);
-  newKek.fill(0);
-
-  await api.changeVaultPassword({
-    kdfVersion: KDF_VERSION,
-    saltPassword: bytesToBase64Url(newSalt),
-    wrapPassword: bytesToBase64Url(newWrap),
-  });
-
-  // Stay unlocked across the password change.
-  await rememberVault(userId, kVaultBytes);
-  kVaultBytes.fill(0);
-
-  invalidateStatusCache();
-  return { ok: true };
+): Promise<VaultResult> {
+  return setVaultPassword(userId, newPassword, { kind: "password", password: currentPassword });
 }
 
 export type RegeneratePhraseResult =
   | { ok: true; recoveryPhrase: string }
-  | { ok: false; reason: "not_setup" | "wrong_password" | "malformed" };
+  | { ok: false; reason: VaultAccessFailure };
 
-/** Requires current password (the old phrase is about to become invalid). */
+/** Replaces the recovery phrase. The old one stops working. */
 export async function regeneratePhrase(
   userId: string,
-  currentPassword: string,
+  via: VaultAccess | string,
 ): Promise<RegeneratePhraseResult> {
-  const status = await getVaultStatus(true);
-  if (!status.isSetup) return { ok: false, reason: "not_setup" };
-
-  const saltPassword = base64UrlToBytes(status.saltPassword);
-  const wrapPassword = base64UrlToBytes(status.wrapPassword);
-  if (wrapPassword.byteLength !== WRAP_BYTES) return { ok: false, reason: "malformed" };
-
-  const kekPassword = await deriveKekFromPassword(currentPassword, saltPassword, status.kdfVersion);
-  const kekPasswordKey = await importKek(kekPassword);
-  const kVaultBytes = await unwrapSecret(kekPasswordKey, wrapPassword);
-  kekPassword.fill(0);
-  if (!kVaultBytes) return { ok: false, reason: "wrong_password" };
-
-  const newPhrase = generateRecoveryPhrase();
-  const newSalt = randomSalt();
-  const newKek = await deriveKekFromPhrase(newPhrase, newSalt, KDF_VERSION);
-  const newKekKey = await importKek(newKek);
-  const newWrap = await wrapSecret(newKekKey, kVaultBytes);
-  newKek.fill(0);
-
-  await api.regenerateVaultPhrase({
-    kdfVersion: KDF_VERSION,
-    saltPhrase: bytesToBase64Url(newSalt),
-    wrapPhrase: bytesToBase64Url(newWrap),
-  });
-
-  // K_vault unchanged; stay unlocked through the regen UI.
-  await rememberVault(userId, kVaultBytes);
-  kVaultBytes.fill(0);
-
-  invalidateStatusCache();
-  return { ok: true, recoveryPhrase: newPhrase };
+  const proof: VaultAccess = typeof via === "string" ? { kind: "password", password: via } : via;
+  const opened = await openWith(userId, proof);
+  if (!opened.ok) return opened;
+  try {
+    const newPhrase = generateRecoveryPhrase();
+    const salt = randomSalt();
+    const kek = await deriveKekFromPhrase(newPhrase, salt, KDF_VERSION);
+    const wrap = await wrapSecret(await importKek(kek), opened.kVault);
+    kek.fill(0);
+    await api.regenerateVaultPhrase({
+      kdfVersion: KDF_VERSION,
+      saltPhrase: bytesToBase64Url(salt),
+      wrapPhrase: bytesToBase64Url(wrap),
+    });
+    await rememberVault(userId, opened.kVault);
+    invalidateStatusCache();
+    return { ok: true, recoveryPhrase: newPhrase };
+  } finally {
+    opened.kVault.fill(0);
+  }
 }
 
 // ─── per-transfer wrap/unwrap ───────────────────────────────────────────────
