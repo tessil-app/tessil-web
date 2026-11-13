@@ -16,7 +16,7 @@
   let cycle = $state<Cycle>("monthly");
   const cycleOptions: { value: Cycle; label: string }[] = [
     { value: "monthly", label: "Monthly" },
-    { value: "annual", label: "Yearly, two months free" },
+    { value: "annual", label: "Yearly" },
   ];
   let busy = $state<PlanId | null>(null);
   let message = $state<string | null>(null);
@@ -108,6 +108,7 @@
         value={cycle}
         onChange={(v) => (cycle = v)}
       />
+      <p class="-mt-2 text-sm text-muted-foreground">Pay yearly and two months are free.</p>
     </header>
 
     {#if message}
