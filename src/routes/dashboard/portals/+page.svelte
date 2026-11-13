@@ -26,6 +26,7 @@
     type MyPortal,
   } from "$lib/portal/client";
   import { auth } from "$lib/stores/auth.svelte";
+  import { formatSize } from "$lib/utils";
   import { isUnlocked, subscribeToVaultState } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import IconDotsThreeRegular from "phosphor-icons-svelte/IconDotsThreeRegular.svelte";
@@ -57,9 +58,16 @@
     confirmDeleteId ? (portals.find((p) => p.id === confirmDeleteId) ?? null) : null,
   );
 
+  let storage = $state<{ usedBytes: number; quotaBytes: number } | null>(null);
+
   async function load() {
     if (!auth.user) return;
     errorMessage = null;
+    // Shown next to the list; the page works without it.
+    void api
+      .getMyUsage()
+      .then((u) => (storage = u.storage ?? null))
+      .catch(() => {});
     try {
       vaultUnlocked = await isUnlocked(auth.user.id);
       const res = await loadMyPortals(auth.user.id, window.location.origin);
@@ -391,6 +399,15 @@
         {#if maxPortals > 0}
           <p class="text-xs text-muted-foreground">
             {ownedCount} of {maxPortals} portals on your plan.
+            {#if storage}
+              {formatSize(storage.usedBytes)} of {formatSize(storage.quotaBytes)} storage used.
+              <a
+                href="/dashboard/settings/usage"
+                class="underline underline-offset-2 hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+              >
+                Details
+              </a>
+            {/if}
           </p>
         {/if}
       {/if}
