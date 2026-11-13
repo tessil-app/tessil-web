@@ -15,6 +15,7 @@
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
+  import * as Table from "$lib/components/table";
   import TextInput from "$lib/components/TextInput.svelte";
   import { api, ApiError } from "$lib/api/client";
   import { DEFAULT_LOCALE, LOCALES, type Locale } from "$lib/i18n/locale";
@@ -282,9 +283,9 @@
           </Frame.Panel>
         </Frame.Root>
       {:else}
-        {#snippet rowBody(portal: MyPortal)}
+        {#snippet nameCell(portal: MyPortal)}
           <div class="min-w-0 flex-1">
-            <div class="text-sm font-medium text-foreground truncate">
+            <div class="font-medium text-foreground truncate">
               {#if portal.state === "open"}
                 {portal.title}
               {:else if portal.state === "locked"}
@@ -304,97 +305,92 @@
               {/if}
             </div>
           </div>
-          <div class="shrink-0 sm:w-36">
-            <Badge tone={portal.isDisabled ? "muted" : "success"}>
-              {portal.isDisabled ? "Switched off" : "Accepting files"}
-            </Badge>
-          </div>
+        {/snippet}
+        {#snippet statusBadge(portal: MyPortal)}
+          <Badge tone={portal.isDisabled ? "muted" : "success"}>
+            {portal.isDisabled ? "Switched off" : "Accepting files"}
+          </Badge>
         {/snippet}
 
-        <div class="rounded-lg bg-card">
-          <div
-            class="hidden sm:flex items-center gap-4 rounded-t-lg bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide"
-          >
-            <div class="flex-1">Portal</div>
-            <div class="w-36">Status</div>
-            <div class="w-36"></div>
-          </div>
-          <ul class="divide-y divide-border">
-            {#each portals as portal (portal.id)}
-              <li
-                class="flex items-center gap-2 pr-3 transition-colors duration-150 ease-out last:rounded-b-lg [@media(hover:hover)]:hover:bg-accent"
-              >
-                {#if portal.state === "open"}
-                  <a
-                    href="/dashboard/portals/{portal.id}"
-                    class="flex min-w-0 flex-1 items-center gap-4 px-4 py-3 rounded-lg focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                  >
-                    {@render rowBody(portal)}
-                  </a>
-                {:else}
-                  <div class="flex min-w-0 flex-1 items-center gap-4 px-4 py-3">
-                    {@render rowBody(portal)}
-                  </div>
-                {/if}
-                <div class="flex shrink-0 items-center justify-end gap-1 sm:w-36">
-                  {#if portal.link}
-                    <button
-                      type="button"
-                      onclick={() => copyLink(portal)}
-                      aria-label="Copy link for {portal.title}"
-                      class="hidden sm:inline-flex text-xs font-medium px-2 py-2 rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:cursor-pointer hover:text-foreground hover:bg-background focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      {copiedId === portal.id ? "Copied" : "Copy link"}
-                    </button>
-                  {/if}
-                  {#if portal.link || portal.role === "owner"}
-                    <DropdownMenu
-                      label="More for {portal.title ?? 'this portal'}"
-                      triggerClass="p-2 text-muted-foreground hover:text-foreground hover:bg-background"
-                    >
-                      {#snippet trigger()}
-                        <IconDotsThreeRegular class="size-5" />
-                      {/snippet}
-                      {#snippet children(close)}
-                        {#if portal.link}
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              close();
-                              void copyLink(portal);
-                            }}
-                          >
-                            Copy link
-                          </DropdownMenuItem>
-                        {/if}
-                        {#if portal.role === "owner"}
-                          <DropdownMenuItem
-                            disabled={busyId === portal.id}
-                            onSelect={() => {
-                              close();
-                              void toggleDisabled(portal);
-                            }}
-                          >
-                            {portal.isDisabled ? "Switch on" : "Switch off"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            disabled={busyId === portal.id}
-                            onSelect={() => {
-                              close();
-                              confirmDeleteId = portal.id;
-                            }}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        {/if}
-                      {/snippet}
-                    </DropdownMenu>
-                  {/if}
+        <Table.Root cols="grid-cols-[minmax(0,1fr)_9rem]" actions="md">
+          {#snippet header()}
+            <div>Portal</div>
+            <div>Status</div>
+          {/snippet}
+
+          {#each portals as portal (portal.id)}
+            <Table.Row
+              href={portal.state === "open" ? `/dashboard/portals/${portal.id}` : undefined}
+              actionsOnPhone
+            >
+              {#snippet cells()}
+                {@render nameCell(portal)}
+                <div>{@render statusBadge(portal)}</div>
+              {/snippet}
+              {#snippet stacked()}
+                <div class="flex items-center justify-between gap-3">
+                  {@render nameCell(portal)}
+                  {@render statusBadge(portal)}
                 </div>
-              </li>
-            {/each}
-          </ul>
-        </div>
+              {/snippet}
+              {#snippet actions()}
+                {#if portal.link}
+                  <button
+                    type="button"
+                    onclick={() => copyLink(portal)}
+                    aria-label="Copy link for {portal.title}"
+                    class="hidden sm:inline-flex text-xs font-medium px-2 py-2 rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:cursor-pointer hover:text-foreground hover:bg-background focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {copiedId === portal.id ? "Copied" : "Copy link"}
+                  </button>
+                {/if}
+                {#if portal.link || portal.role === "owner"}
+                  <DropdownMenu
+                    label="More for {portal.title ?? 'this portal'}"
+                    triggerClass="p-2 text-muted-foreground hover:text-foreground hover:bg-background"
+                  >
+                    {#snippet trigger()}
+                      <IconDotsThreeRegular class="size-5" />
+                    {/snippet}
+                    {#snippet children(close)}
+                      {#if portal.link}
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            close();
+                            void copyLink(portal);
+                          }}
+                        >
+                          Copy link
+                        </DropdownMenuItem>
+                      {/if}
+                      {#if portal.role === "owner"}
+                        <DropdownMenuItem
+                          disabled={busyId === portal.id}
+                          onSelect={() => {
+                            close();
+                            void toggleDisabled(portal);
+                          }}
+                        >
+                          {portal.isDisabled ? "Switch on" : "Switch off"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={busyId === portal.id}
+                          onSelect={() => {
+                            close();
+                            confirmDeleteId = portal.id;
+                          }}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      {/if}
+                    {/snippet}
+                  </DropdownMenu>
+                {/if}
+              {/snippet}
+            </Table.Row>
+          {/each}
+        </Table.Root>
 
         {#if maxPortals > 0}
           <p class="text-xs text-muted-foreground">
