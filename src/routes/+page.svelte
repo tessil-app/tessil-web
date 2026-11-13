@@ -751,7 +751,7 @@
     <div class="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
         {#if PORTALS_ANNOUNCED}
           <a
-            href="#portals"
+            href="/portals"
             class="inline-flex items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3.5 text-sm text-foreground transition-colors duration-200 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <span class="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">New</span>
@@ -1103,7 +1103,7 @@
 
       {#if PORTALS_ANNOUNCED && !hasFiles}
         <a
-          href="#portals"
+          href="/portals"
           class="group relative self-end w-full sm:w-80 rounded-lg bg-card/95 p-5 shadow-lg space-y-2 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <span class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1189,6 +1189,7 @@
             </Button>
             <p class="text-sm text-muted-foreground">
               You set portals up in your dashboard. Sending stays free.
+              <TextLink href="/portals">Take the tour</TextLink>
             </p>
           </div>
         </div>

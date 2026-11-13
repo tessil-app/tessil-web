@@ -99,7 +99,7 @@
   // Signed-out visitors get the pages that help them decide. Signed-in
   // people get their own pages instead; these stay in the footer for them.
   const publicLinks = [
-    ...(PORTALS_ANNOUNCED ? [{ href: "/#portals", label: "Portals" }] : []),
+    ...(PORTALS_ANNOUNCED ? [{ href: "/portals", label: "Portals" }] : []),
     { href: "/pricing", label: "Pricing" },
     { href: "/security", label: "Security" },
   ];
