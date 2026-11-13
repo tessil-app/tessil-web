@@ -5,8 +5,12 @@
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
+  import DetailItem from "$lib/components/DetailItem.svelte";
+  import DetailList from "$lib/components/DetailList.svelte";
   import Drawer from "$lib/components/Drawer.svelte";
+  import DrawerSection from "$lib/components/DrawerSection.svelte";
   import FilterChips from "$lib/components/FilterChips.svelte";
+  import EmptyState from "$lib/components/EmptyState.svelte";
   import * as Frame from "$lib/components/frame";
   import IconButton from "$lib/components/IconButton.svelte";
   import Modal from "$lib/components/Modal.svelte";
@@ -59,10 +63,33 @@
     title="Components"
     tagline="The shared building blocks. Not linked from the site."
     align="left"
-    class="mb-8"
   />
 
   <div class="space-y-12">
+    <section class="space-y-4">
+      {@render section(
+        "Page header",
+        "Every page starts with one. The way back sits above the title, the state next to it, the buttons beside it and below it on a phone.",
+      )}
+      <div class="rounded-lg border border-dashed border-border p-4">
+        <PageHeader
+          title="Belastingaangifte 2025"
+          tagline="One line on what this page is for."
+          back={{ href: "/styleguide", label: "All portals" }}
+          align="left"
+          class="mb-0"
+        >
+          {#snippet badge()}
+            <Badge tone="success">Accepting files</Badge>
+          {/snippet}
+          {#snippet actions()}
+            <Button variant="secondary" fullWidth={false}>Secondary</Button>
+            <Button fullWidth={false}>Primary</Button>
+          {/snippet}
+        </PageHeader>
+      </div>
+    </section>
+
     <section class="space-y-4">
       {@render section(
         "Buttons",
@@ -197,17 +224,12 @@
 
     <section class="space-y-4">
       {@render section("Empty state", "Says what belongs here and offers the one way to start.")}
-      <Frame.Root>
-        <Frame.Panel>
-          <div class="text-center space-y-3">
-            <h3 class="text-lg font-medium text-foreground">Nothing has been sent yet</h3>
-            <p class="text-sm text-muted-foreground">Share the link. Files appear here as soon as someone sends them.</p>
-            <div class="flex justify-center pt-2">
-              <Button fullWidth={false}>Copy link</Button>
-            </div>
-          </div>
-        </Frame.Panel>
-      </Frame.Root>
+      <EmptyState title="Nothing has been sent yet">
+        <p>Share the link. Files appear here as soon as someone sends them.</p>
+        {#snippet actions()}
+          <Button fullWidth={false}>Copy link</Button>
+        {/snippet}
+      </EmptyState>
     </section>
 
     <section class="space-y-4">
@@ -226,20 +248,27 @@
 <Drawer open={opened !== null} title={opened?.name ?? ""} onClose={() => (openId = null)}>
   {#if opened}
     <div class="space-y-3">
-      <section class="rounded-lg bg-card p-4">
-        <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-y-2 gap-x-4 text-sm">
-          <dt class="text-muted-foreground">Reference</dt>
-          <dd class="text-foreground font-mono">{opened.ref}</dd>
-          <dt class="text-muted-foreground">Files</dt>
-          <dd class="text-foreground">{opened.files}</dd>
-        </dl>
-      </section>
-      <section class="space-y-2 rounded-lg bg-card p-4">
-        <h3 class="text-sm font-medium text-foreground">A section</h3>
-        <p class="text-xs text-muted-foreground">
-          Each group of related things gets its own card with a small heading.
-        </p>
-      </section>
+      <DrawerSection>
+        <DetailList>
+          <DetailItem label="Reference"><span class="font-mono">{opened.ref}</span></DetailItem>
+          <DetailItem label="Files">{opened.files}</DetailItem>
+        </DetailList>
+      </DrawerSection>
+      <DrawerSection
+        title="A section"
+        description="Each group of related things gets its own card with a small heading."
+      >
+        {#snippet aside()}
+          <Badge tone={opened.done ? "success" : "warning"}>{opened.done ? "Complete" : "Incomplete"}</Badge>
+        {/snippet}
+      </DrawerSection>
+      <DrawerSection
+        title="Delete"
+        description="Things that can't be undone go last, in a section of their own."
+        tone="danger"
+      >
+        <Button variant="destructive" fullWidth={false} onclick={() => (modalOpen = true)}>Delete</Button>
+      </DrawerSection>
     </div>
   {/if}
   {#snippet footer()}

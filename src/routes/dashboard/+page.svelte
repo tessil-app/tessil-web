@@ -3,7 +3,7 @@
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
-  import * as Frame from "$lib/components/frame";
+  import EmptyState from "$lib/components/EmptyState.svelte";
   import IconButton from "$lib/components/IconButton.svelte";
   import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
@@ -477,19 +477,14 @@
           <p class="text-muted-foreground">Loading your transfers…</p>
         </div>
       {:else if transfers.length === 0}
-        <Frame.Root>
-          <Frame.Panel>
-            <div class="text-center space-y-3">
-              <h2 class="text-lg font-medium text-foreground">No transfers yet</h2>
-              <p class="text-sm text-muted-foreground">
-                Anything you upload while signed in appears here.
-              </p>
-              <div class="flex justify-center pt-2">
-                <Button href="/" fullWidth={false}>Create your first transfer</Button>
-              </div>
-            </div>
-          </Frame.Panel>
-        </Frame.Root>
+        <EmptyState title="No transfers yet">
+          <p>
+            Anything you upload while signed in appears here.
+          </p>
+          {#snippet actions()}
+            <Button href="/" fullWidth={false}>Create your first transfer</Button>
+          {/snippet}
+        </EmptyState>
       {:else}
         <Table.Root
           cols="grid-cols-[minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,0.8fr)]"

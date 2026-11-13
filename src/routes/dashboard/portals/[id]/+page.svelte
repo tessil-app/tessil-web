@@ -11,7 +11,7 @@
   import IconButton from "$lib/components/IconButton.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
   import * as Table from "$lib/components/table";
-  import * as Frame from "$lib/components/frame";
+  import EmptyState from "$lib/components/EmptyState.svelte";
   import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
@@ -19,6 +19,7 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import { api } from "$lib/api/client";
   import { saveDecryptedFile, StreamInterruptedError } from "$lib/download/saveFile";
+  import BackLink from "$lib/components/BackLink.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import {
@@ -333,14 +334,9 @@
 <Seo title="{portal?.title ?? 'Portal'} - Tessil" robots="noindex" />
 
 <PageLayout width="5xl">
-  <p class="mb-4 text-sm">
-    <a
-      href="/dashboard/portals"
-      class="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-    >
-      ← All portals
-    </a>
-  </p>
+  {#if phase !== "ready"}
+    <BackLink href="/dashboard/portals" label="All portals" />
+  {/if}
 
   {#if phase === "loading"}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
@@ -348,52 +344,41 @@
       <p class="text-muted-foreground">Loading…</p>
     </div>
   {:else if phase === "locked"}
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="text-center space-y-3">
-          <h1 class="text-lg font-medium text-foreground">
-            {auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"}
-          </h1>
-          <p class="text-sm text-muted-foreground">
-            The files sent to this portal are opened with a key kept in your vault.
-          </p>
-          <div class="flex justify-center pt-2">
-            {#if auth.needsVaultSetup}
-              <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
-            {:else}
-              <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
-            {/if}
-          </div>
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
+    <EmptyState title={auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"} level={1}>
+      <p>
+        The files sent to this portal are opened with a key kept in your vault.
+      </p>
+      {#snippet actions()}
+        {#if auth.needsVaultSetup}
+          <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+        {:else}
+          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+        {/if}
+      {/snippet}
+    </EmptyState>
   {:else if phase === "missing" || phase === "unreadable"}
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="text-center space-y-3">
-          <h1 class="text-lg font-medium text-foreground">
-            {phase === "missing" ? "Portal not found" : "This portal can't be opened"}
-          </h1>
-          <p class="text-sm text-muted-foreground">
-            {phase === "missing"
-              ? "It may have been deleted, or you may not be a member of it."
-              : "Its keys did not open with your vault."}
-          </p>
-          {#if errorMessage}
-            <Alert tone="destructive">{errorMessage}</Alert>
-          {/if}
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
+    <EmptyState title={phase === "missing" ? "Portal not found" : "This portal can't be opened"} level={1}>
+      <p>
+        {phase === "missing"
+          ? "It may have been deleted, or you may not be a member of it."
+          : "Its keys did not open with your vault."}
+      </p>
+      {#if errorMessage}
+        <Alert tone="destructive">{errorMessage}</Alert>
+      {/if}
+    </EmptyState>
   {:else if portal}
     <PageHeader
       title={portal.title}
-      tagline={portal.isDisabled
-        ? "Switched off. Nobody can send files here until you switch it back on."
-        : "Files are deleted automatically, so download what you need to keep."}
+      tagline="Files are deleted automatically, so download what you need to keep."
+      back={{ href: "/dashboard/portals", label: "All portals" }}
       align="left"
-      class="mb-8 flex-wrap"
     >
+      {#snippet badge()}
+        <Badge tone={portal?.isDisabled ? "muted" : "success"}>
+          {portal?.isDisabled ? "Switched off" : "Accepting files"}
+        </Badge>
+      {/snippet}
       {#snippet actions()}
         {#if portal?.role === "owner"}
           <Button
@@ -425,16 +410,11 @@
       {/if}
 
       {#if deposits.length === 0}
-        <Frame.Root>
-          <Frame.Panel>
-            <div class="text-center space-y-3">
-              <h2 class="text-lg font-medium text-foreground">Nothing has been sent yet</h2>
-              <p class="text-sm text-muted-foreground">
-                Share the portal link. Files appear here as soon as someone sends them.
-              </p>
-            </div>
-          </Frame.Panel>
-        </Frame.Root>
+        <EmptyState title="Nothing has been sent yet">
+          <p>
+            Share the portal link. Files appear here as soon as someone sends them.
+          </p>
+        </EmptyState>
       {:else}
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
           <SearchField

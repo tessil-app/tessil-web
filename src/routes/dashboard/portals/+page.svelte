@@ -9,7 +9,7 @@
   import Button from "$lib/components/Button.svelte";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import DropdownMenuItem from "$lib/components/DropdownMenuItem.svelte";
-  import * as Frame from "$lib/components/frame";
+  import EmptyState from "$lib/components/EmptyState.svelte";
   import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
@@ -254,34 +254,24 @@
       {/if}
 
       {#if maxPortals === 0 && portals.length === 0}
-        <Frame.Root>
-          <Frame.Panel>
-            <div class="text-center space-y-3">
-              <h2 class="text-lg font-medium text-foreground">Portals are part of the paid plans</h2>
-              <p class="text-sm text-muted-foreground">
-                A portal is a link you hand out so clients or colleagues can send you files,
-                encrypted in their browser so only you can open them.
-              </p>
-              <div class="flex justify-center pt-2">
-                <Button href="/pricing" fullWidth={false}>See the plans</Button>
-              </div>
-            </div>
-          </Frame.Panel>
-        </Frame.Root>
+        <EmptyState title="Portals are part of the paid plans">
+          <p>
+            A portal is a link you hand out so clients or colleagues can send you files,
+            encrypted in their browser so only you can open them.
+          </p>
+          {#snippet actions()}
+            <Button href="/pricing" fullWidth={false}>See the plans</Button>
+          {/snippet}
+        </EmptyState>
       {:else if portals.length === 0}
-        <Frame.Root>
-          <Frame.Panel>
-            <div class="text-center space-y-3">
-              <h2 class="text-lg font-medium text-foreground">No portals yet</h2>
-              <p class="text-sm text-muted-foreground">
-                Create one, share its link, and files people send through it appear here.
-              </p>
-              <div class="flex justify-center pt-2">
-                <Button fullWidth={false} onclick={openCreate}>Create your first portal</Button>
-              </div>
-            </div>
-          </Frame.Panel>
-        </Frame.Root>
+        <EmptyState title="No portals yet">
+          <p>
+            Create one, share its link, and files people send through it appear here.
+          </p>
+          {#snippet actions()}
+            <Button fullWidth={false} onclick={openCreate}>Create your first portal</Button>
+          {/snippet}
+        </EmptyState>
       {:else}
         {#snippet nameCell(portal: MyPortal)}
           <div class="min-w-0 flex-1">
