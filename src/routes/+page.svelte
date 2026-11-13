@@ -9,7 +9,9 @@
   import Button from "$lib/components/Button.svelte";
   import CircularProgress from "$lib/components/CircularProgress.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
-  import HowItWorks from "$lib/components/HowItWorks.svelte";
+  import Badge from "$lib/components/Badge.svelte";
+  import TextLink from "$lib/components/TextLink.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
   import Modal from "$lib/components/Modal.svelte";
   import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
@@ -126,6 +128,30 @@
     { value: 25, label: "25" },
   ];
 
+  const steps: { title: string; body: string; link?: { href: string; label: string } }[] = [
+    {
+      title: "Encrypted before it leaves",
+      body: "Your browser scrambles every file, its name included. What reaches us is unreadable.",
+    },
+    {
+      title: "The key is never ours",
+      body: PORTALS_ANNOUNCED
+        ? "It travels in the part of the link browsers don't send to servers. For portals it stays in your vault."
+        : "It travels in the part of the link browsers don't send to servers.",
+    },
+    {
+      title: "Gone when it should be",
+      body: PORTALS_ANNOUNCED
+        ? "Transfers expire in hours or days. What arrives in a portal is deleted after 30 days."
+        : "Transfers expire in hours or days, and the files are deleted with them.",
+    },
+    {
+      title: "Check it yourself",
+      body: "Four checks in your own browser, about two minutes.",
+      link: { href: "/verify", label: "Verify it" },
+    },
+  ];
+
   type FeaturedItem = {
     slug: string;
     src: string;
@@ -146,7 +172,6 @@
   let isDraggingOver = $state(false);
   let fileInput = $state<HTMLInputElement | null>(null);
   let featured = $state<FeaturedItem | null>(null);
-  let imageRevealed = $state(false);
 
   let unlockOpen = $state(false);
   let unlockMode = $state<"password" | "phrase">("password");
@@ -713,18 +738,6 @@
     isDraggingOver && "bg-primary/5",
   )}
 >
-  {#if featured}
-    <div
-      aria-hidden="true"
-      class="featured-reveal absolute inset-0 bg-cover bg-center pointer-events-none"
-      style="
-        background-image: url('{featured.src}');
-        clip-path: {imageRevealed ? 'inset(0 round 0)' : 'inset(var(--reveal-top) 0 0 var(--reveal-left) round var(--reveal-round))'};
-        transition: clip-path 1200ms cubic-bezier(0.83, 0, 0.17, 1);
-      "
-    ></div>
-  {/if}
-
   {#if isDraggingOver}
     <div
       aria-hidden="true"
@@ -732,13 +745,44 @@
     ></div>
   {/if}
 
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-[16rem] sm:pb-24">
-    <div class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-6 sm:gap-10 lg:gap-12 items-stretch">
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-12 sm:pb-16">
+    <div class="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+        {#if supportPillVisible}
+          <div class="flex justify-center">
+            <button
+              type="button"
+              onclick={() => (supportOpen = true)}
+              class="inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
+              Keep Tessil alive
+            </button>
+          </div>
+        {/if}
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-tight text-foreground leading-none" style="letter-spacing: -0.035em">
+          Send anything.
+          <br />
+          We see nothing.
+        </h1>
+        <p class="max-w-lg text-base sm:text-lg text-muted-foreground leading-relaxed">
+          End-to-end encrypted in your browser. The key never
+          reaches our server.
+        </p>
+        <p class="text-sm text-muted-foreground/80 leading-relaxed">
+          Drop a file in the panel - or anywhere on this page.
+        </p>
+    </div>
+
+    <!-- The wall: this month's artwork, with the panel hung on it. -->
+    <div
+      class="relative mt-10 sm:mt-14 flex flex-wrap items-start justify-between gap-6 rounded-2xl bg-muted bg-cover bg-center p-3 pb-44 sm:p-8 lg:p-10 sm:min-h-[41.25rem]"
+      style={featured ? `background-image: url('${featured.src}')` : undefined}
+    >
 
       <!-- Height animates between empty (420) and has-files (580) sizes; sync'd with the extension's width animation. -->
       <aside
         class={cn(
-          "relative sm:sticky sm:top-6 sm:flex sm:items-stretch",
+          "relative w-full sm:w-auto sm:flex sm:items-stretch",
           isSuccess ? "sm:h-auto" : hasFiles ? "sm:h-[580px]" : "sm:h-[420px]",
         )}
         style="transition: height 450ms cubic-bezier(0.16, 1, 0.3, 1);"
@@ -1046,73 +1090,128 @@
         </div>
       </aside>
 
-      <div class="space-y-4 sm:text-right sm:max-w-md sm:ml-auto sm:pt-4">
-        {#if supportPillVisible}
-          <div class="flex sm:justify-end">
-            <button
-              type="button"
-              onclick={() => (supportOpen = true)}
-              class="inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-              Keep Tessil alive
-            </button>
-          </div>
-        {/if}
-        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-foreground leading-[1.05]" style="letter-spacing: -0.03em">
-          Send anything.
-          <br />
-          We see nothing.
-        </h1>
-        <p class="text-base text-muted-foreground leading-relaxed">
-          End-to-end encrypted in your browser. The key never
-          reaches our server.
-        </p>
-        <p class="text-sm text-muted-foreground/80 leading-relaxed">
-          Drop a file in the panel - or anywhere on this page.
-        </p>
-      </div>
-    </div>
-  </div>
-
-  {#if featured}
-    <div class="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:right-[25rem] sm:translate-x-1/2 bottom-4 z-20 flex flex-col items-center gap-1.5 max-w-[calc(100vw-2rem)]">
-      <button
-        type="button"
-        onclick={() => (imageRevealed = !imageRevealed)}
-        aria-pressed={imageRevealed}
-        aria-label={imageRevealed
-          ? `Hide ${featured.title}`
-          : `Reveal ${featured.title} by ${featured.artist}`}
-        class="group inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        <span class="size-1.5 rounded-full bg-primary"></span>
-        <span class="font-medium">{featured.title}</span>
-        <span class="text-muted-foreground">by {featured.artist}</span>
-        <span class="text-muted-foreground/60 mx-1" aria-hidden="true">·</span>
-        <span class="min-w-[2.75rem] text-center text-muted-foreground group-hover:text-foreground transition-colors duration-200 ease-out font-medium">
-          {imageRevealed ? "Hide" : "Reveal"}
-        </span>
-      </button>
-      {#if featured.artistUrl}
+      {#if PORTALS_ANNOUNCED && !hasFiles}
         <a
-          href={featured.artistUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex items-center gap-1 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-background transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          href="#portals"
+          class="group relative self-end w-full sm:w-80 rounded-lg bg-card/95 p-5 shadow-lg space-y-2 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
-          Artist →
+          <span class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Receive
+            <Badge tone="info">New</Badge>
+          </span>
+          <span class="block text-base font-semibold leading-snug text-foreground">
+            A link where people send you files. Only you can open them.
+          </span>
+          <span class="block text-sm text-primary underline-offset-4 group-hover:underline">
+            Meet portals
+          </span>
         </a>
       {/if}
     </div>
-  {/if}
+
+    {#if featured}
+      <div class="mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1 px-1 text-xs text-muted-foreground">
+        <p>
+          <span class="font-medium text-foreground">{featured.artist}</span>, from
+          {#if featured.artistUrl}
+            <TextLink href={featured.artistUrl} target="_blank" rel="noopener noreferrer">{featured.title}</TextLink>
+          {:else}
+            {featured.title}
+          {/if}
+        </p>
+        <p>On this wall this month.</p>
+      </div>
+    {/if}
+  </div>
+
 </section>
 
-<div class="bg-background border-t border-border">
-  <div class="max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-    <HowItWorks class="mt-0 pt-0 border-t-0" />
+<div class="bg-background">
+  <section aria-labelledby="how-title" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <h2 id="how-title" class="sr-only">How it works</h2>
+    <ol class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+      {#each steps as step, i (step.title)}
+        <li class="space-y-2">
+          <p class="text-xs font-semibold tracking-wider text-primary tabular-nums" aria-hidden="true">
+            0{i + 1}
+          </p>
+          <h3 class="text-lg font-semibold tracking-tight text-foreground">{step.title}</h3>
+          <p class="text-sm leading-relaxed text-muted-foreground">
+            {step.body}
+            {#if step.link}
+              <TextLink href={step.link.href} class="text-primary">{step.link.label}</TextLink>
+            {/if}
+          </p>
+        </li>
+      {/each}
+    </ol>
+  </section>
 
-    <section class="mt-14 pt-10 border-t border-border/60 space-y-3 text-sm text-muted-foreground leading-relaxed">
+  {#if PORTALS_ANNOUNCED}
+    <section
+      id="portals"
+      aria-labelledby="portals-title"
+      class="border-t border-border scroll-mt-20"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center">
+        <div class="space-y-5">
+          <p class="text-xs font-semibold uppercase tracking-wider text-primary">New: portals</p>
+          <h2 id="portals-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
+            Now it works both ways.
+          </h2>
+          <p class="max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground">
+            A portal is a link you hand to the people you work with. They see what you need
+            and send it, without an account. It is encrypted in their browser, so what arrives
+            can be opened by you and nobody else, us included.
+          </p>
+          <ul class="space-y-2.5 text-sm text-foreground">
+            {#each ["A checklist that shows what is still missing", "Works on a phone, no account for the sender", "Deleted automatically after 30 days"] as point (point)}
+              <li class="flex items-center gap-2.5">
+                <IconCheckRegular class="size-4 shrink-0 text-primary" />
+                {point}
+              </li>
+            {/each}
+          </ul>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-3 pt-2">
+            <Button href={auth.user ? "/dashboard/portals" : "/pricing"} fullWidth={false}>
+              {auth.user ? "Open your portals" : "See the plans"}
+            </Button>
+            <p class="text-sm text-muted-foreground">
+              You set portals up in your dashboard. Sending stays free.
+            </p>
+          </div>
+        </div>
+
+        <!-- What the sender sees. An illustration, not a control. -->
+        <div aria-hidden="true" class="rounded-xl border border-border bg-card p-6 shadow-sm space-y-3.5">
+          <p class="text-xs text-muted-foreground">Send files to</p>
+          <p class="text-xl font-semibold tracking-tight text-foreground">Studio North</p>
+          <div class="flex justify-between border-t border-border pt-3.5 text-xs text-muted-foreground">
+            <span>What is needed</span>
+            <span>2 of 3 added</span>
+          </div>
+          {#each [{ label: "Signed contract", file: "contract-signed.pdf" }, { label: "Logo files", file: "logo.zip" }] as row (row.label)}
+            <div class="flex items-center gap-2.5 rounded-md border border-border px-3.5 py-2.5 text-sm">
+              <IconCheckRegular class="size-4 shrink-0 text-success-foreground" />
+              <span class="flex-1 text-foreground">{row.label}</span>
+              <span class="text-xs text-muted-foreground">{row.file}</span>
+            </div>
+          {/each}
+          <div class="flex items-center gap-2.5 rounded-md border border-dashed border-border px-3.5 py-2.5 text-sm text-muted-foreground">
+            <span class="size-4 shrink-0 rounded-full border border-dashed border-warning"></span>
+            <span class="flex-1">Invoice details</span>
+            <span class="text-xs font-medium text-foreground">Choose file</span>
+          </div>
+          <div class="rounded-md bg-primary py-2.5 text-center text-sm font-medium text-primary-foreground">
+            Send 2 files
+          </div>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20 border-t border-border pt-16">
+    <section class="space-y-3 text-sm text-muted-foreground leading-relaxed">
       <h2 class="text-base font-semibold text-foreground">
         Tessil, explained
       </h2>
@@ -1318,19 +1417,5 @@
 
   :global(.ease-liquid) {
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  /* Featured reveal band - shorter & full-width on mobile, corner crop on desktop. */
-  .featured-reveal {
-    --reveal-top: calc(100% - 13rem);
-    --reveal-left: 0px;
-    --reveal-round: 1.5rem 1.5rem 0 0;
-  }
-  @media (min-width: 640px) {
-    .featured-reveal {
-      --reveal-top: calc(100% - 22rem);
-      --reveal-left: calc(100% - 50rem);
-      --reveal-round: 1.5rem 0 0 0;
-    }
   }
 </style>
