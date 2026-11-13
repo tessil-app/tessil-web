@@ -186,12 +186,18 @@
     <Frame.Root>
       <Frame.Panel>
         <div class="text-center space-y-3">
-          <h1 class="text-lg font-medium text-foreground">Your vault is locked</h1>
+          <h1 class="text-lg font-medium text-foreground">
+            {auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"}
+          </h1>
           <p class="text-sm text-muted-foreground">
             The files sent to this portal are opened with a key kept in your vault.
           </p>
           <div class="flex justify-center pt-2">
-            <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+            {#if auth.needsVaultSetup}
+              <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+            {:else}
+              <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+            {/if}
           </div>
         </div>
       </Frame.Panel>
