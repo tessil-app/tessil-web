@@ -7,6 +7,10 @@
   import Button from "$lib/components/Button.svelte";
   import DepositDrawer from "$lib/components/DepositDrawer.svelte";
   import Drawer from "$lib/components/Drawer.svelte";
+  import FilterChips from "$lib/components/FilterChips.svelte";
+  import IconButton from "$lib/components/IconButton.svelte";
+  import SearchField from "$lib/components/SearchField.svelte";
+  import * as Table from "$lib/components/table";
   import * as Frame from "$lib/components/frame";
   import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
@@ -38,7 +42,6 @@
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
-  import IconMagnifyingGlassRegular from "phosphor-icons-svelte/IconMagnifyingGlassRegular.svelte";
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
   import { onDestroy } from "svelte";
 
@@ -312,8 +315,6 @@
       ? "grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]"
       : "grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]",
   );
-  const iconButton =
-    "p-2 rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:cursor-pointer hover:text-foreground hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
   const shortFmt = new Intl.DateTimeFormat(undefined, {
     month: "short",
@@ -436,34 +437,18 @@
         </Frame.Root>
       {:else}
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-          <label
-            class="flex items-center gap-2 sm:w-80 rounded-md border border-border bg-card px-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"
-          >
-            <IconMagnifyingGlassRegular class="size-4 shrink-0 text-muted-foreground" />
-            <span class="sr-only">Search deliveries</span>
-            <input
-              type="search"
-              bind:value={query}
-              placeholder="Search note, reference or file name"
-              class="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-            />
-          </label>
-          <div class="flex flex-wrap gap-2" role="group" aria-label="Show">
-            {#each filters as f (f.id)}
-              <button
-                type="button"
-                aria-pressed={filter === f.id}
-                onclick={() => (filter = f.id)}
-                class="rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring {filter ===
-                f.id
-                  ? 'border-foreground bg-foreground text-background'
-                  : 'border-border bg-card text-foreground hover:bg-accent'}"
-              >
-                {f.label}
-                <span class="opacity-70">{counts[f.id]}</span>
-              </button>
-            {/each}
-          </div>
+          <SearchField
+            bind:value={query}
+            label="Search deliveries"
+            placeholder="Search note, reference or file name"
+            class="sm:w-80"
+          />
+          <FilterChips
+            label="Show"
+            options={filters.map((f) => ({ value: f.id, label: f.label, count: counts[f.id] }))}
+            value={filter}
+            onChange={(v) => (filter = v)}
+          />
         </div>
 
         {#if visible.length === 0}
@@ -471,137 +456,110 @@
             Nothing matches. Search looks at notes, references and file names.
           </div>
         {:else}
-          <!-- Desktop table (sm+) -->
-          <div class="hidden sm:block overflow-hidden rounded-lg bg-card">
-            <div class="flex items-center bg-muted/40">
-              <div
-                class="grid flex-1 min-w-0 {cols} gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide"
-              >
-                <div>Note</div>
-                <div>Received</div>
-                <div>Files</div>
-                {#if checklist.length > 0}
-                  <div>Asked for</div>
-                {/if}
-                <div>Deleted</div>
-              </div>
-              <div class="w-24 shrink-0"></div>
-            </div>
-            <ul class="divide-y divide-border">
-              {#each visible as row (row.deposit.id)}
-                {@const deposit = row.deposit}
-                <li
-                  class="flex items-center transition-colors duration-150 ease-out [@media(hover:hover)]:hover:bg-accent"
-                >
-                  <button
-                    type="button"
-                    onclick={() => (openDepositId = deposit.id)}
-                    class="grid flex-1 min-w-0 {cols} gap-4 items-center px-4 py-3 text-left text-sm hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <div class="min-w-0">
-                      <div
-                        class="truncate font-medium {deposit.note
-                          ? 'text-foreground'
-                          : 'text-muted-foreground'}"
-                        title={deposit.note ?? undefined}
-                      >
-                        {deposit.note ?? "No note"}
-                      </div>
-                      <div class="text-xs text-muted-foreground font-mono">{deposit.reference}</div>
-                    </div>
-                    <div class="text-muted-foreground">
-                      {shortFmt.format(new Date(deposit.createdAt))}
-                    </div>
-                    <div class="text-muted-foreground">
-                      {deposit.files.length} · {formatSize(deposit.totalBytes)}
-                    </div>
-                    {#if checklist.length > 0}
-                      <div>
-                        <Badge tone={row.complete ? "success" : "warning"}>
-                          {row.complete
-                            ? "Complete"
-                            : `${row.coverage.provided.length} of ${checklist.length}`}
-                        </Badge>
-                      </div>
-                    {/if}
-                    <div class={row.soon ? "text-destructive-foreground" : "text-muted-foreground"}>
-                      {daysLeft(deposit.expiresAt)}
-                    </div>
-                  </button>
-                  <div class="flex w-24 shrink-0 items-center justify-end gap-1 pr-3">
-                    <button
-                      type="button"
-                      onclick={() => downloadAll(deposit)}
-                      disabled={downloadingAll !== null}
-                      aria-label="Download all files of {deposit.reference}"
-                      title="Download all"
-                      class={iconButton}
-                    >
-                      {#if downloadingAll === deposit.id}
-                        <Spinner class="size-4" aria-hidden="true" />
-                      {:else if allSaved(deposit)}
-                        <IconCheckRegular class="size-4 text-success-foreground" />
-                      {:else}
-                        <IconDownloadRegular class="size-4" />
-                      {/if}
-                    </button>
-                    <button
-                      type="button"
-                      onclick={() => (confirmDeleteId = deposit.id)}
-                      aria-label="Delete {deposit.reference}"
-                      title="Delete"
-                      class={iconButton}
-                    >
-                      <IconTrashRegular class="size-4" />
-                    </button>
-                  </div>
-                </li>
-              {/each}
-            </ul>
-          </div>
+          <Table.Root {cols} actions="sm">
+            {#snippet header()}
+              <div>Note</div>
+              <div>Received</div>
+              <div>Files</div>
+              {#if checklist.length > 0}
+                <div>Asked for</div>
+              {/if}
+              <div>Deleted</div>
+            {/snippet}
 
-          <!-- Mobile stack (<sm): actions live in the drawer. -->
-          <ul class="space-y-3 sm:hidden">
             {#each visible as row (row.deposit.id)}
               {@const deposit = row.deposit}
-              <li>
-                <button
-                  type="button"
-                  onclick={() => (openDepositId = deposit.id)}
-                  class="block w-full text-left bg-card rounded-lg p-4 space-y-2 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                      <p
-                        class="text-sm font-medium truncate {deposit.note
-                          ? 'text-foreground'
-                          : 'text-muted-foreground'}"
-                      >
-                        {deposit.note ?? "No note"}
-                      </p>
-                      <p class="text-xs text-muted-foreground font-mono">{deposit.reference}</p>
+              <Table.Row onclick={() => (openDepositId = deposit.id)}>
+                {#snippet cells()}
+                  <div class="min-w-0">
+                    <div
+                      class="truncate font-medium {deposit.note
+                        ? 'text-foreground'
+                        : 'text-muted-foreground'}"
+                      title={deposit.note ?? undefined}
+                    >
+                      {deposit.note ?? "No note"}
                     </div>
-                    {#if checklist.length > 0}
+                    <div class="text-xs text-muted-foreground font-mono">{deposit.reference}</div>
+                  </div>
+                  <div class="text-muted-foreground">
+                    {shortFmt.format(new Date(deposit.createdAt))}
+                  </div>
+                  <div class="text-muted-foreground">
+                    {deposit.files.length} · {formatSize(deposit.totalBytes)}
+                  </div>
+                  {#if checklist.length > 0}
+                    <div>
                       <Badge tone={row.complete ? "success" : "warning"}>
                         {row.complete
                           ? "Complete"
                           : `${row.coverage.provided.length} of ${checklist.length}`}
                       </Badge>
-                    {/if}
+                    </div>
+                  {/if}
+                  <div class={row.soon ? "text-destructive-foreground" : "text-muted-foreground"}>
+                    {daysLeft(deposit.expiresAt)}
                   </div>
-                  <p class="text-xs text-muted-foreground">
-                    {shortFmt.format(new Date(deposit.createdAt))} ·
-                    {deposit.files.length}
-                    {deposit.files.length === 1 ? "file" : "files"} · {formatSize(deposit.totalBytes)}
-                    ·
-                    <span class={row.soon ? "text-destructive-foreground" : ""}>
-                      deleted {daysLeft(deposit.expiresAt)}
-                    </span>
-                  </p>
-                </button>
-              </li>
+                {/snippet}
+
+                {#snippet stacked()}
+                  <div class="space-y-2">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0 flex-1">
+                        <p
+                          class="font-medium truncate {deposit.note
+                            ? 'text-foreground'
+                            : 'text-muted-foreground'}"
+                        >
+                          {deposit.note ?? "No note"}
+                        </p>
+                        <p class="text-xs text-muted-foreground font-mono">{deposit.reference}</p>
+                      </div>
+                      {#if checklist.length > 0}
+                        <Badge tone={row.complete ? "success" : "warning"}>
+                          {row.complete
+                            ? "Complete"
+                            : `${row.coverage.provided.length} of ${checklist.length}`}
+                        </Badge>
+                      {/if}
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                      {shortFmt.format(new Date(deposit.createdAt))} ·
+                      {deposit.files.length}
+                      {deposit.files.length === 1 ? "file" : "files"} · {formatSize(deposit.totalBytes)}
+                      ·
+                      <span class={row.soon ? "text-destructive-foreground" : ""}>
+                        deleted {daysLeft(deposit.expiresAt)}
+                      </span>
+                    </p>
+                  </div>
+                {/snippet}
+
+                {#snippet actions()}
+                  <IconButton
+                    label="Download all files of {deposit.reference}"
+                    onclick={() => downloadAll(deposit)}
+                    disabled={downloadingAll !== null}
+                  >
+                    {#if downloadingAll === deposit.id}
+                      <Spinner class="size-4" aria-hidden="true" />
+                    {:else if allSaved(deposit)}
+                      <IconCheckRegular class="size-4 text-success-foreground" />
+                    {:else}
+                      <IconDownloadRegular class="size-4" />
+                    {/if}
+                  </IconButton>
+                  <IconButton
+                    label="Delete {deposit.reference}"
+                    tone="destructive"
+                    onclick={() => (confirmDeleteId = deposit.id)}
+                  >
+                    <IconTrashRegular class="size-4" />
+                  </IconButton>
+                {/snippet}
+              </Table.Row>
             {/each}
-          </ul>
+          </Table.Root>
         {/if}
 
         <p class="text-xs text-muted-foreground" role="status">
