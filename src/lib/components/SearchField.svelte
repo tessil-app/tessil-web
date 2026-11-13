@@ -25,6 +25,6 @@
     type="search"
     bind:value
     {placeholder}
-    class="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+    class="min-w-0 flex-1 bg-transparent py-[9px] text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
   />
 </label>

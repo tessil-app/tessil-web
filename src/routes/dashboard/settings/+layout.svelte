@@ -32,7 +32,7 @@
 
 <Seo title="Settings - Tessil" robots="noindex" />
 
-<PageLayout width="3xl">
+<PageLayout width="5xl">
   {#if !auth.loaded}
     <div
       role="status"

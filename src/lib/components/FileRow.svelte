@@ -13,7 +13,8 @@
 
   interface Props {
     name: string;
-    size: string;
+    /** Second line under the name; left out when not known. */
+    size?: string;
     status?: Status;
     kind?: Kind;
     percent?: number;
@@ -90,7 +91,9 @@
 
   <div class="flex-1 min-w-0 space-y-1">
     <div class="text-sm text-foreground font-medium truncate">{name}</div>
-    <div class="text-xs text-muted-foreground tabular-nums">{size}</div>
+    {#if size}
+      <div class="text-xs text-muted-foreground tabular-nums">{size}</div>
+    {/if}
 
     {#if inProgress}
       <div
