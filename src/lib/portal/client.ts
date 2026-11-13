@@ -6,11 +6,13 @@ import { api, type PortalRow } from "$lib/api/client";
 import type { Locale } from "$lib/i18n/locale";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
 import { ensureUserKeypair } from "$lib/vault/client";
+import { publicKeyFingerprint } from "$lib/vault/keypair";
 import { readVaultDerivationKey } from "$lib/vault/session";
 import {
   PORTAL_TITLE_MAX,
   createPortalKeys,
   openPortalBundle,
+  isHandedCopy,
   openPortalKeys,
   portalLink,
 } from "./keys";
@@ -26,10 +28,13 @@ export interface MyPortal {
    * open        title and link are available
    * locked      the vault is locked, so neither can be read yet
    * unreadable  the keys did not open with this vault
+   * invited     the owner shared it and this account has not accepted yet
    */
-  state: "open" | "locked" | "unreadable";
+  state: "open" | "locked" | "unreadable" | "invited";
   title: string | null;
   link: string | null;
+  /** On portals shared with this account: who shared it, and their key to compare. */
+  sharedBy: { email: string; fingerprint: string | null } | null;
 }
 
 export interface MyPortals {
@@ -43,7 +48,26 @@ async function readRow(
   derivationKey: CryptoKey | null,
   origin: string,
 ): Promise<MyPortal> {
-  const base = { id: row.id, role: row.role, isDisabled: row.isDisabled, createdAt: row.createdAt };
+  const sharedBy =
+    row.role === "member" && row.owner
+      ? {
+          email: row.owner.email,
+          fingerprint: row.owner.publicKey
+            ? await publicKeyFingerprint(base64UrlToBytes(row.owner.publicKey))
+            : null,
+        }
+      : null;
+  const base = {
+    id: row.id,
+    role: row.role,
+    isDisabled: row.isDisabled,
+    createdAt: row.createdAt,
+    sharedBy,
+  };
+  // Says who shared it even while the vault is locked.
+  if (isHandedCopy(base64UrlToBytes(row.sealedKeys))) {
+    return { ...base, state: "invited", title: null, link: null };
+  }
   if (!derivationKey) return { ...base, state: "locked", title: null, link: null };
 
   const keys = await openPortalKeys(
@@ -107,6 +131,7 @@ export async function createMyPortal(
       role: "owner",
       isDisabled: false,
       createdAt: created.createdAt,
+      sharedBy: null,
       state: "open",
       title: title.trim(),
       link: portalLink(origin, made.id, made.linkKey),

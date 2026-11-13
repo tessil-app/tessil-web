@@ -228,6 +228,11 @@ export async function openPortalBundle(
 const FORM_KEPT = 0x4b;
 const FORM_HANDED = 0x48;
 
+/** True for keys an inviter handed over that this member has not accepted yet. */
+export function isHandedCopy(blob: Uint8Array): boolean {
+  return blob.byteLength >= 2 && blob[0] === FORM_HANDED;
+}
+
 export interface PortalKeys {
   linkKey: Uint8Array;
   /** Usable for opening deposits; not readable by page script. */

@@ -20,7 +20,9 @@
     type VaultRowState,
   } from "$lib/components/TransferDetailDrawer.svelte";
   import { api, type OwnedTransferSummary, type UsageResponse } from "$lib/api/client";
+  import { base64UrlToBytes } from "$lib/crypto/base64url";
   import { decryptFilename, decryptString } from "$lib/crypto/decrypt";
+  import { isHandedCopy } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
   import UsageBanner from "$lib/components/UsageBanner.svelte";
@@ -99,6 +101,21 @@
         void unwrapRow(t);
       }
     }
+  });
+
+  // Someone handed this account a portal it has not accepted yet.
+  let pendingShare = $state<string | null>(null);
+  onMount(() => {
+    if (!auth.user) return;
+    api
+      .listPortals()
+      .then((res) => {
+        const row = res.portals.find(
+          (p) => p.role === "member" && isHandedCopy(base64UrlToBytes(p.sealedKeys)),
+        );
+        pendingShare = row ? (row.owner?.email ?? "Someone") : null;
+      })
+      .catch(() => {});
   });
 
   onMount(async () => {
@@ -428,6 +445,15 @@
     />
 
     <UsageBanner {usage} />
+
+    {#if pendingShare}
+      <Notice class="mb-6">
+        {pendingShare} shared a portal with you.
+        {#snippet action()}
+          <Button variant="secondary" fullWidth={false} href="/dashboard/portals">View</Button>
+        {/snippet}
+      </Notice>
+    {/if}
 
     <div class="space-y-6">
       <p class="text-sm text-muted-foreground">
