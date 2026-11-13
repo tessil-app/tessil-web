@@ -5,7 +5,10 @@
 
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
+  import DetailItem from "$lib/components/DetailItem.svelte";
+  import DetailList from "$lib/components/DetailList.svelte";
   import Drawer from "$lib/components/Drawer.svelte";
+  import DrawerSection from "$lib/components/DrawerSection.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
   import { coverageOf, type OpenedDeposit } from "$lib/portal/deposits";
   import type { ChecklistItem } from "$lib/portal/keys";
@@ -93,30 +96,26 @@
 
   {#if deposit && coverage}
     <div class="space-y-3">
-      <section class="rounded-lg bg-card p-4">
-        <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-y-2 gap-x-4 text-sm">
-          <dt class="text-muted-foreground">Received</dt>
-          <dd class="text-foreground">{dateFmt.format(new Date(deposit.createdAt))}</dd>
-          <dt class="text-muted-foreground">Deleted on</dt>
-          <dd class="text-foreground">{dayFmt.format(new Date(deposit.expiresAt))}</dd>
-          <dt class="text-muted-foreground">Size</dt>
-          <dd class="text-foreground">
+      <DrawerSection>
+        <DetailList>
+          <DetailItem label="Received">{dateFmt.format(new Date(deposit.createdAt))}</DetailItem>
+          <DetailItem label="Deleted on">{dayFmt.format(new Date(deposit.expiresAt))}</DetailItem>
+          <DetailItem label="Size">
             {deposit.files.length}
             {deposit.files.length === 1 ? "file" : "files"}, {formatSize(deposit.totalBytes)}
-          </dd>
-        </dl>
-      </section>
+          </DetailItem>
+        </DetailList>
+      </DrawerSection>
 
       {#if checklist.length > 0}
-        <section class="space-y-3 rounded-lg bg-card p-4">
-          <div class="flex items-center justify-between gap-3">
-            <h3 class="text-sm font-medium text-foreground">What you asked for</h3>
+        <DrawerSection title="What you asked for">
+          {#snippet aside()}
             <Badge tone={coverage.missing.length === 0 ? "success" : "warning"}>
               {coverage.missing.length === 0
                 ? "Complete"
                 : `${coverage.provided.length} of ${checklist.length}`}
             </Badge>
-          </div>
+          {/snippet}
           <ul class="space-y-4">
             {#each checklist as item (item.id)}
               {@const files = deposit.files.filter((f) => f.itemId === item.id)}
@@ -134,30 +133,25 @@
               </li>
             {/each}
           </ul>
-        </section>
+        </DrawerSection>
       {/if}
 
       {#if extras.length > 0}
-        <section class="space-y-3 rounded-lg bg-card p-4">
-          <h3 class="text-sm font-medium text-foreground">
-            {checklist.length > 0 ? "Also sent" : "Files"}
-          </h3>
+        <DrawerSection title={checklist.length > 0 ? "Also sent" : "Files"}>
           <ul class="space-y-2">
             {#each extras as file (file.id)}
               <li>{@render fileRow(file)}</li>
             {/each}
           </ul>
-        </section>
+        </DrawerSection>
       {/if}
 
-      <section class="space-y-2 rounded-lg bg-card p-4">
-        <h3 class="text-sm font-medium text-foreground">Keep a record</h3>
-        <p class="text-xs text-muted-foreground">
-          A text file with the reference, the note, the file names and the deletion date. The
-          sender has the same reference on their confirmation.
-        </p>
+      <DrawerSection
+        title="Keep a record"
+        description="A text file with the reference, the note, the file names and the deletion date. The sender has the same reference on their confirmation."
+      >
         <Button variant="secondary" fullWidth={false} onclick={onSaveRecord}>Save record</Button>
-      </section>
+      </DrawerSection>
     </div>
   {/if}
 

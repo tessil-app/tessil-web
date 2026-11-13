@@ -2,12 +2,17 @@
   // What was sent through one portal. Deposits are decrypted here with the
   // portal's private key from the member's vault.
 
+  import TextLink from "$lib/components/TextLink.svelte";
   import { page } from "$app/stores";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import DepositDrawer from "$lib/components/DepositDrawer.svelte";
   import Drawer from "$lib/components/Drawer.svelte";
-  import * as Frame from "$lib/components/frame";
+  import FilterChips from "$lib/components/FilterChips.svelte";
+  import IconButton from "$lib/components/IconButton.svelte";
+  import SearchField from "$lib/components/SearchField.svelte";
+  import * as Table from "$lib/components/table";
+  import EmptyState from "$lib/components/EmptyState.svelte";
   import Modal from "$lib/components/Modal.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
@@ -15,6 +20,7 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import { api } from "$lib/api/client";
   import { saveDecryptedFile, StreamInterruptedError } from "$lib/download/saveFile";
+  import BackLink from "$lib/components/BackLink.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import {
@@ -38,7 +44,6 @@
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
-  import IconMagnifyingGlassRegular from "phosphor-icons-svelte/IconMagnifyingGlassRegular.svelte";
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
   import { onDestroy } from "svelte";
 
@@ -312,8 +317,6 @@
       ? "grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]"
       : "grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]",
   );
-  const iconButton =
-    "p-2 rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:cursor-pointer hover:text-foreground hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
   const shortFmt = new Intl.DateTimeFormat(undefined, {
     month: "short",
@@ -332,14 +335,9 @@
 <Seo title="{portal?.title ?? 'Portal'} - Tessil" robots="noindex" />
 
 <PageLayout width="5xl">
-  <p class="mb-4 text-sm">
-    <a
-      href="/dashboard/portals"
-      class="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-    >
-      ← All portals
-    </a>
-  </p>
+  {#if phase !== "ready"}
+    <BackLink href="/dashboard/portals" label="All portals" />
+  {/if}
 
   {#if phase === "loading"}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
@@ -347,52 +345,41 @@
       <p class="text-muted-foreground">Loading…</p>
     </div>
   {:else if phase === "locked"}
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="text-center space-y-3">
-          <h1 class="text-lg font-medium text-foreground">
-            {auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"}
-          </h1>
-          <p class="text-sm text-muted-foreground">
-            The files sent to this portal are opened with a key kept in your vault.
-          </p>
-          <div class="flex justify-center pt-2">
-            {#if auth.needsVaultSetup}
-              <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
-            {:else}
-              <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
-            {/if}
-          </div>
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
+    <EmptyState title={auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"} level={1}>
+      <p>
+        The files sent to this portal are opened with a key kept in your vault.
+      </p>
+      {#snippet actions()}
+        {#if auth.needsVaultSetup}
+          <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+        {:else}
+          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+        {/if}
+      {/snippet}
+    </EmptyState>
   {:else if phase === "missing" || phase === "unreadable"}
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="text-center space-y-3">
-          <h1 class="text-lg font-medium text-foreground">
-            {phase === "missing" ? "Portal not found" : "This portal can't be opened"}
-          </h1>
-          <p class="text-sm text-muted-foreground">
-            {phase === "missing"
-              ? "It may have been deleted, or you may not be a member of it."
-              : "Its keys did not open with your vault."}
-          </p>
-          {#if errorMessage}
-            <Alert tone="destructive">{errorMessage}</Alert>
-          {/if}
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
+    <EmptyState title={phase === "missing" ? "Portal not found" : "This portal can't be opened"} level={1}>
+      <p>
+        {phase === "missing"
+          ? "It may have been deleted, or you may not be a member of it."
+          : "Its keys did not open with your vault."}
+      </p>
+      {#if errorMessage}
+        <Alert tone="destructive">{errorMessage}</Alert>
+      {/if}
+    </EmptyState>
   {:else if portal}
     <PageHeader
       title={portal.title}
-      tagline={portal.isDisabled
-        ? "Switched off. Nobody can send files here until you switch it back on."
-        : "Files are deleted automatically, so download what you need to keep."}
+      tagline="Files are deleted automatically, so download what you need to keep."
+      back={{ href: "/dashboard/portals", label: "All portals" }}
       align="left"
-      class="mb-8 flex-wrap"
     >
+      {#snippet badge()}
+        <Badge tone={portal?.isDisabled ? "muted" : "success"}>
+          {portal?.isDisabled ? "Switched off" : "Accepting files"}
+        </Badge>
+      {/snippet}
       {#snippet actions()}
         {#if portal?.role === "owner"}
           <Button
@@ -424,46 +411,25 @@
       {/if}
 
       {#if deposits.length === 0}
-        <Frame.Root>
-          <Frame.Panel>
-            <div class="text-center space-y-3">
-              <h2 class="text-lg font-medium text-foreground">Nothing has been sent yet</h2>
-              <p class="text-sm text-muted-foreground">
-                Share the portal link. Files appear here as soon as someone sends them.
-              </p>
-            </div>
-          </Frame.Panel>
-        </Frame.Root>
+        <EmptyState title="Nothing has been sent yet">
+          <p>
+            Share the portal link. Files appear here as soon as someone sends them.
+          </p>
+        </EmptyState>
       {:else}
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-          <label
-            class="flex items-center gap-2 sm:w-80 rounded-md border border-border bg-card px-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"
-          >
-            <IconMagnifyingGlassRegular class="size-4 shrink-0 text-muted-foreground" />
-            <span class="sr-only">Search deliveries</span>
-            <input
-              type="search"
-              bind:value={query}
-              placeholder="Search note, reference or file name"
-              class="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-            />
-          </label>
-          <div class="flex flex-wrap gap-2" role="group" aria-label="Show">
-            {#each filters as f (f.id)}
-              <button
-                type="button"
-                aria-pressed={filter === f.id}
-                onclick={() => (filter = f.id)}
-                class="rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring {filter ===
-                f.id
-                  ? 'border-foreground bg-foreground text-background'
-                  : 'border-border bg-card text-foreground hover:bg-accent'}"
-              >
-                {f.label}
-                <span class="opacity-70">{counts[f.id]}</span>
-              </button>
-            {/each}
-          </div>
+          <SearchField
+            bind:value={query}
+            label="Search deliveries"
+            placeholder="Search note, reference or file name"
+            class="sm:w-80"
+          />
+          <FilterChips
+            label="Show"
+            options={filters.map((f) => ({ value: f.id, label: f.label, count: counts[f.id] }))}
+            value={filter}
+            onChange={(v) => (filter = v)}
+          />
         </div>
 
         {#if visible.length === 0}
@@ -471,137 +437,110 @@
             Nothing matches. Search looks at notes, references and file names.
           </div>
         {:else}
-          <!-- Desktop table (sm+) -->
-          <div class="hidden sm:block overflow-hidden rounded-lg bg-card">
-            <div class="flex items-center bg-muted/40">
-              <div
-                class="grid flex-1 min-w-0 {cols} gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide"
-              >
-                <div>Note</div>
-                <div>Received</div>
-                <div>Files</div>
-                {#if checklist.length > 0}
-                  <div>Asked for</div>
-                {/if}
-                <div>Deleted</div>
-              </div>
-              <div class="w-24 shrink-0"></div>
-            </div>
-            <ul class="divide-y divide-border">
-              {#each visible as row (row.deposit.id)}
-                {@const deposit = row.deposit}
-                <li
-                  class="flex items-center transition-colors duration-150 ease-out [@media(hover:hover)]:hover:bg-accent"
-                >
-                  <button
-                    type="button"
-                    onclick={() => (openDepositId = deposit.id)}
-                    class="grid flex-1 min-w-0 {cols} gap-4 items-center px-4 py-3 text-left text-sm hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <div class="min-w-0">
-                      <div
-                        class="truncate font-medium {deposit.note
-                          ? 'text-foreground'
-                          : 'text-muted-foreground'}"
-                        title={deposit.note ?? undefined}
-                      >
-                        {deposit.note ?? "No note"}
-                      </div>
-                      <div class="text-xs text-muted-foreground font-mono">{deposit.reference}</div>
-                    </div>
-                    <div class="text-muted-foreground">
-                      {shortFmt.format(new Date(deposit.createdAt))}
-                    </div>
-                    <div class="text-muted-foreground">
-                      {deposit.files.length} · {formatSize(deposit.totalBytes)}
-                    </div>
-                    {#if checklist.length > 0}
-                      <div>
-                        <Badge tone={row.complete ? "success" : "warning"}>
-                          {row.complete
-                            ? "Complete"
-                            : `${row.coverage.provided.length} of ${checklist.length}`}
-                        </Badge>
-                      </div>
-                    {/if}
-                    <div class={row.soon ? "text-destructive-foreground" : "text-muted-foreground"}>
-                      {daysLeft(deposit.expiresAt)}
-                    </div>
-                  </button>
-                  <div class="flex w-24 shrink-0 items-center justify-end gap-1 pr-3">
-                    <button
-                      type="button"
-                      onclick={() => downloadAll(deposit)}
-                      disabled={downloadingAll !== null}
-                      aria-label="Download all files of {deposit.reference}"
-                      title="Download all"
-                      class={iconButton}
-                    >
-                      {#if downloadingAll === deposit.id}
-                        <Spinner class="size-4" aria-hidden="true" />
-                      {:else if allSaved(deposit)}
-                        <IconCheckRegular class="size-4 text-success-foreground" />
-                      {:else}
-                        <IconDownloadRegular class="size-4" />
-                      {/if}
-                    </button>
-                    <button
-                      type="button"
-                      onclick={() => (confirmDeleteId = deposit.id)}
-                      aria-label="Delete {deposit.reference}"
-                      title="Delete"
-                      class={iconButton}
-                    >
-                      <IconTrashRegular class="size-4" />
-                    </button>
-                  </div>
-                </li>
-              {/each}
-            </ul>
-          </div>
+          <Table.Root {cols} actions="sm">
+            {#snippet header()}
+              <div>Note</div>
+              <div>Received</div>
+              <div>Files</div>
+              {#if checklist.length > 0}
+                <div>Asked for</div>
+              {/if}
+              <div>Deleted</div>
+            {/snippet}
 
-          <!-- Mobile stack (<sm): actions live in the drawer. -->
-          <ul class="space-y-3 sm:hidden">
             {#each visible as row (row.deposit.id)}
               {@const deposit = row.deposit}
-              <li>
-                <button
-                  type="button"
-                  onclick={() => (openDepositId = deposit.id)}
-                  class="block w-full text-left bg-card rounded-lg p-4 space-y-2 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                      <p
-                        class="text-sm font-medium truncate {deposit.note
-                          ? 'text-foreground'
-                          : 'text-muted-foreground'}"
-                      >
-                        {deposit.note ?? "No note"}
-                      </p>
-                      <p class="text-xs text-muted-foreground font-mono">{deposit.reference}</p>
+              <Table.Row onclick={() => (openDepositId = deposit.id)}>
+                {#snippet cells()}
+                  <div class="min-w-0">
+                    <div
+                      class="truncate font-medium {deposit.note
+                        ? 'text-foreground'
+                        : 'text-muted-foreground'}"
+                      title={deposit.note ?? undefined}
+                    >
+                      {deposit.note ?? "No note"}
                     </div>
-                    {#if checklist.length > 0}
+                    <div class="text-xs text-muted-foreground font-mono">{deposit.reference}</div>
+                  </div>
+                  <div class="text-muted-foreground">
+                    {shortFmt.format(new Date(deposit.createdAt))}
+                  </div>
+                  <div class="text-muted-foreground">
+                    {deposit.files.length} · {formatSize(deposit.totalBytes)}
+                  </div>
+                  {#if checklist.length > 0}
+                    <div>
                       <Badge tone={row.complete ? "success" : "warning"}>
                         {row.complete
                           ? "Complete"
                           : `${row.coverage.provided.length} of ${checklist.length}`}
                       </Badge>
-                    {/if}
+                    </div>
+                  {/if}
+                  <div class={row.soon ? "text-destructive-foreground" : "text-muted-foreground"}>
+                    {daysLeft(deposit.expiresAt)}
                   </div>
-                  <p class="text-xs text-muted-foreground">
-                    {shortFmt.format(new Date(deposit.createdAt))} ·
-                    {deposit.files.length}
-                    {deposit.files.length === 1 ? "file" : "files"} · {formatSize(deposit.totalBytes)}
-                    ·
-                    <span class={row.soon ? "text-destructive-foreground" : ""}>
-                      deleted {daysLeft(deposit.expiresAt)}
-                    </span>
-                  </p>
-                </button>
-              </li>
+                {/snippet}
+
+                {#snippet stacked()}
+                  <div class="space-y-2">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0 flex-1">
+                        <p
+                          class="font-medium truncate {deposit.note
+                            ? 'text-foreground'
+                            : 'text-muted-foreground'}"
+                        >
+                          {deposit.note ?? "No note"}
+                        </p>
+                        <p class="text-xs text-muted-foreground font-mono">{deposit.reference}</p>
+                      </div>
+                      {#if checklist.length > 0}
+                        <Badge tone={row.complete ? "success" : "warning"}>
+                          {row.complete
+                            ? "Complete"
+                            : `${row.coverage.provided.length} of ${checklist.length}`}
+                        </Badge>
+                      {/if}
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                      {shortFmt.format(new Date(deposit.createdAt))} ·
+                      {deposit.files.length}
+                      {deposit.files.length === 1 ? "file" : "files"} · {formatSize(deposit.totalBytes)}
+                      ·
+                      <span class={row.soon ? "text-destructive-foreground" : ""}>
+                        deleted {daysLeft(deposit.expiresAt)}
+                      </span>
+                    </p>
+                  </div>
+                {/snippet}
+
+                {#snippet actions()}
+                  <IconButton
+                    label="Download all files of {deposit.reference}"
+                    onclick={() => downloadAll(deposit)}
+                    disabled={downloadingAll !== null}
+                  >
+                    {#if downloadingAll === deposit.id}
+                      <Spinner class="size-4" aria-hidden="true" />
+                    {:else if allSaved(deposit)}
+                      <IconCheckRegular class="size-4 text-success-foreground" />
+                    {:else}
+                      <IconDownloadRegular class="size-4" />
+                    {/if}
+                  </IconButton>
+                  <IconButton
+                    label="Delete {deposit.reference}"
+                    tone="destructive"
+                    onclick={() => (confirmDeleteId = deposit.id)}
+                  >
+                    <IconTrashRegular class="size-4" />
+                  </IconButton>
+                {/snippet}
+              </Table.Row>
             {/each}
-          </ul>
+          </Table.Root>
         {/if}
 
         <p class="text-xs text-muted-foreground" role="status">
@@ -648,14 +587,13 @@
         {#each draft as item (item.id)}
           <li class="flex items-center justify-between gap-3 px-3 py-2">
             <span class="min-w-0 break-words text-sm text-foreground">{item.label}</span>
-            <button
-              type="button"
+            <TextLink
               onclick={() => removeItem(item.id)}
               disabled={isSavingList}
-              class="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+              class="shrink-0 text-xs text-muted-foreground"
             >
               Remove<span class="sr-only"> {item.label}</span>
-            </button>
+            </TextLink>
           </li>
         {/each}
       </ul>

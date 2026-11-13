@@ -3,6 +3,7 @@
   // whichever of password, recovery phrase and passkey this vault has and
   // the caller allows, and hands back the chosen proof.
 
+  import TextLink from "$lib/components/TextLink.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
   import {
@@ -100,14 +101,12 @@
   <p class="text-xs text-muted-foreground">
     {#each available.filter((k) => k !== kind) as other, i (other)}
       {#if i > 0}<span> · </span>{/if}
-      <button
-        type="button"
+      <TextLink
         onclick={() => (kind = other)}
         {disabled}
-        class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
       >
         Use {LABELS[other]} instead
-      </button>
+      </TextLink>
     {/each}
   </p>
 {/if}

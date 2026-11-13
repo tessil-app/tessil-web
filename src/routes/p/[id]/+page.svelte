@@ -3,11 +3,13 @@
   // link. No account. Files are encrypted here, to the portal's public
   // key, before anything is uploaded.
 
+  import TextLink from "$lib/components/TextLink.svelte";
   import { page } from "$app/stores";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import DropZone from "$lib/components/DropZone.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
+  import EmptyState from "$lib/components/EmptyState.svelte";
   import * as Frame from "$lib/components/frame";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Seo from "$lib/components/Seo.svelte";
@@ -238,14 +240,9 @@
       <p class="text-muted-foreground">{t.opening}</p>
     </div>
   {:else if phase === "invalid"}
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="text-center space-y-3">
-          <h1 class="text-xl font-semibold text-foreground">{t.invalid[invalidReason].title}</h1>
-          <p class="text-sm text-muted-foreground">{t.invalid[invalidReason].body}</p>
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
+    <EmptyState title={t.invalid[invalidReason].title} level={1}>
+      <p>{t.invalid[invalidReason].body}</p>
+    </EmptyState>
   {:else if portal}
     <header class="mb-8 space-y-2">
       <p class="text-sm text-muted-foreground">{t.sendTo}</p>
@@ -255,43 +252,33 @@
     </header>
 
     {#if phase === "done"}
-      <Frame.Root>
-        <Frame.Panel>
-          <div class="text-center space-y-3" role="status" aria-live="polite">
-            <div
-              class="mx-auto flex size-10 items-center justify-center rounded-full bg-success/15 text-success-foreground"
-            >
-              <IconCheckRegular class="size-5" />
-            </div>
-            <h2 class="text-lg font-medium text-foreground">
-              {sentCount === 1 ? t.sentOne : t.sentMany(sentCount)}
-            </h2>
-            <p class="text-sm text-muted-foreground">
-              {sentCount === 1 ? t.onlyRecipientOne(portal.title) : t.onlyRecipientMany(portal.title)}
-            </p>
-            {#if sent}
-              <p class="text-sm text-muted-foreground">
-                {t.reference}: <span class="font-mono text-foreground">{sent.reference}</span>
-              </p>
-            {/if}
-            <div class="flex flex-wrap justify-center gap-2 pt-2">
-              {#if sent}
-                <Button fullWidth={false} onclick={saveConfirmation}>{t.saveConfirmation}</Button>
-              {/if}
-              <Button variant="secondary" fullWidth={false} onclick={sendMore}>{t.sendMore}</Button>
-            </div>
+      <EmptyState title={sentCount === 1 ? t.sentOne : t.sentMany(sentCount)} announce>
+        {#snippet icon()}
+          <div
+            class="flex size-10 items-center justify-center rounded-full bg-success/15 text-success-foreground"
+          >
+            <IconCheckRegular class="size-5" />
           </div>
-        </Frame.Panel>
-      </Frame.Root>
+        {/snippet}
+        <p>
+          {sentCount === 1 ? t.onlyRecipientOne(portal.title) : t.onlyRecipientMany(portal.title)}
+        </p>
+        {#if sent}
+          <p>
+            {t.reference}: <span class="font-mono text-foreground">{sent.reference}</span>
+          </p>
+        {/if}
+        {#snippet actions()}
+          {#if sent}
+            <Button fullWidth={false} onclick={saveConfirmation}>{t.saveConfirmation}</Button>
+          {/if}
+          <Button variant="secondary" fullWidth={false} onclick={sendMore}>{t.sendMore}</Button>
+        {/snippet}
+      </EmptyState>
     {:else if !portal.accepting}
-      <Frame.Root>
-        <Frame.Panel>
-          <div class="text-center space-y-3">
-            <h2 class="text-lg font-medium text-foreground">{t.closedTitle}</h2>
-            <p class="text-sm text-muted-foreground">{t.closedBody(portal.title)}</p>
-          </div>
-        </Frame.Panel>
-      </Frame.Root>
+      <EmptyState title={t.closedTitle}>
+        <p>{t.closedBody(portal.title)}</p>
+      </EmptyState>
     {:else}
       <Frame.Root>
         <Frame.Panel>
@@ -447,7 +434,7 @@
         <IconLockRegular class="size-4 shrink-0" />
         <span>
           {t.footnote(portal.title)}
-          <a href="/security" class="underline underline-offset-2 hover:text-foreground">{t.howItWorks}</a>
+          <TextLink href="/security">{t.howItWorks}</TextLink>
         </span>
       </p>
     {/if}
@@ -460,14 +447,12 @@
         {#if option === locale}
           <span class="text-foreground" aria-current="true">{depositStrings[option].languageName}</span>
         {:else}
-          <button
-            type="button"
+          <TextLink
             lang={HTML_LANG[option]}
             onclick={() => (chosenLocale = option)}
-            class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
           >
             {depositStrings[option].languageName}
-          </button>
+          </TextLink>
         {/if}
       {/each}
     </p>

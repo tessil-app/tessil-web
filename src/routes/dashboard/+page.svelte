@@ -1,16 +1,20 @@
 <script lang="ts">
+  import TextLink from "$lib/components/TextLink.svelte";
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
-  import * as Frame from "$lib/components/frame";
+  import EmptyState from "$lib/components/EmptyState.svelte";
+  import IconButton from "$lib/components/IconButton.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import Notice from "$lib/components/Notice.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
+  import * as Table from "$lib/components/table";
   import Textarea from "$lib/components/Textarea.svelte";
   import TransferDetailDrawer, {
     type VaultRowState,
@@ -31,6 +35,9 @@
     vaultHasPassword,
   } from "$lib/vault/client";
   import { vaultFailureMessage } from "$lib/vault/messages";
+  import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
+  import IconCopyRegular from "phosphor-icons-svelte/IconCopyRegular.svelte";
+  import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
   import { onDestroy, onMount } from "svelte";
 
   let transfers = $state<OwnedTransferSummary[]>([]);
@@ -433,33 +440,25 @@
       {/if}
 
       {#if auth.needsVaultSetup}
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
-        >
-          <p class="text-sm text-muted-foreground">
-            Without a vault, transfers are listed without their names and their links can't be
-            shown again. A vault keeps both, encrypted so only you can read them.
-          </p>
-          <div class="sm:shrink-0">
+        <Notice>
+          Without a vault, transfers are listed without their names and their links can't be
+          shown again. A vault keeps both, encrypted so only you can read them.
+          {#snippet action()}
             <Button variant="secondary" fullWidth={false} href="/setup/vault">Set up vault</Button>
-          </div>
-        </div>
+          {/snippet}
+        </Notice>
       {/if}
 
       {#if !vaultUnlocked && lockedVaultedCount > 0 && skipped}
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
-        >
-          <p class="text-sm text-muted-foreground">
-            Vault is locked. {lockedVaultedCount}
-            {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted names waiting.
-          </p>
-          <div class="sm:shrink-0">
+        <Notice>
+          Vault is locked. {lockedVaultedCount}
+          {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted names waiting.
+          {#snippet action()}
             <Button variant="secondary" fullWidth={false} onclick={openUnlockPrompt}>
               Unlock vault
             </Button>
-          </div>
-        </div>
+          {/snippet}
+        </Notice>
       {/if}
 
       {#if isLoading}
@@ -472,144 +471,115 @@
           <p class="text-muted-foreground">Loading your transfers…</p>
         </div>
       {:else if transfers.length === 0}
-        <Frame.Root>
-          <Frame.Panel>
-            <div class="text-center space-y-3">
-              <h2 class="text-lg font-medium text-foreground">No transfers yet</h2>
-              <p class="text-sm text-muted-foreground">
-                Anything you upload while signed in appears here.
-              </p>
-              <div class="flex justify-center pt-2">
-                <Button href="/" fullWidth={false}>Create your first transfer</Button>
-              </div>
-            </div>
-          </Frame.Panel>
-        </Frame.Root>
+        <EmptyState title="No transfers yet">
+          <p>
+            Anything you upload while signed in appears here.
+          </p>
+          {#snippet actions()}
+            <Button href="/" fullWidth={false}>Create your first transfer</Button>
+          {/snippet}
+        </EmptyState>
       {:else}
-        <!-- Desktop table (sm+) -->
-        <div class="hidden sm:block overflow-hidden rounded-lg bg-card">
-          <div
-            class="grid grid-cols-[minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-4 px-4 py-2 bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide"
-          >
+        <Table.Root
+          cols="grid-cols-[minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,0.8fr)]"
+          actions="sm"
+        >
+          {#snippet header()}
             <div>Name</div>
             <div>Size</div>
             <div>Created</div>
             <div>Expires</div>
             <div>Status</div>
-          </div>
-          <ul class="divide-y divide-border">
-            {#each transfers as t (t.id)}
-              {@const status = statusOf(t)}
-              {@const vs = vaultStates[t.id]}
-              {@const isVaulted = !!t.wrappedKey}
-              {@const canRowAction = isVaulted && vs?.status === "unlocked"}
-              <li class="relative group">
-                <button
-                  type="button"
-                  onclick={() => (openTransferId = t.id)}
-                  class="grid grid-cols-[minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-4 items-center w-full px-4 py-3 text-left text-sm transition-colors duration-150 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <div class="min-w-0">
-                    <div class="text-foreground font-medium truncate" title={rowDisplayName(t)}>
-                      {rowDisplayName(t)}
-                    </div>
-                    <div class="text-xs text-muted-foreground truncate">
-                      {t.fileCount} {t.fileCount === 1 ? "file" : "files"}
-                      {#if t.hasPassword}
-                        · password-protected
-                      {/if}
-                      {#if !isVaulted}
-                        · name not kept
-                      {:else if vs?.status === "locked"}
-                        · vault locked
-                      {:else if vs?.status === "unlocking"}
-                        · decrypting…
-                      {:else if vs?.status === "blind-error"}
-                        · couldn't decrypt
-                      {/if}
-                    </div>
-                  </div>
-                  <div class="text-muted-foreground">{formatSize(t.totalBytes)}</div>
-                  <div class="text-muted-foreground">{shortDate(t.createdAt)}</div>
-                  <div class="text-muted-foreground">
-                    {shortDate(t.expiresAt)}
-                    <span class="text-xs">({relativeExpiry(t.expiresAt)})</span>
-                  </div>
-                  <div>
-                    <Badge tone={status.tone}>{status.label}</Badge>
-                  </div>
-                </button>
+          {/snippet}
 
-                <!-- Sibling of the button so its clicks don't bubble through and open the drawer. -->
-                <div
-                  class="pointer-events-none absolute inset-y-0 right-3 hidden items-center gap-2 opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:hover)]:flex"
-                >
-                  <div class="pointer-events-auto flex items-center gap-2 bg-card rounded-md p-1 shadow-sm border border-border">
-                    <button
-                      type="button"
-                      onclick={(e) => copyRowLink(t, e)}
-                      disabled={!canRowAction || copyingId === t.id}
-                      class="text-xs font-medium px-2 py-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      {#if copyingId === t.id}
-                        Copying…
-                      {:else if copiedId === t.id}
-                        Copied!
-                      {:else}
-                        Copy link
-                      {/if}
-                    </button>
-                    <button
-                      type="button"
-                      onclick={(e) => requestInlineDelete(t, e)}
-                      disabled={inlineDeletingId === t.id}
-                      class="text-xs font-medium px-2 py-1 rounded text-destructive-foreground hover:bg-destructive/10 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      {inlineDeletingId === t.id ? "Deleting…" : "Delete"}
-                    </button>
-                  </div>
-                </div>
-              </li>
-            {/each}
-          </ul>
-        </div>
-
-        <!-- Mobile stack (<sm) - actions live in the drawer instead of an overlay. -->
-        <ul class="space-y-3 sm:hidden">
           {#each transfers as t (t.id)}
             {@const status = statusOf(t)}
             {@const vs = vaultStates[t.id]}
-            <li>
-              <button
-                type="button"
-                onclick={() => (openTransferId = t.id)}
-                class="block w-full text-left bg-card rounded-lg p-4 space-y-2 transition-colors duration-150 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-foreground truncate">
-                      {rowDisplayName(t)}
-                    </p>
-                    <p class="text-xs text-muted-foreground">
-                      {t.fileCount} {t.fileCount === 1 ? "file" : "files"} · {formatSize(t.totalBytes)}
-                    </p>
+            {@const isVaulted = !!t.wrappedKey}
+            {@const canRowAction = isVaulted && vs?.status === "unlocked"}
+            <Table.Row onclick={() => (openTransferId = t.id)}>
+              {#snippet cells()}
+                <div class="min-w-0">
+                  <div class="text-foreground font-medium truncate" title={rowDisplayName(t)}>
+                    {rowDisplayName(t)}
                   </div>
+                  <div class="text-xs text-muted-foreground truncate">
+                    {t.fileCount} {t.fileCount === 1 ? "file" : "files"}
+                    {#if t.hasPassword}
+                      · password-protected
+                    {/if}
+                    {#if !isVaulted}
+                      · name not kept
+                    {:else if vs?.status === "locked"}
+                      · vault locked
+                    {:else if vs?.status === "unlocking"}
+                      · decrypting…
+                    {:else if vs?.status === "blind-error"}
+                      · couldn't decrypt
+                    {/if}
+                  </div>
+                </div>
+                <div class="text-muted-foreground">{formatSize(t.totalBytes)}</div>
+                <div class="text-muted-foreground">{shortDate(t.createdAt)}</div>
+                <div class="text-muted-foreground">
+                  {shortDate(t.expiresAt)}
+                  <span class="text-xs">({relativeExpiry(t.expiresAt)})</span>
+                </div>
+                <div>
                   <Badge tone={status.tone}>{status.label}</Badge>
                 </div>
-                <p class="text-xs text-muted-foreground">
-                  Created {shortDate(t.createdAt)} · Expires {relativeExpiry(t.expiresAt)}
-                </p>
-                {#if vs?.status === "locked"}
-                  <p class="text-xs text-muted-foreground">Vault locked - unlock to see name.</p>
-                {:else if vs?.status === "unlocking"}
-                  <p class="text-xs text-muted-foreground">Decrypting…</p>
-                {:else if vs?.status === "blind-error"}
-                  <p class="text-xs text-muted-foreground">Couldn't decrypt metadata.</p>
-                {/if}
-              </button>
-            </li>
+              {/snippet}
+
+              {#snippet stacked()}
+                <div class="space-y-2">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <p class="font-medium text-foreground truncate">{rowDisplayName(t)}</p>
+                      <p class="text-xs text-muted-foreground">
+                        {t.fileCount} {t.fileCount === 1 ? "file" : "files"} · {formatSize(t.totalBytes)}
+                      </p>
+                    </div>
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                  </div>
+                  <p class="text-xs text-muted-foreground">
+                    Created {shortDate(t.createdAt)} · Expires {relativeExpiry(t.expiresAt)}
+                  </p>
+                  {#if vs?.status === "locked"}
+                    <p class="text-xs text-muted-foreground">Vault locked - unlock to see name.</p>
+                  {:else if vs?.status === "unlocking"}
+                    <p class="text-xs text-muted-foreground">Decrypting…</p>
+                  {:else if vs?.status === "blind-error"}
+                    <p class="text-xs text-muted-foreground">Couldn't decrypt metadata.</p>
+                  {/if}
+                </div>
+              {/snippet}
+
+              {#snippet actions()}
+                <IconButton
+                  label={copiedId === t.id ? "Link copied" : "Copy link"}
+                  onclick={(e) => copyRowLink(t, e)}
+                  disabled={!canRowAction || copyingId === t.id}
+                >
+                  {#if copyingId === t.id}
+                    <Spinner class="size-4" aria-hidden="true" />
+                  {:else if copiedId === t.id}
+                    <IconCheckRegular class="size-4 text-success-foreground" />
+                  {:else}
+                    <IconCopyRegular class="size-4" />
+                  {/if}
+                </IconButton>
+                <IconButton
+                  label="Delete transfer"
+                  tone="destructive"
+                  onclick={(e) => requestInlineDelete(t, e)}
+                  disabled={inlineDeletingId === t.id}
+                >
+                  <IconTrashRegular class="size-4" />
+                </IconButton>
+              {/snippet}
+            </Table.Row>
           {/each}
-        </ul>
+        </Table.Root>
 
         {#if nextCursor}
           <div class="flex justify-center">
@@ -688,19 +658,18 @@
     {/if}
 
     {#if hasVaultPassword}
-    <button
-      type="button"
+    <TextLink
       onclick={() => {
         unlockMode = unlockMode === "password" ? "phrase" : "password";
         unlockError = null;
       }}
-      class="text-xs text-muted-foreground hover:text-foreground hover:cursor-pointer underline-offset-4 hover:underline focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+      class="text-xs text-muted-foreground"
       disabled={isUnlocking}
     >
       {unlockMode === "password"
         ? "Forgot your password? Use your recovery phrase instead."
         : "Have your password? Use it instead."}
-    </button>
+    </TextLink>
     {/if}
 
     {#snippet footerActions()}

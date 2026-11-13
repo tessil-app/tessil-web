@@ -3,6 +3,7 @@
   // set to unlock the vault. Removing one never loses data: the vault
   // password and recovery phrase still open it.
 
+  import TextLink from "$lib/components/TextLink.svelte";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import * as Frame from "$lib/components/frame";
@@ -380,14 +381,12 @@
                       ? "Unlocks your vault."
                       : "Can also unlock your vault, so you don't have to type its password."}
                   </span>
-                  <button
-                    type="button"
+                  <TextLink
                     onclick={() => (unlocksVault.has(p.id) ? stopVaultUnlock(p) : askVaultUnlock(p))}
                     disabled={vaultBusyId === p.id}
-                    class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer disabled:opacity-60 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
                   >
                     {unlocksVault.has(p.id) ? "Stop" : "Set this up"}
-                  </button>
+                  </TextLink>
                 </p>
               {/if}
 

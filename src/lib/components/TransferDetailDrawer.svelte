@@ -3,7 +3,10 @@
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
+  import DetailItem from "$lib/components/DetailItem.svelte";
+  import DetailList from "$lib/components/DetailList.svelte";
   import Drawer from "$lib/components/Drawer.svelte";
+  import DrawerSection from "$lib/components/DrawerSection.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import { encryptString } from "$lib/crypto/encrypt";
@@ -319,33 +322,20 @@
         {/if}
       </section>
 
-      <section class="space-y-2 rounded-lg bg-card p-4">
-        <h3 class="text-sm font-medium text-foreground">Details</h3>
-        <dl class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-          <dt class="text-muted-foreground">Status</dt>
-          <dd><Badge tone={status.tone}>{status.label}</Badge></dd>
-
-          <dt class="text-muted-foreground">Created</dt>
-          <dd class="text-foreground">{dateFmt.format(new Date(transfer.createdAt))}</dd>
-
-          <dt class="text-muted-foreground">Expires</dt>
-          <dd class="text-foreground">
+      <DrawerSection title="Details">
+        <DetailList>
+          <DetailItem label="Status"><Badge tone={status.tone}>{status.label}</Badge></DetailItem>
+          <DetailItem label="Created">{dateFmt.format(new Date(transfer.createdAt))}</DetailItem>
+          <DetailItem label="Expires">
             {dateFmt.format(new Date(transfer.expiresAt))}
             <span class="text-muted-foreground">({relativeExpiry(transfer.expiresAt)})</span>
-          </dd>
+          </DetailItem>
+          <DetailItem label="Downloads">{transfer.downloadCount}</DetailItem>
+          <DetailItem label="Password">{transfer.hasPassword ? "Required" : "None"}</DetailItem>
+        </DetailList>
+      </DrawerSection>
 
-          <dt class="text-muted-foreground">Downloads</dt>
-          <dd class="text-foreground">{transfer.downloadCount}</dd>
-
-          <dt class="text-muted-foreground">Password</dt>
-          <dd class="text-foreground">
-            {transfer.hasPassword ? "Required" : "None"}
-          </dd>
-        </dl>
-      </section>
-
-      <section class="space-y-2 rounded-lg bg-card p-4">
-        <h3 class="text-sm font-medium text-foreground">Share link</h3>
+      <DrawerSection title="Share link">
         {#if recoverError}
           <Alert tone="warning">{recoverError}</Alert>
         {/if}
@@ -405,14 +395,13 @@
             Unlock the vault to rebuild this transfer's share link.
           </p>
         {/if}
-      </section>
+      </DrawerSection>
 
-      <section class="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-        <h3 class="text-sm font-medium text-foreground">Danger zone</h3>
-        <p class="text-xs text-muted-foreground">
-          Deleting removes the encrypted files and revokes the share link.
-          This can't be undone.
-        </p>
+      <DrawerSection
+        title="Delete"
+        description="Deleting removes the encrypted files and revokes the share link. This can't be undone."
+        tone="danger"
+      >
         {#if deleteError}
           <Alert tone="destructive">{deleteError}</Alert>
         {/if}
@@ -449,7 +438,7 @@
             Delete transfer
           </Button>
         {/if}
-      </section>
+      </DrawerSection>
     </div>
   {/if}
 

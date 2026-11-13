@@ -12,7 +12,6 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import { auth } from "$lib/stores/auth.svelte";
   import { cn } from "$lib/utils";
-  import IconArrowLeftRegular from "phosphor-icons-svelte/IconArrowLeftRegular.svelte";
 
   let { children } = $props();
 
@@ -44,17 +43,7 @@
       <p class="text-muted-foreground">Loading…</p>
     </div>
   {:else if auth.user}
-    <PageHeader title="Settings" align="left">
-      {#snippet actions()}
-        <a
-          href="/dashboard"
-          class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-        >
-          <IconArrowLeftRegular class="size-3.5" />
-          Back to dashboard
-        </a>
-      {/snippet}
-    </PageHeader>
+    <PageHeader title="Settings" align="left" back={{ href: "/dashboard", label: "Dashboard" }} />
 
     <IdentityStrip>
       <DefinitionRow label="Email" value={auth.user.email} />
