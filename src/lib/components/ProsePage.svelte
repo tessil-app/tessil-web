@@ -4,6 +4,7 @@
   // narrow enough to read.
 
   import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import { cn } from "$lib/utils";
   import { onMount, type ComponentProps, type Snippet } from "svelte";
 
   interface Props {
@@ -19,6 +20,7 @@
 
   let article = $state<HTMLElement | null>(null);
   let sections = $state<{ id: string; label: string }[]>([]);
+  let active = $state<string | null>(null);
 
   // The list is read from the page's own headings, so it cannot drift.
   onMount(() => {
@@ -36,6 +38,27 @@
       h.id = id;
       return { id, label: (h.textContent ?? "").trim() };
     });
+
+    // The section being read: the last heading that has passed the top.
+    let queued = false;
+    const mark = () => {
+      queued = false;
+      const passed = sections.filter((sec) => {
+        const el = document.getElementById(sec.id);
+        return el !== null && el.getBoundingClientRect().top <= 140;
+      });
+      // At the very bottom the last headings can no longer reach the top.
+      const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      active = (atEnd ? sections.at(-1) : (passed.at(-1) ?? sections[0]))?.id ?? null;
+    };
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(mark);
+    };
+    mark();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   });
 </script>
 
@@ -60,12 +83,18 @@
       <nav aria-label="On this page" class="hidden lg:block">
         <div class="sticky top-24 space-y-3">
           <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">On this page</p>
-          <ul class="space-y-2 text-sm">
+          <ul class="border-l border-border text-sm">
             {#each sections as section (section.id)}
               <li>
                 <a
                   href="#{section.id}"
-                  class="block rounded text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  aria-current={active === section.id ? "location" : undefined}
+                  class={cn(
+                    "-ml-px block border-l-2 py-1 pl-3 transition-colors duration-150 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    active === section.id
+                      ? "border-primary font-semibold text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
                 >
                   {section.label}
                 </a>

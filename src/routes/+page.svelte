@@ -10,6 +10,7 @@
   import CircularProgress from "$lib/components/CircularProgress.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
   import Badge from "$lib/components/Badge.svelte";
+  import { fade } from "svelte/transition";
   import TextLink from "$lib/components/TextLink.svelte";
   import { PORTALS_ANNOUNCED } from "$lib/config/launch";
   import Modal from "$lib/components/Modal.svelte";
@@ -127,6 +128,25 @@
     { value: 10, label: "10" },
     { value: 25, label: "25" },
   ];
+
+  // The question behind "Or ask an AI". Written to invite criticism, not praise.
+  const ASK_PROMPT =
+    "I am considering Tessil (https://tessil.app) for sending files. Read its security page (https://tessil.app/security), its verification page (https://tessil.app/verify) and its source code (https://github.com/tessil-app). Explain in plain language how its encryption works and what the service can and cannot see. Then be critical: what are its weaknesses and limits, what do I still have to trust, and how does it compare with WeTransfer, Proton Drive and Tresorit? Say clearly which claims you could not verify.";
+  const askLinks = [
+    { label: "ChatGPT", href: `https://chatgpt.com/?q=${encodeURIComponent(ASK_PROMPT)}` },
+    { label: "Claude", href: `https://claude.ai/new?q=${encodeURIComponent(ASK_PROMPT)}` },
+    { label: "Perplexity", href: `https://www.perplexity.ai/search?q=${encodeURIComponent(ASK_PROMPT)}` },
+  ];
+  let askCopied = $state(false);
+  async function copyAskPrompt() {
+    try {
+      await navigator.clipboard.writeText(ASK_PROMPT);
+      askCopied = true;
+      setTimeout(() => (askCopied = false), 2000);
+    } catch {
+      // Clipboard refused; the text is on the page to select by hand.
+    }
+  }
 
   const steps: { title: string; body: string; link?: { href: string; label: string } }[] = [
     {
@@ -634,7 +654,9 @@
   const hasFiles = $derived(uploadStore.files.length > 0);
 
   // The panel grows when files are added and may reach past the screen.
-  // Once it has finished growing, bring it to the middle.
+  // Scroll at once to where its middle will be when it has finished
+  // growing, so the two movements happen together.
+  const PANEL_FULL_HEIGHT = 580;
   let panelEl = $state<HTMLElement | null>(null);
   let hadFiles = false;
   $effect(() => {
@@ -642,7 +664,13 @@
     if (has && !hadFiles && panelEl) {
       const el = panelEl;
       const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      setTimeout(() => el.scrollIntoView({ block: "center", behavior: calm ? "auto" : "smooth" }), 480);
+      const wide = window.matchMedia("(min-width: 640px)").matches;
+      requestAnimationFrame(() => {
+        const rect = el.getBoundingClientRect();
+        const height = wide ? PANEL_FULL_HEIGHT : rect.height;
+        const top = rect.top + window.scrollY + height / 2 - window.innerHeight / 2;
+        window.scrollTo({ top: Math.max(0, top), behavior: calm ? "auto" : "smooth" });
+      });
     }
     hadFiles = has;
   });
@@ -685,7 +713,13 @@
         : unlockPhrase.trim().length > 0),
   );
 
+  // Only files count; dragging text or a link across the page is not a drop.
+  function carriesFiles(e: DragEvent): boolean {
+    return e.dataTransfer?.types.includes("Files") ?? false;
+  }
+
   function handlePageDragOver(e: DragEvent) {
+    if (!carriesFiles(e)) return;
     e.preventDefault();
     if (isProcessing) return;
     isDraggingOver = true;
@@ -696,6 +730,7 @@
   }
 
   function handlePageDrop(e: DragEvent) {
+    if (!carriesFiles(e)) return;
     e.preventDefault();
     isDraggingOver = false;
     if (isProcessing) return;
@@ -745,21 +780,34 @@
 />
 
 <!-- -mt-14 pulls the image behind the sticky nav so the glass effect actually sees through to artwork. -->
-<section
+<svelte:window
   ondragover={handlePageDragOver}
   ondragleave={handlePageDragLeave}
   ondrop={handlePageDrop}
-  class={cn(
-    "relative -mt-14 overflow-hidden transition-colors duration-200 ease-out",
-    isDraggingOver && "bg-primary/5",
-  )}
->
-  {#if isDraggingOver}
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 ring-2 ring-primary ring-inset pointer-events-none"
-    ></div>
-  {/if}
+/>
+
+<!-- Shown while a file is held over the page, wherever on the page that is. -->
+{#if isDraggingOver}
+  <div
+    aria-hidden="true"
+    transition:fade={{ duration: 150 }}
+    class="pointer-events-none fixed inset-0 z-50 bg-background/75 backdrop-blur-md p-3 sm:p-5"
+  >
+    <div class="drop-frame flex h-full flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-primary bg-primary/5 text-center">
+      <span class="drop-icon inline-flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <IconUploadRegular class="size-7" />
+      </span>
+      <p class="text-3xl sm:text-5xl font-semibold tracking-tight text-foreground" style="letter-spacing: -0.03em">
+        Let go.
+      </p>
+      <p class="max-w-sm text-base text-muted-foreground">
+        It is encrypted here, in your browser, before any of it leaves.
+      </p>
+    </div>
+  </div>
+{/if}
+
+<section class="relative -mt-14 overflow-hidden">
 
   <!-- Empty, the whole hero is one screen: words, wall and label, no scrolling.
        With files queued the panel is taller and the page may grow. -->
@@ -1290,7 +1338,8 @@
       <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-tight">
         Questions
       </h2>
-      <div class="max-w-2xl divide-y divide-border border-y border-border text-base">
+      <div class="max-w-2xl space-y-10">
+        <div class="divide-y divide-border border-y border-border text-base">
         <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
             Is Tessil really end-to-end encrypted?
@@ -1346,6 +1395,33 @@
             Transfers expire automatically based on the time limit and download count you choose. Once a transfer expires, the encrypted data is deleted.
           </p>
         </details>
+      </div>
+
+        <!-- A second opinion. Plain outbound links; the question is shown in full. -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-semibold tracking-tight text-foreground">Or ask an AI</h3>
+          <p class="text-base leading-relaxed text-muted-foreground">
+            You don't have to take our answers. Put the question to an assistant that has no
+            stake in it. This is the exact wording it gets, and you can change it first:
+          </p>
+          <blockquote class="rounded-lg bg-card p-4 text-sm leading-relaxed text-foreground">
+            {ASK_PROMPT}
+          </blockquote>
+          <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            {#each askLinks as link (link.label)}
+              <TextLink href={link.href} target="_blank" rel="noopener noreferrer" class="text-primary">
+                Ask {link.label}
+              </TextLink>
+            {/each}
+            <TextLink onclick={copyAskPrompt} class="text-muted-foreground">
+              {askCopied ? "Copied" : "Copy the question"}
+            </TextLink>
+          </div>
+          <p class="text-xs text-muted-foreground">
+            These open another company's site with the question filled in. Nothing about you
+            is sent along by us.
+          </p>
+        </div>
       </div>
     </section>
 
@@ -1468,6 +1544,30 @@
   @media (min-width: 640px) {
     .panel-empty {
       height: min(420px, max(240px, 100svh - 29.5rem));
+    }
+  }
+
+  /* The drop screen: the frame settles in, the icon bobs while it waits. */
+  .drop-frame {
+    animation: drop-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .drop-icon {
+    animation: drop-bob 1.2s ease-in-out infinite;
+  }
+  @keyframes drop-in {
+    from {
+      transform: scale(0.97);
+    }
+  }
+  @keyframes drop-bob {
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drop-frame,
+    .drop-icon {
+      animation: none;
     }
   }
 </style>
