@@ -14,6 +14,7 @@
   import * as Frame from "$lib/components/frame";
   import IconButton from "$lib/components/IconButton.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import Notice from "$lib/components/Notice.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import ProgressBar from "$lib/components/ProgressBar.svelte";
@@ -22,6 +23,7 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import * as Table from "$lib/components/table";
   import TextInput from "$lib/components/TextInput.svelte";
+  import TextLink from "$lib/components/TextLink.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
 
@@ -135,6 +137,23 @@
         <Alert tone="warning">1 deposit could not be opened and is not shown.</Alert>
         <Alert tone="destructive">Couldn't delete these files.</Alert>
       </div>
+    </section>
+
+    <section class="space-y-4">
+      {@render section(
+        "Notice and text link",
+        "A notice is a calm, standing message with at most one thing to do. A text link is for a link or a small action inside a sentence.",
+      )}
+      <Notice>
+        Your vault is locked. Portal names and links are encrypted, so unlock to see them.
+        {#snippet action()}
+          <Button variant="secondary" fullWidth={false}>Unlock vault</Button>
+        {/snippet}
+      </Notice>
+      <p class="text-sm text-muted-foreground">
+        Files are encrypted in the browser. <TextLink href="/security">How it works</TextLink>
+        · <TextLink onclick={() => (modalOpen = true)}>An action that reads as a link</TextLink>
+      </p>
     </section>
 
     <section class="space-y-4">

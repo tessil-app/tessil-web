@@ -2,6 +2,7 @@
   // What was sent through one portal. Deposits are decrypted here with the
   // portal's private key from the member's vault.
 
+  import TextLink from "$lib/components/TextLink.svelte";
   import { page } from "$app/stores";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -586,14 +587,13 @@
         {#each draft as item (item.id)}
           <li class="flex items-center justify-between gap-3 px-3 py-2">
             <span class="min-w-0 break-words text-sm text-foreground">{item.label}</span>
-            <button
-              type="button"
+            <TextLink
               onclick={() => removeItem(item.id)}
               disabled={isSavingList}
-              class="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+              class="shrink-0 text-xs text-muted-foreground"
             >
               Remove<span class="sr-only"> {item.label}</span>
-            </button>
+            </TextLink>
           </li>
         {/each}
       </ul>

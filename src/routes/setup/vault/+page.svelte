@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TextLink from "$lib/components/TextLink.svelte";
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -275,12 +276,11 @@
           </Button>
 
           <p class="text-center text-xs text-muted-foreground">
-            <a
+            <TextLink
               href="/dashboard"
-              class="underline underline-offset-2 hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
             >
               Not now
-            </a>
+            </TextLink>
             · you can send without a vault and set one up later.
           </p>
         </div>
@@ -361,12 +361,11 @@
             {/if}
           </Button>
           <p class="text-center text-xs text-muted-foreground">
-            <a
+            <TextLink
               href="/dashboard"
-              class="underline underline-offset-2 hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
             >
               Not now
-            </a>
+            </TextLink>
             · you can send without a vault and set one up later.
           </p>
         </form>

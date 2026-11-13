@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TextLink from "$lib/components/TextLink.svelte";
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
@@ -6,6 +7,7 @@
   import EmptyState from "$lib/components/EmptyState.svelte";
   import IconButton from "$lib/components/IconButton.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import Notice from "$lib/components/Notice.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
@@ -438,33 +440,25 @@
       {/if}
 
       {#if auth.needsVaultSetup}
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
-        >
-          <p class="text-sm text-muted-foreground">
-            Without a vault, transfers are listed without their names and their links can't be
-            shown again. A vault keeps both, encrypted so only you can read them.
-          </p>
-          <div class="sm:shrink-0">
+        <Notice>
+          Without a vault, transfers are listed without their names and their links can't be
+          shown again. A vault keeps both, encrypted so only you can read them.
+          {#snippet action()}
             <Button variant="secondary" fullWidth={false} href="/setup/vault">Set up vault</Button>
-          </div>
-        </div>
+          {/snippet}
+        </Notice>
       {/if}
 
       {#if !vaultUnlocked && lockedVaultedCount > 0 && skipped}
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
-        >
-          <p class="text-sm text-muted-foreground">
-            Vault is locked. {lockedVaultedCount}
-            {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted names waiting.
-          </p>
-          <div class="sm:shrink-0">
+        <Notice>
+          Vault is locked. {lockedVaultedCount}
+          {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted names waiting.
+          {#snippet action()}
             <Button variant="secondary" fullWidth={false} onclick={openUnlockPrompt}>
               Unlock vault
             </Button>
-          </div>
-        </div>
+          {/snippet}
+        </Notice>
       {/if}
 
       {#if isLoading}
@@ -664,19 +658,18 @@
     {/if}
 
     {#if hasVaultPassword}
-    <button
-      type="button"
+    <TextLink
       onclick={() => {
         unlockMode = unlockMode === "password" ? "phrase" : "password";
         unlockError = null;
       }}
-      class="text-xs text-muted-foreground hover:text-foreground hover:cursor-pointer underline-offset-4 hover:underline focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+      class="text-xs text-muted-foreground"
       disabled={isUnlocking}
     >
       {unlockMode === "password"
         ? "Forgot your password? Use your recovery phrase instead."
         : "Have your password? Use it instead."}
-    </button>
+    </TextLink>
     {/if}
 
     {#snippet footerActions()}

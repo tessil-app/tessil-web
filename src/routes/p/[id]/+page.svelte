@@ -3,6 +3,7 @@
   // link. No account. Files are encrypted here, to the portal's public
   // key, before anything is uploaded.
 
+  import TextLink from "$lib/components/TextLink.svelte";
   import { page } from "$app/stores";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -433,7 +434,7 @@
         <IconLockRegular class="size-4 shrink-0" />
         <span>
           {t.footnote(portal.title)}
-          <a href="/security" class="underline underline-offset-2 hover:text-foreground">{t.howItWorks}</a>
+          <TextLink href="/security">{t.howItWorks}</TextLink>
         </span>
       </p>
     {/if}
@@ -446,14 +447,12 @@
         {#if option === locale}
           <span class="text-foreground" aria-current="true">{depositStrings[option].languageName}</span>
         {:else}
-          <button
-            type="button"
+          <TextLink
             lang={HTML_LANG[option]}
             onclick={() => (chosenLocale = option)}
-            class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
           >
             {depositStrings[option].languageName}
-          </button>
+          </TextLink>
         {/if}
       {/each}
     </p>

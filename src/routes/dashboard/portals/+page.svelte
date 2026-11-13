@@ -3,6 +3,7 @@
   // switch off, delete. Titles and links are decrypted in the browser, so
   // they need an unlocked vault.
 
+  import TextLink from "$lib/components/TextLink.svelte";
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
@@ -11,6 +12,7 @@
   import DropdownMenuItem from "$lib/components/DropdownMenuItem.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import Notice from "$lib/components/Notice.svelte";
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Seo from "$lib/components/Seo.svelte";
@@ -226,31 +228,23 @@
       {/if}
 
       {#if auth.needsVaultSetup && maxPortals > 0}
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
-        >
-          <p class="text-sm text-muted-foreground">
-            Portals need a vault. It holds the keys that open what people send you, so only you
-            can read it.
-          </p>
-          <div class="sm:shrink-0">
+        <Notice>
+          Portals need a vault. It holds the keys that open what people send you, so only you
+          can read it.
+          {#snippet action()}
             <Button variant="secondary" fullWidth={false} href="/setup/vault">Set up vault</Button>
-          </div>
-        </div>
+          {/snippet}
+        </Notice>
       {:else if !vaultUnlocked && maxPortals > 0}
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
-        >
-          <p class="text-sm text-muted-foreground">
-            Your vault is locked. Portal names and links are encrypted, so unlock to see them
-            or to create a portal.
-          </p>
-          <div class="sm:shrink-0">
+        <Notice>
+          Your vault is locked. Portal names and links are encrypted, so unlock to see them
+          or to create a portal.
+          {#snippet action()}
             <Button variant="secondary" fullWidth={false} onclick={() => unlockPrompt.request()}>
               Unlock vault
             </Button>
-          </div>
-        </div>
+          {/snippet}
+        </Notice>
       {/if}
 
       {#if maxPortals === 0 && portals.length === 0}
@@ -387,12 +381,11 @@
             {ownedCount} of {maxPortals} portals on your plan.
             {#if storage}
               {formatSize(storage.usedBytes)} of {formatSize(storage.quotaBytes)} storage used.
-              <a
+              <TextLink
                 href="/dashboard/settings/usage"
-                class="underline underline-offset-2 hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
               >
                 Details
-              </a>
+              </TextLink>
             {/if}
           </p>
         {/if}
