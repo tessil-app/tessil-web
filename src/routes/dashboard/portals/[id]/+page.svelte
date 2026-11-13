@@ -14,13 +14,24 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import { api } from "$lib/api/client";
   import { saveDecryptedFile, StreamInterruptedError } from "$lib/download/saveFile";
+  import Badge from "$lib/components/Badge.svelte";
+  import TextInput from "$lib/components/TextInput.svelte";
   import {
+    coverageOf,
     loadDeposits,
     openMemberPortal,
+    saveChecklist,
     type OpenedDeposit,
     type OpenedMemberPortal,
   } from "$lib/portal/deposits";
+  import {
+    CHECKLIST_LABEL_MAX,
+    CHECKLIST_MAX_ITEMS,
+    newChecklistItemId,
+    type ChecklistItem,
+  } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
+  import { buildReceiptText, saveTextFile } from "$lib/portal/receipt";
   import { formatSize } from "$lib/utils";
   import { subscribeToVaultState } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
@@ -45,6 +56,46 @@
   let isDeleting = $state(false);
   let copied = $state(false);
 
+  // ─── what the portal asks for ─────────────────────────────────────────────
+  let draft = $state<ChecklistItem[]>([]);
+  let newLabel = $state("");
+  let isSavingList = $state(false);
+  let listError = $state<string | null>(null);
+  let listSaved = $state(false);
+
+  const listChanged = $derived(
+    portal !== null && JSON.stringify(draft) !== JSON.stringify(portal.checklist),
+  );
+
+  function addItem(e?: Event) {
+    e?.preventDefault();
+    const label = newLabel.trim().slice(0, CHECKLIST_LABEL_MAX);
+    if (!label || draft.length >= CHECKLIST_MAX_ITEMS) return;
+    draft = [...draft, { id: newChecklistItemId(), label }];
+    newLabel = "";
+    listSaved = false;
+  }
+
+  function removeItem(id: string) {
+    draft = draft.filter((item) => item.id !== id);
+    listSaved = false;
+  }
+
+  async function saveList() {
+    if (!portal || isSavingList || !listChanged) return;
+    isSavingList = true;
+    listError = null;
+    try {
+      await saveChecklist(portal, draft);
+      portal = { ...portal, checklist: draft };
+      listSaved = true;
+    } catch (err) {
+      listError = err instanceof Error ? err.message : "Couldn't save the list.";
+    } finally {
+      isSavingList = false;
+    }
+  }
+
   async function load() {
     if (!auth.user) return;
     errorMessage = null;
@@ -57,6 +108,7 @@
         return;
       }
       portal = opened.portal;
+      draft = opened.portal.checklist;
       const first = await loadDeposits(opened.portal);
       deposits = first.deposits;
       unreadable = first.unreadable;
@@ -123,6 +175,41 @@
             : "Couldn't download this file. Try again.",
       };
     }
+  }
+
+  // One file after another: browsers allow a page to save several files
+  // once the first has been allowed, and each still streams to disk.
+  let downloadingAll = $state<string | null>(null);
+
+  async function downloadAll(deposit: OpenedDeposit) {
+    if (downloadingAll) return;
+    downloadingAll = deposit.id;
+    try {
+      for (const file of deposit.files) {
+        if (fileStates[file.id]?.status === "complete") continue;
+        await download(deposit, file.id);
+        if (fileStates[file.id]?.status === "error") break;
+      }
+    } finally {
+      downloadingAll = null;
+    }
+  }
+
+  function saveRecord(deposit: OpenedDeposit) {
+    if (!portal) return;
+    saveTextFile(
+      `tessil-${deposit.reference}.txt`,
+      buildReceiptText({
+        kind: "received",
+        locale: "en",
+        portalTitle: portal.title,
+        reference: deposit.reference,
+        at: new Date(deposit.createdAt),
+        note: deposit.note,
+        files: deposit.files.map((f) => ({ name: f.name, size: formatSize(f.plainSize) })),
+        deletedOn: new Date(deposit.expiresAt),
+      }),
+    );
   }
 
   async function confirmDelete() {
@@ -225,7 +312,7 @@
       title={portal.title}
       tagline={portal.isDisabled
         ? "Switched off. Nobody can send files here until you switch it back on."
-        : "Files people sent through this portal."}
+        : "Files people sent through this portal. They are deleted automatically, so download what you need to keep."}
       align="left"
     >
       {#snippet actions()}
@@ -238,6 +325,80 @@
     <div class="space-y-6">
       {#if errorMessage}
         <Alert tone="destructive">{errorMessage}</Alert>
+      {/if}
+
+      {#if portal.role === "owner"}
+        <section class="rounded-lg border border-border bg-card p-4 space-y-3">
+          <div>
+            <h2 class="text-base font-medium text-foreground">What you ask for</h2>
+            <p class="text-sm text-muted-foreground">
+              People who open the link see this list and attach a file to each item, so you can
+              see at a glance what is still missing. Leave it empty to accept anything.
+            </p>
+          </div>
+
+          {#if draft.length > 0}
+            <ul class="divide-y divide-border rounded-md border border-border">
+              {#each draft as item (item.id)}
+                <li class="flex items-center justify-between gap-3 px-3 py-2">
+                  <span class="min-w-0 break-words text-sm text-foreground">{item.label}</span>
+                  <button
+                    type="button"
+                    onclick={() => removeItem(item.id)}
+                    disabled={isSavingList}
+                    class="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+                  >
+                    Remove<span class="sr-only"> {item.label}</span>
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+
+          {#if draft.length < CHECKLIST_MAX_ITEMS}
+            <form onsubmit={addItem} class="flex flex-col sm:flex-row sm:items-end gap-2">
+              <div class="min-w-0 flex-1">
+                <TextInput
+                  id="checklist-new"
+                  label="Add an item"
+                  placeholder="For example: Copy of your ID"
+                  maxlength={CHECKLIST_LABEL_MAX}
+                  bind:value={newLabel}
+                  disabled={isSavingList}
+                />
+              </div>
+              <Button
+                type="submit"
+                variant="secondary"
+                fullWidth={false}
+                class="whitespace-nowrap"
+                disabled={isSavingList || newLabel.trim().length === 0}
+              >
+                Add
+              </Button>
+            </form>
+          {/if}
+
+          {#if listError}
+            <Alert tone="destructive">{listError}</Alert>
+          {/if}
+
+          <div class="flex items-center gap-3">
+            <Button fullWidth={false} onclick={saveList} disabled={!listChanged || isSavingList}>
+              {#if isSavingList}
+                <Spinner aria-hidden="true" />
+                Saving…
+              {:else}
+                Save list
+              {/if}
+            </Button>
+            {#if listSaved && !listChanged}
+              <span class="text-sm text-muted-foreground" role="status">
+                Saved. The link stays the same.
+              </span>
+            {/if}
+          </div>
+        </section>
       {/if}
 
       {#if unreadable > 0}
@@ -262,6 +423,7 @@
       {:else}
         <ul class="space-y-4">
           {#each deposits as deposit (deposit.id)}
+            {@const coverage = coverageOf(portal.checklist, deposit.files)}
             <li class="rounded-lg border border-border bg-card p-4 space-y-3">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
@@ -274,16 +436,24 @@
                     {deposit.files.length === 1 ? "file" : "files"} · {formatSize(deposit.totalBytes)}
                     · deleted automatically {daysLeft(deposit.expiresAt)}
                   </p>
+                  <p class="text-xs text-muted-foreground">
+                    Reference <span class="font-mono">{deposit.reference}</span>
+                  </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  fullWidth={false}
-                  class="shrink-0"
-                  onclick={() => (confirmDeleteId = deposit.id)}
-                >
-                  Delete
-                </Button>
+                {#if portal.checklist.length > 0}
+                  <Badge tone={coverage.missing.length === 0 ? "success" : "warning"}>
+                    {coverage.missing.length === 0
+                      ? "Complete"
+                      : `${coverage.provided.length} of ${portal.checklist.length}`}
+                  </Badge>
+                {/if}
               </div>
+
+              {#if coverage.missing.length > 0}
+                <p class="text-sm text-muted-foreground">
+                  Not included: {coverage.missing.map((i) => i.label).join(", ")}
+                </p>
+              {/if}
 
               <ul class="space-y-2">
                 {#each deposit.files as file (file.id)}
@@ -291,7 +461,12 @@
                   <li>
                     <FileRow
                       name={file.name}
-                      size={formatSize(file.plainSize)}
+                      size={(() => {
+                        const label = portal?.checklist.find((i) => i.id === file.itemId)?.label;
+                        return label
+                          ? `${label} · ${formatSize(file.plainSize)}`
+                          : formatSize(file.plainSize);
+                      })()}
                       kind="download"
                       status={state?.status ?? "idle"}
                       percent={state?.percent ?? 0}
@@ -302,6 +477,31 @@
                   </li>
                 {/each}
               </ul>
+
+              <div class="flex flex-wrap items-center gap-2 pt-1">
+                <Button
+                  variant="secondary"
+                  fullWidth={false}
+                  onclick={() => downloadAll(deposit)}
+                  disabled={downloadingAll !== null}
+                >
+                  {downloadingAll === deposit.id
+                    ? "Downloading…"
+                    : deposit.files.length > 1
+                      ? `Download all ${deposit.files.length}`
+                      : "Download"}
+                </Button>
+                <Button variant="ghost" fullWidth={false} onclick={() => saveRecord(deposit)}>
+                  Save record
+                </Button>
+                <Button
+                  variant="ghost"
+                  fullWidth={false}
+                  onclick={() => (confirmDeleteId = deposit.id)}
+                >
+                  Delete
+                </Button>
+              </div>
             </li>
           {/each}
         </ul>

@@ -21,6 +21,8 @@
     trailingHidden?: boolean;
     errorSub?: string;
     onRemove?: () => void;
+    /** Accessible name of the remove button, for pages in another language. */
+    removeLabel?: string;
     onDownload?: () => void;
     onRetry?: () => void;
     class?: string;
@@ -35,6 +37,7 @@
     trailingHidden = false,
     errorSub,
     onRemove,
+    removeLabel,
     onDownload,
     onRetry,
     class: className,
@@ -133,7 +136,7 @@
         <button
           type="button"
           onclick={onRemove}
-          aria-label="Remove {name}"
+          aria-label={removeLabel ?? `Remove ${name}`}
           class="p-2 rounded text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/10 transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <IconXRegular class="size-4" />

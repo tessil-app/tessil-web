@@ -8,9 +8,11 @@
     disabled?: boolean;
     maxTotalSize?: number;
     compact?: boolean;
+    /** Wording, for pages shown in another language. English when omitted. */
+    labels?: { prompt: string; addMore: string; maxTotal: (size: string) => string };
   }
 
-  let { onFilesSelect, disabled = false, maxTotalSize, compact = false }: Props =
+  let { onFilesSelect, disabled = false, maxTotalSize, compact = false, labels }: Props =
     $props();
 
   let isDragging = $state(false);
@@ -70,7 +72,9 @@
   ondrop={handleDrop}
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}
-  aria-label={compact ? "Add more files" : "Choose files to upload - opens file picker"}
+  aria-label={compact
+    ? (labels?.addMore ?? "Add more files")
+    : (labels?.prompt ?? "Choose files to upload - opens file picker")}
   class={cn(
     "w-full border-2 border-dashed rounded-md transition-[border-color,background-color] duration-200 ease-out cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
     compact ? "p-4" : "p-10",
@@ -84,17 +88,19 @@
   {#if compact}
     <div class="flex items-center justify-center gap-2 text-sm text-muted-foreground">
       <IconUploadRegular class="size-4" />
-      <span>Add more files</span>
+      <span>{labels?.addMore ?? "Add more files"}</span>
     </div>
   {:else}
     <div class="flex flex-col items-center gap-4 text-primary">
       <IconUploadRegular class="size-10" />
       <div class="text-center">
         <p class="text-lg font-medium text-foreground">
-          Drop files here or click to browse
+          {labels?.prompt ?? "Drop files here or click to browse"}
         </p>
         <p class="text-sm mt-1 text-muted-foreground">
-          Maximum {maxTotalSize ? formatSize(maxTotalSize) : "1 GB"} total
+          {labels
+            ? labels.maxTotal(maxTotalSize ? formatSize(maxTotalSize) : "1 GB")
+            : `Maximum ${maxTotalSize ? formatSize(maxTotalSize) : "1 GB"} total`}
         </p>
       </div>
     </div>

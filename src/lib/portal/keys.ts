@@ -13,6 +13,7 @@
 
 import { openSealed, sealTo, type RecipientKeypair } from "$lib/crypto/seal";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
+import { LOCALES, type Locale } from "$lib/i18n/locale";
 import { openVaultItem, sealVaultItem } from "$lib/vault/keypair";
 
 const ECDH = { name: "ECDH", namedCurve: "P-256" } as const;
@@ -63,6 +64,51 @@ export interface PortalPublicInfo {
   publicKey: Uint8Array;
   title: string;
   keyVersion: number;
+  /** Language of the deposit page, chosen by the owner. Absent on older portals. */
+  lang?: Locale;
+  /** What the owner asks visitors to send. Empty or absent: anything goes. */
+  checklist?: ChecklistItem[];
+}
+
+/** One thing the owner asks for, e.g. "Copy of your ID". */
+export interface ChecklistItem {
+  /** Stable across renames, so files stay attached to the right item. */
+  id: string;
+  label: string;
+}
+
+export const CHECKLIST_MAX_ITEMS = 20;
+export const CHECKLIST_LABEL_MAX = 80;
+const ITEM_ID = /^[a-z0-9]{6}$/;
+
+export function newChecklistItemId(): string {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  // 36 does not divide 256, so reject the tail instead of taking it modulo.
+  let id = "";
+  while (id.length < 6) {
+    const [b] = crypto.getRandomValues(new Uint8Array(1));
+    if (b < 252) id += alphabet[b % 36];
+  }
+  return id;
+}
+
+/** Keeps only well-formed items; a bundle is data from the network. */
+function cleanChecklist(raw: unknown): ChecklistItem[] {
+  if (!Array.isArray(raw)) return [];
+  const items: ChecklistItem[] = [];
+  for (const entry of raw.slice(0, CHECKLIST_MAX_ITEMS)) {
+    const item = entry as { id?: unknown; label?: unknown };
+    if (
+      typeof item?.id === "string" &&
+      ITEM_ID.test(item.id) &&
+      typeof item.label === "string" &&
+      item.label.trim().length > 0 &&
+      !items.some((i) => i.id === item.id)
+    ) {
+      items.push({ id: item.id, label: item.label.trim().slice(0, CHECKLIST_LABEL_MAX) });
+    }
+  }
+  return items;
 }
 
 async function bundleKey(linkKey: Uint8Array): Promise<CryptoKey> {
@@ -90,6 +136,8 @@ export async function sealPortalBundle(
     publicKey: bytesToBase64Url(info.publicKey),
     title: info.title,
     keyVersion: info.keyVersion,
+    ...(info.lang ? { lang: info.lang } : {}),
+    ...(info.checklist && info.checklist.length > 0 ? { checklist: cleanChecklist(info.checklist) } : {}),
   });
   // Padded with spaces so the stored size does not give away the title's length.
   const raw = encoder.encode(json);
@@ -134,6 +182,8 @@ export async function openPortalBundle(
       publicKey?: unknown;
       title?: unknown;
       keyVersion?: unknown;
+      lang?: unknown;
+      checklist?: unknown;
     };
     if (
       typeof parsed.publicKey !== "string" ||
@@ -145,7 +195,15 @@ export async function openPortalBundle(
     const publicKey = base64UrlToBytes(parsed.publicKey);
     // Refuses anything that is not a point on the curve.
     await crypto.subtle.importKey("raw", buffer(publicKey), ECDH, true, []);
-    return { publicKey, title: parsed.title, keyVersion: parsed.keyVersion };
+    const lang = LOCALES.find((l) => l === parsed.lang);
+    const checklist = cleanChecklist(parsed.checklist);
+    return {
+      publicKey,
+      title: parsed.title,
+      keyVersion: parsed.keyVersion,
+      ...(lang ? { lang } : {}),
+      ...(checklist.length > 0 ? { checklist } : {}),
+    };
   } catch {
     return null;
   }
@@ -335,7 +393,11 @@ export interface NewPortal {
 }
 
 /** Everything for a new portal, with its owner as the only member. */
-export async function createPortalKeys(title: string, owner: MemberVault): Promise<NewPortal> {
+export async function createPortalKeys(
+  title: string,
+  owner: MemberVault,
+  lang?: Locale,
+): Promise<NewPortal> {
   const id = newPortalId();
   const keyVersion = 1;
   const linkKey = crypto.getRandomValues(new Uint8Array(LINK_KEY_BYTES));
@@ -347,7 +409,7 @@ export async function createPortalKeys(title: string, owner: MemberVault): Promi
   material.set(pkcs8, LINK_KEY_BYTES);
   try {
     const [publicBundle, sealedKeys, depositToken] = await Promise.all([
-      sealPortalBundle(id, linkKey, { publicKey, title, keyVersion }),
+      sealPortalBundle(id, linkKey, { publicKey, title, keyVersion, lang }),
       keep(owner, id, keyVersion, material),
       depositTokenFor(linkKey),
     ]);

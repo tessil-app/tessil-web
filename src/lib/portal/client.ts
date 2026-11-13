@@ -3,6 +3,7 @@
 // the server only ever sees opaque blobs.
 
 import { api, type PortalRow } from "$lib/api/client";
+import type { Locale } from "$lib/i18n/locale";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
 import { ensureUserKeypair } from "$lib/vault/client";
 import { readVaultDerivationKey } from "$lib/vault/session";
@@ -83,6 +84,7 @@ export async function createMyPortal(
   userId: string,
   title: string,
   origin: string,
+  lang?: Locale,
 ): Promise<CreatePortalResult> {
   const derivationKey = await readVaultDerivationKey(userId);
   if (!derivationKey) return { ok: false, reason: "locked" };
@@ -91,7 +93,7 @@ export async function createMyPortal(
   // made at unlock; this covers a session unlocked before that existed.
   await ensureUserKeypair(userId);
 
-  const made = await createPortalKeys(title.trim(), { userId, derivationKey });
+  const made = await createPortalKeys(title.trim(), { userId, derivationKey }, lang);
   const created = await api.createPortal({
     id: made.id,
     publicBundle: bytesToBase64Url(made.publicBundle),
