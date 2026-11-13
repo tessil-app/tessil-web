@@ -66,9 +66,10 @@
   path="/portals"
 />
 
-<div class="hero">
-  <!-- One screen exactly: the header is 3.5rem, the rest is the hero. -->
-  <div class="mx-auto flex h-[calc(100svh-3.5rem)] min-h-[34rem] max-w-5xl flex-col items-center justify-center gap-4 px-4 py-6 text-center sm:gap-5">
+<!-- Pulled up behind the header, which turns dark while this is under it. -->
+<div class="hero -mt-14" data-header-tone="dark">
+  <!-- One screen exactly, the header included. -->
+  <div class="mx-auto flex h-[100svh] min-h-[38rem] max-w-6xl flex-col items-center justify-center gap-4 px-4 sm:px-6 pt-20 pb-6 text-center sm:gap-5">
     <p class="inline-flex items-center gap-2 rounded-full border border-white/15 py-1 pl-1 pr-3.5 text-sm text-white/80">
       <span class="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">New</span>
       Tessil now works both ways
@@ -101,14 +102,14 @@
 </div>
 
 <div class="bg-background">
-  <section class="mx-auto max-w-5xl px-4 py-24 sm:py-32">
+  <section class="mx-auto max-w-6xl px-4 sm:px-6 py-24 sm:py-32">
     <p use:reveal class="reveal text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl sm:leading-[1.1]">
       Until now you could send files without us seeing them.
       <span class="text-muted-foreground">Now people can send files to you the same way.</span>
     </p>
   </section>
 
-  <section class="mx-auto grid max-w-5xl gap-6 px-4 pb-24 md:grid-cols-3">
+  <section class="mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 pb-24 md:grid-cols-3">
     {#each numbers as n, i (n.unit)}
       <div use:reveal class="reveal rounded-2xl bg-card p-8" style="transition-delay: {i * 80}ms">
         <p class="flex items-baseline gap-2">
@@ -121,8 +122,8 @@
   </section>
 </div>
 
-<div class="hero">
-  <section class="mx-auto max-w-5xl px-4 py-24 text-center sm:py-32">
+<div class="hero" data-header-tone="dark">
+  <section class="mx-auto max-w-6xl px-4 sm:px-6 py-24 text-center sm:py-32">
     <h2 use:reveal class="reveal text-4xl font-semibold leading-none text-white sm:text-7xl" style="letter-spacing: -0.035em">
       We see nothing. Still.
     </h2>
@@ -141,7 +142,7 @@
 </div>
 
 <div class="bg-background">
-  <section class="mx-auto grid max-w-5xl gap-12 px-4 py-24 sm:py-32 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-center">
+  <section class="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 py-24 sm:py-32 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-center">
     <div use:reveal class="reveal space-y-5">
       <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
         Ask once.<br />Watch it arrive.
@@ -225,7 +226,7 @@
   /* Sized by what the screen has left after the words, so the hero never scrolls. */
   .stage {
     position: relative;
-    width: min(78vw, 26rem, 100svh - 26rem);
+    width: min(78vw, 26rem, 100svh - 30rem);
     min-width: 11rem;
     aspect-ratio: 1;
     margin: 0.5rem 0;

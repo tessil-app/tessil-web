@@ -633,6 +633,20 @@
 
   const hasFiles = $derived(uploadStore.files.length > 0);
 
+  // The panel grows when files are added and may reach past the screen.
+  // Once it has finished growing, bring it to the middle.
+  let panelEl = $state<HTMLElement | null>(null);
+  let hadFiles = false;
+  $effect(() => {
+    const has = hasFiles;
+    if (has && !hadFiles && panelEl) {
+      const el = panelEl;
+      const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      setTimeout(() => el.scrollIntoView({ block: "center", behavior: calm ? "auto" : "smooth" }), 480);
+    }
+    hadFiles = has;
+  });
+
   const isSuccess = $derived(
     uploadStore.status === "complete" && !!uploadStore.shareUrl,
   );
@@ -751,7 +765,7 @@
        With files queued the panel is taller and the page may grow. -->
   <div
     class={cn(
-      "relative max-w-7xl mx-auto px-4 sm:px-6 pt-[4.5rem] sm:pt-20 pb-3 flex flex-col min-h-[100svh]",
+      "relative max-w-6xl mx-auto px-4 sm:px-6 pt-[4.5rem] sm:pt-20 pb-3 flex flex-col min-h-[100svh]",
       !hasFiles && !isSuccess && "sm:h-[100svh] sm:min-h-[38rem]",
     )}
   >
@@ -802,6 +816,7 @@
 
       <!-- Height animates between empty (420) and has-files (580) sizes; sync'd with the extension's width animation. -->
       <aside
+        bind:this={panelEl}
         class={cn(
           "relative w-full sm:w-auto sm:flex sm:items-stretch",
           isSuccess ? "sm:h-auto" : hasFiles ? "sm:h-[580px]" : "panel-empty",
@@ -1148,7 +1163,7 @@
 </section>
 
 <div class="bg-background">
-  <section aria-labelledby="how-title" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+  <section aria-labelledby="how-title" class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
     <h2 id="how-title" class="sr-only">How it works</h2>
     <ol class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
       {#each steps as step, i (step.title)}
@@ -1174,7 +1189,7 @@
       aria-labelledby="portals-title"
       class="border-t border-border scroll-mt-20"
     >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center">
         <div class="space-y-5">
           <p class="text-xs font-semibold uppercase tracking-wider text-primary">New: portals</p>
           <h2 id="portals-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">

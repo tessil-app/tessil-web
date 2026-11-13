@@ -423,7 +423,7 @@
     ></div>
   {/if}
 
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-[16rem] sm:pb-24">
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32 pb-[16rem] sm:pb-24">
     <div class="grid grid-cols-1 sm:grid-cols-[320px_1fr] gap-6 sm:gap-10 lg:gap-12 items-stretch">
 
       <aside class="glass-panel sm:sticky sm:top-6 sm:min-h-[420px] sm:flex sm:flex-col">

@@ -10,10 +10,10 @@
 
   let { width = "2xl", class: className, children }: Props = $props();
 
-  // 5xl matches the site header so dashboard-style surfaces line up with
-  // the top nav. 2xl/3xl stay the default for marketing + form pages.
+  // "5xl" is the site width (max-w-6xl), the same as the header, so wide
+  // pages line up with the logo. 2xl/3xl are for text and form pages.
   const widthClass = $derived(
-    width === "5xl" ? "max-w-5xl" : width === "3xl" ? "max-w-3xl" : "max-w-2xl",
+    width === "5xl" ? "max-w-6xl sm:px-6" : width === "3xl" ? "max-w-3xl" : "max-w-2xl",
   );
 </script>
 

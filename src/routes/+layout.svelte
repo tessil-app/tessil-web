@@ -77,12 +77,10 @@
 
   // Dark mode is scoped to /dashboard; afterNavigate (not $effect) avoids the mode-watcher reactive loop.
   const isApp = $derived($page.url.pathname.startsWith("/dashboard"));
-  // Home and the download page run the wide (max-w-7xl) picture-frame layout;
-  // the nav matches them so the wordmark/menu align with the content edges.
-  // Everywhere else (dashboard + narrow content pages) stays compact at max-w-5xl.
-  const isWideNav = $derived(
-    $page.url.pathname === "/" || $page.url.pathname.startsWith("/d/"),
-  );
+  // A new page has its own sections; wait for it to render, then look again.
+  afterNavigate(() => {
+    requestAnimationFrame(readHeaderTone);
+  });
 
   afterNavigate(({ to }) => {
     const path = to?.url.pathname ?? "/";
@@ -110,9 +108,40 @@
   const navLinkInactive = "text-muted-foreground hover:text-foreground";
   const navLinkActive = "text-foreground font-medium";
 
-  // A page with a dark top gets a dark header, or the light glass bar
-  // sits on it like a strip of paper.
-  const isDarkTop = $derived($page.url.pathname === "/portals");
+  // The glass header takes the tone of what is under it. A dark section
+  // marks itself with data-header-tone="dark"; while one sits behind the
+  // header, the header uses the dark palette.
+  let isDarkTop = $state(false);
+  let headerEl = $state<HTMLElement | null>(null);
+
+  function readHeaderTone() {
+    if (!headerEl) return;
+    const line = headerEl.getBoundingClientRect().bottom / 2;
+    isDarkTop = [...document.querySelectorAll<HTMLElement>('[data-header-tone="dark"]')].some((el) => {
+      const r = el.getBoundingClientRect();
+      return r.top <= line && r.bottom > line;
+    });
+  }
+
+  $effect(() => {
+    if (!headerEl) return;
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        readHeaderTone();
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    readHeaderTone();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  });
 
   function isActive(path: string, exact = false) {
     const current = $page.url.pathname;
@@ -227,18 +256,16 @@
 </a>
 <div class="min-h-screen bg-background text-foreground">
   <header
+    bind:this={headerEl}
     class={cn(
-      "sticky top-0 z-40 border-b",
-      // Solid, matching the page's own black: glass over it turns grey.
-      isDarkTop
-        ? "dark border-white/10 bg-[#07080d]"
-        : "border-border/40 bg-background/40 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/30",
+      "sticky top-0 z-40 border-b border-border/40 bg-background/40 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/30 transition-[background-color,border-color] duration-200 ease-out",
+      isDarkTop && "dark",
     )}
   >
     <div
       class={cn(
         "mx-auto py-3 flex items-center justify-between gap-4",
-        isWideNav ? "max-w-7xl px-4 sm:px-6" : "max-w-5xl px-4",
+        "max-w-6xl px-4 sm:px-6",
       )}
     >
       <a
