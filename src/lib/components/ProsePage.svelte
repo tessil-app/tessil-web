@@ -63,7 +63,7 @@
 </script>
 
 <div class="bg-background text-foreground">
-  <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-14 sm:pt-20">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-20">
     <header class="max-w-3xl space-y-4 pb-10 sm:pb-14">
       <h1
         class="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-none text-foreground"

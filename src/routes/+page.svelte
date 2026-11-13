@@ -10,6 +10,7 @@
   import CircularProgress from "$lib/components/CircularProgress.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
   import Badge from "$lib/components/Badge.svelte";
+  import PlanCards from "$lib/components/PlanCards.svelte";
   import { fade } from "svelte/transition";
   import TextLink from "$lib/components/TextLink.svelte";
   import { PORTALS_ANNOUNCED } from "$lib/config/launch";
@@ -1291,6 +1292,25 @@
             Send 2 files
           </div>
         </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if PORTALS_ANNOUNCED}
+    <section aria-labelledby="pricing-title" class="border-t border-border">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 space-y-10">
+        <div class="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+          <div class="max-w-xl space-y-3">
+            <h2 id="pricing-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
+              Sending is free. Receiving is the plan.
+            </h2>
+            <p class="text-base sm:text-lg leading-relaxed text-muted-foreground">
+              Encryption is never what you pay for. A plan adds portals.
+            </p>
+          </div>
+          <TextLink href="/pricing" class="text-primary">See what each plan includes</TextLink>
+        </div>
+        <PlanCards compact />
       </div>
     </section>
   {/if}
