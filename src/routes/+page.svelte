@@ -136,6 +136,8 @@
   let copied = $state(false);
   let uploadSpeed = $state<number | null>(null);
   let uploadEta = $state<number | null>(null);
+  // The connection dropped mid-file; the upload continues by itself when it is back.
+  let uploadStalled = $state(false);
   let lastSpeedTs = 0;
   let uploadController: AbortController | null = null;
   let lastUploadVaulted = $state(false);
@@ -262,6 +264,7 @@
     uploadStore.clearError();
     uploadSpeed = null;
     uploadEta = null;
+    uploadStalled = false;
   }
 
   // Re-run the upload with the same files (from the error state's "Try again").
@@ -394,6 +397,7 @@
 
     uploadSpeed = null;
     uploadEta = null;
+    uploadStalled = false;
     lastSpeedTs = 0;
 
     const controller = new AbortController();
@@ -508,6 +512,7 @@
                 uploadEta = p.etaSeconds;
                 lastSpeedTs = now;
               }
+              uploadStalled = p.stalled;
             },
           });
 
@@ -856,7 +861,11 @@
                     sublabel={phaseLabel}
                   />
                   <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
-                    {#if currentFile?.status === "uploading" && uploadSpeed}
+                    {#if currentFile?.status === "uploading" && uploadStalled}
+                      <p class="text-warning-foreground">
+                        Connection lost. Continuing as soon as it is back. Keep this tab open.
+                      </p>
+                    {:else if currentFile?.status === "uploading" && uploadSpeed}
                       <p class="tabular-nums">
                         {formatSpeed(uploadSpeed)}{#if uploadEta} · {formatEta(uploadEta)} left{/if}
                       </p>

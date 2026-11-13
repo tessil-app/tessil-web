@@ -69,6 +69,7 @@
 
   let rows = $state<Row[]>([]);
   let note = $state("");
+  let stalled = $state(false);
   let failure = $state<DepositError | "failed" | null>(null);
   // What the confirmation needs, kept after the files themselves are cleared.
   let sent = $state<{
@@ -171,6 +172,7 @@
     rows = rows.map((r) => ({ ...r, status: "idle", percent: 0 }));
     phase = "sending";
     controller = new AbortController();
+    stalled = false;
     try {
       const result = await sendDeposit(
         portal,
@@ -178,9 +180,10 @@
         note,
         {
           signal: controller.signal,
-          onProgress: (index, status, percent) => {
+          onProgress: (index, status, percent, isStalled) => {
             rows[index].status = status;
             rows[index].percent = percent;
+            stalled = status === "uploading" && isStalled === true;
           },
         },
       );
@@ -417,6 +420,10 @@
 
             {#if errorMessage}
               <Alert tone="destructive">{errorMessage}</Alert>
+            {/if}
+
+            {#if phase === "sending" && stalled}
+              <Alert tone="warning">{t.reconnecting}</Alert>
             {/if}
 
             {#if phase === "sending"}

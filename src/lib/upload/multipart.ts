@@ -10,14 +10,32 @@
 // fetch exposes no upload progress, which made big files look frozen between
 // part completions. With per-byte progress we report a smooth byte count plus
 // a live speed (EMA) and ETA.
+//
+// A dropped connection does not fail the file. A part that keeps failing for
+// network reasons is retried, with the parts already stored left alone, until
+// the connection is back or GIVE_UP_AFTER_MS passes. Only this tab can
+// continue: a reload starts the file again.
 
 import {
   api,
+  ApiError,
   type CompleteMultipartUploadPart,
   type InitMultipartUploadPart,
 } from "$lib/api/client";
 
-const MAX_PART_RETRIES = 3;
+// Tunable so tests do not wait real seconds.
+export const timing = {
+  /** Quick retries before the upload is reported as stalled. */
+  quickRetries: 3,
+  retryBaseMs: 1000,
+  retryMaxMs: 10_000,
+  /** Longest wait between attempts while stalled. */
+  stallMaxMs: 30_000,
+  /** A part that has failed for this long ends the upload. */
+  giveUpAfterMs: 30 * 60 * 1000,
+  /** No bytes moving for this long counts as a dropped connection. */
+  idleTimeoutMs: 60_000,
+};
 // Concurrent part uploads. Kept moderate (below the browser's ~6-connection cap)
 // so a large file doesn't put too much data in flight at once - heavy concurrency
 // makes connection drops ("network connection was lost") more likely, notably on
@@ -40,6 +58,8 @@ export interface MultipartProgress {
   bytesPerSecond: number | null;
   /** Estimated seconds remaining; null until a rate is known. */
   etaSeconds: number | null;
+  /** The connection dropped and the upload is waiting to continue. */
+  stalled: boolean;
 }
 
 interface MultipartUploadInput {
@@ -109,9 +129,28 @@ function uploadSinglePart(
 
     const onAbort = () => xhr.abort();
     signal?.addEventListener("abort", onAbort, { once: true });
-    const cleanup = () => signal?.removeEventListener("abort", onAbort);
+    const cleanup = () => {
+      clearTimeout(idle);
+      signal?.removeEventListener("abort", onAbort);
+    };
 
-    xhr.upload.onprogress = (e) => onLoaded(e.loaded);
+    // A connection can die without an error event (sleep, a network
+    // switch). No movement for a while is treated as a network failure.
+    let idle: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
+    const watch = () => {
+      clearTimeout(idle);
+      idle = setTimeout(() => {
+        timedOut = true;
+        xhr.abort();
+      }, timing.idleTimeoutMs);
+    };
+    watch();
+
+    xhr.upload.onprogress = (e) => {
+      watch();
+      onLoaded(e.loaded);
+    };
 
     xhr.onload = () => {
       cleanup();
@@ -149,6 +188,12 @@ function uploadSinglePart(
 
     xhr.onabort = () => {
       cleanup();
+      if (timedOut) {
+        const err = new Error("Part upload stalled") as Error & { status?: number };
+        err.status = 0;
+        reject(err);
+        return;
+      }
       reject(new DOMException("aborted", "AbortError"));
     };
 
@@ -156,30 +201,81 @@ function uploadSinglePart(
   });
 }
 
-async function uploadPartWithRetry(
-  task: PartTask,
-  onLoaded: (loaded: number) => void,
-  signal?: AbortSignal,
-): Promise<PartUploadResult> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= MAX_PART_RETRIES; attempt++) {
-    try {
-      onLoaded(0); // reset this part's contribution at the start of the attempt
-      return await uploadSinglePart(task, onLoaded, signal);
-    } catch (err) {
-      if ((err as DOMException).name === "AbortError") throw err;
-      lastError = err;
-      const status = (err as { status?: number }).status ?? 0;
-      if (!isRetryableStatus(status)) break;
-      if (attempt === MAX_PART_RETRIES) break;
+/** Waits `ms`, or less if the browser reports the connection is back. */
+function waitForConnection(ms: number, signal?: AbortSignal): Promise<void> {
+  if (typeof window === "undefined") return sleep(ms, signal);
+  return new Promise((resolve, reject) => {
+    const done = (fn: () => void) => {
+      window.removeEventListener("online", onOnline);
+      fn();
+    };
+    const onOnline = () => done(resolve);
+    window.addEventListener("online", onOnline, { once: true });
+    sleep(ms, signal).then(
+      () => done(resolve),
+      (err) => done(() => reject(err)),
+    );
+  });
+}
 
-      // Exponential backoff with jitter, capped at 10s; jitter prevents lockstep retries.
-      const base = Math.min(1000 * Math.pow(2, attempt), 10000);
-      const jitter = Math.random() * 500;
-      await sleep(base + jitter, signal);
+function backoff(attempt: number, max: number): number {
+  // Jitter keeps parallel parts from retrying in lockstep.
+  return Math.min(timing.retryBaseMs * Math.pow(2, attempt), max) + Math.random() * (timing.retryBaseMs / 2);
+}
+
+/**
+ * Runs `attempt` until it succeeds. Failures that look like a lost
+ * connection are retried: quickly at first, then, with `onStall(true)`
+ * reported, for as long as `giveUpAfterMs`. Anything else is thrown.
+ */
+async function untilConnected<T>(
+  attempt: () => Promise<T>,
+  isRetryable: (err: unknown) => boolean,
+  onStall: (stalled: boolean) => void,
+  signal?: AbortSignal,
+): Promise<T> {
+  let failingSince: number | null = null;
+  let stalled = false;
+  for (let n = 0; ; n++) {
+    try {
+      const result = await attempt();
+      if (stalled) onStall(false);
+      return result;
+    } catch (err) {
+      if ((err as DOMException)?.name === "AbortError") throw err;
+      failingSince ??= Date.now();
+      if (!isRetryable(err) || Date.now() - failingSince > timing.giveUpAfterMs) {
+        if (stalled) onStall(false);
+        throw err instanceof Error ? err : new Error("Upload failed");
+      }
+      if (n < timing.quickRetries) {
+        await sleep(backoff(n, timing.retryMaxMs), signal);
+        continue;
+      }
+      if (!stalled) {
+        stalled = true;
+        onStall(true);
+      }
+      await waitForConnection(backoff(n, timing.stallMaxMs), signal);
     }
   }
-  throw lastError instanceof Error ? lastError : new Error("Part upload failed");
+}
+
+function uploadPartWithRetry(
+  task: PartTask,
+  onLoaded: (loaded: number) => void,
+  onStall: (stalled: boolean) => void,
+  signal?: AbortSignal,
+): Promise<PartUploadResult> {
+  return untilConnected(
+    () => {
+      onLoaded(0); // reset this part's contribution at the start of the attempt
+      return uploadSinglePart(task, onLoaded, signal);
+    },
+    (err) => isRetryableStatus((err as { status?: number }).status ?? 0),
+    onStall,
+    signal,
+  );
 }
 
 /**
@@ -202,6 +298,13 @@ export async function uploadEncryptedStreamMultipart(
   // Per-part uploaded bytes; aggregated across the parallel parts for a smooth
   // total. Indexed by task position so a retry can reset just its own slot.
   const partLoaded = new Array<number>(partUrls.length).fill(0);
+
+  // How many parts, or the final call, are waiting for the connection.
+  let stalledCount = 0;
+  const onStall = (stalled: boolean) => {
+    stalledCount += stalled ? 1 : -1;
+    report(true);
+  };
 
   // Speed/ETA tracking (EMA over wall-clock).
   let emaBps = 0;
@@ -229,6 +332,7 @@ export async function uploadEncryptedStreamMultipart(
       totalBytes,
       bytesPerSecond: emaBps > 0 ? emaBps : null,
       etaSeconds: emaBps > 0 ? remaining / emaBps : null,
+      stalled: stalledCount > 0,
     });
   }
 
@@ -287,6 +391,7 @@ export async function uploadEncryptedStreamMultipart(
             partLoaded[idx] = Math.min(loaded, task.contentLength);
             report();
           },
+          onStall,
           controller.signal,
         );
         partLoaded[idx] = task.contentLength;
@@ -320,13 +425,14 @@ export async function uploadEncryptedStreamMultipart(
 
     report(true); // ensure a final 100% emit
 
-    const completed = await api.completeMultipartUpload({
-      transferId,
-      fileId,
-      uploadId,
-      parts: results,
-    });
-    return completed;
+    // Every part is stored; losing the connection now must not throw
+    // them away. The server answers a repeated call for a finished file.
+    return await untilConnected(
+      () => api.completeMultipartUpload({ transferId, fileId, uploadId, parts: results }),
+      (err) => !(err instanceof ApiError) || isRetryableStatus(err.status),
+      onStall,
+      controller.signal,
+    );
   } catch (err) {
     controller.abort();
     await reader.cancel().catch(() => {});

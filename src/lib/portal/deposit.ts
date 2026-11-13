@@ -108,6 +108,8 @@ export type FileProgress = (
   index: number,
   status: "uploading" | "complete" | "error",
   percent: number,
+  /** The connection dropped; the upload continues when it is back. */
+  stalled?: boolean,
 ) => void;
 
 export type DepositErrorCode =
@@ -216,7 +218,7 @@ export async function sendDeposit(
           source: encryptor.stream,
           partUrls: init.partUrls,
           signal,
-          onProgress: (p) => onProgress?.(i, "uploading", p.percent),
+          onProgress: (p) => onProgress?.(i, "uploading", p.percent, p.stalled),
         });
         onProgress?.(i, "complete", 100);
       } catch (err) {
