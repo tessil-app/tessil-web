@@ -10,7 +10,15 @@
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import { auth } from "$lib/stores/auth.svelte";
-  import { prepareVaultSetup, type PreparedVaultSetup } from "$lib/vault/client";
+  import { api } from "$lib/api/client";
+  import { enrollPasskey, PasskeyError } from "$lib/auth/passkey";
+  import {
+    canSetUpWithPasskey,
+    prepareVaultSetup,
+    prepareVaultSetupWith,
+    type PreparedVaultSetup,
+  } from "$lib/vault/client";
+  import IconFingerprintRegular from "phosphor-icons-svelte/IconFingerprintRegular.svelte";
   import {
     evaluatePassword,
     MIN_PASSWORD_LENGTH,
@@ -24,9 +32,58 @@
   import IconEyeRegular from "phosphor-icons-svelte/IconEyeRegular.svelte";
   import IconEyeSlashRegular from "phosphor-icons-svelte/IconEyeSlashRegular.svelte";
 
-  type Step = "password" | "phrase";
+  // "method" is only shown where a passkey can protect the vault: then the
+  // user picks passkey or password. Elsewhere setup starts at "password".
+  type Step = "loading" | "method" | "password" | "phrase";
 
-  let step = $state<Step>("password");
+  let step = $state<Step>("loading");
+  let usedPasskey = $state(false);
+  let isStartingPasskey = $state(false);
+  let passkeyError = $state<string | null>(null);
+
+  let methodChecked = false;
+  $effect(() => {
+    if (!auth.loaded || !auth.user || methodChecked) return;
+    methodChecked = true;
+    canSetUpWithPasskey()
+      .then((can) => (step = can ? "method" : "password"))
+      .catch(() => (step = "password"));
+  });
+
+  async function startWithPasskey() {
+    if (!auth.user || isStartingPasskey) return;
+    isStartingPasskey = true;
+    passkeyError = null;
+    try {
+      // Use the passkeys the account has; make one if it has none.
+      let { authenticators: passkeys } = await api.listPasskeys();
+      if (passkeys.length === 0) {
+        const created = await enrollPasskey(null);
+        passkeys = [created.authenticator];
+      }
+      const result = await prepareVaultSetupWith(auth.user.id, { kind: "passkey", passkeys });
+      if (!result.ok) {
+        passkeyError =
+          result.reason === "cancelled"
+            ? "The passkey prompt was dismissed. Try again, or use a password."
+            : "This passkey can't protect a vault. Use a password instead; you can still sign in with the passkey.";
+        return;
+      }
+      prepared = result.prepared;
+      recoveryPhrase = result.prepared.recoveryPhrase;
+      usedPasskey = true;
+      step = "phrase";
+    } catch (err) {
+      passkeyError =
+        err instanceof PasskeyError && err.kind === "cancelled"
+          ? "The passkey prompt was dismissed. Try again, or use a password."
+          : err instanceof Error
+            ? err.message
+            : "Couldn't use a passkey here. Use a password instead.";
+    } finally {
+      isStartingPasskey = false;
+    }
+  }
 
   let password = $state("");
   let passwordConfirm = $state("");
@@ -169,15 +226,65 @@
 
 <PageLayout>
   <PageHeader
-    title={step === "password" ? "Set up your vault" : "Save your recovery phrase"}
-    tagline={step === "password"
-      ? "A vault keeps the names and links of what you send, encrypted so only you can read them. Pick a long password you'll remember: we can't reset it."
-      : "Write these 12 words down somewhere safe. They're the only way back in if you forget your password."}
+    title={step === "phrase" ? "Save your recovery phrase" : "Set up your vault"}
+    tagline={step === "phrase"
+      ? usedPasskey
+        ? "Write these 12 words down somewhere safe. They're the only way back in if you lose your passkey."
+        : "Write these 12 words down somewhere safe. They're the only way back in if you forget your password."
+      : step === "password"
+        ? "Pick a long password you'll remember: we can't reset it."
+        : "A vault keeps the names and links of what you send, encrypted so only you can read them."}
   />
 
   <Frame.Root>
     <Frame.Panel>
-      {#if step === "password"}
+      {#if step === "loading"}
+        <div role="status" aria-live="polite" class="flex justify-center py-8 text-info">
+          <Spinner class="size-6" aria-hidden="true" />
+        </div>
+      {:else if step === "method"}
+        <div class="space-y-5">
+          <div class="space-y-2">
+            <Button onclick={startWithPasskey} disabled={isStartingPasskey}>
+              {#if isStartingPasskey}
+                <Spinner aria-hidden="true" />
+                Waiting for your passkey…
+              {:else}
+                <IconFingerprintRegular class="size-4" />
+                Protect it with a passkey
+              {/if}
+            </Button>
+            <p class="text-xs text-muted-foreground text-center">
+              Your fingerprint, face or device PIN opens the vault. No password to remember.
+              You may be asked twice: once to create the passkey, once to use it.
+            </p>
+          </div>
+
+          {#if passkeyError}
+            <Alert tone="destructive">{passkeyError}</Alert>
+          {/if}
+
+          <div class="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
+            <span class="h-px flex-1 bg-border"></span>
+            or
+            <span class="h-px flex-1 bg-border"></span>
+          </div>
+
+          <Button variant="secondary" onclick={() => (step = "password")} disabled={isStartingPasskey}>
+            Use a password instead
+          </Button>
+
+          <p class="text-center text-xs text-muted-foreground">
+            <a
+              href="/dashboard"
+              class="underline underline-offset-2 hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+            >
+              Not now
+            </a>
+            · you can send without a vault and set one up later.
+          </p>
+        </div>
+      {:else if step === "password"}
         <form onsubmit={handleSubmitPassword} class="space-y-5" novalidate>
           <div class="space-y-2">
             <PasswordInput

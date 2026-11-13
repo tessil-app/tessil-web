@@ -3,6 +3,7 @@
   // switch off, delete. Titles and links are decrypted in the browser, so
   // they need an unlocked vault.
 
+  import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -83,6 +84,10 @@
 
   function openCreate() {
     // Making a portal needs the vault: its keys are stored there.
+    if (auth.needsVaultSetup) {
+      goto("/setup/vault");
+      return;
+    }
     if (!vaultUnlocked) {
       unlockPrompt.request();
       return;
@@ -208,7 +213,19 @@
         <Alert tone="destructive">{errorMessage}</Alert>
       {/if}
 
-      {#if !vaultUnlocked && maxPortals > 0}
+      {#if auth.needsVaultSetup && maxPortals > 0}
+        <div
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
+        >
+          <p class="text-sm text-muted-foreground">
+            Portals need a vault. It holds the keys that open what people send you, so only you
+            can read it.
+          </p>
+          <div class="sm:shrink-0">
+            <Button variant="secondary" fullWidth={false} href="/setup/vault">Set up vault</Button>
+          </div>
+        </div>
+      {:else if !vaultUnlocked && maxPortals > 0}
         <div
           class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-border bg-card p-4"
         >

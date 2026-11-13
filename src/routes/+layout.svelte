@@ -9,6 +9,7 @@
     subscribeToVaultState,
     unlockWithPassword,
     unlockWithPhrase,
+    vaultHasPassword,
   } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import { cn } from "$lib/utils";
@@ -16,6 +17,7 @@
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import DropdownMenuItem from "$lib/components/DropdownMenuItem.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -33,6 +35,18 @@
 
   let unlockOpen = $state(false);
   let unlockMode = $state<"password" | "phrase">("password");
+  // A vault can exist without a password. Then the dialog offers the
+  // passkey and the recovery phrase, and no password field.
+  let hasVaultPassword = $state(true);
+  $effect(() => {
+    if (!unlockOpen) return;
+    vaultHasPassword()
+      .then((has) => {
+        hasVaultPassword = has;
+        if (!has) unlockMode = "phrase";
+      })
+      .catch(() => {});
+  });
   let unlockPassword = $state("");
   let unlockPhrase = $state("");
   let unlockError = $state<string | null>(null);
@@ -299,6 +313,7 @@
     onClose={closeUnlock}
   >
     <form onsubmit={submitUnlock} class="space-y-4" novalidate>
+      <PasskeyUnlockButton active={unlockOpen} disabled={isUnlockingVault} onUnlocked={closeUnlock} />
       {#if unlockMode === "password"}
         <PasswordInput
           id="nav-unlock-password"
@@ -323,6 +338,7 @@
         <Alert tone="destructive">{unlockError}</Alert>
       {/if}
 
+      {#if hasVaultPassword}
       <button
         type="button"
         onclick={() => {
@@ -336,6 +352,7 @@
           ? "Forgot your password? Use your recovery phrase instead."
           : "Have your password? Use it instead."}
       </button>
+      {/if}
     </form>
 
     {#snippet footer()}

@@ -47,11 +47,19 @@ export async function enrollPasskey(nickname: string | null) {
       );
     });
 
+  // Ask for the PRF capability at creation. Synced passkeys have it
+  // anyway, but a hardware security key only enables it if asked now, and
+  // without it the key can never unlock the vault. Harmless where it is
+  // not supported: the extension is simply ignored.
+  const creationOptions = options as PublicKeyCredentialCreationOptionsJSON;
+  const optionsJSON = {
+    ...creationOptions,
+    extensions: { ...creationOptions.extensions, prf: {} },
+  } as PublicKeyCredentialCreationOptionsJSON;
+
   let response;
   try {
-    response = await startRegistration({
-      optionsJSON: options as PublicKeyCredentialCreationOptionsJSON,
-    });
+    response = await startRegistration({ optionsJSON });
   } catch (err) {
     throw mapCeremonyError(err);
   }
