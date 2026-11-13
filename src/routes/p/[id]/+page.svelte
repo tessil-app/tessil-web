@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { holdWhileUploading } from "$lib/upload/keepAwake";
   // A portal's deposit page: what someone sees when they open a portal
   // link. No account. Files are encrypted here, to the portal's public
   // key, before anything is uploaded.
@@ -69,6 +70,13 @@
 
   let rows = $state<Row[]>([]);
   let note = $state("");
+  let stalled = $state(false);
+
+  // A locked phone or a closed tab ends the upload; prevent the first, ask before the second.
+  $effect(() => {
+    if (phase !== "sending") return;
+    return holdWhileUploading();
+  });
   let failure = $state<DepositError | "failed" | null>(null);
   // What the confirmation needs, kept after the files themselves are cleared.
   let sent = $state<{
@@ -171,6 +179,7 @@
     rows = rows.map((r) => ({ ...r, status: "idle", percent: 0 }));
     phase = "sending";
     controller = new AbortController();
+    stalled = false;
     try {
       const result = await sendDeposit(
         portal,
@@ -178,9 +187,10 @@
         note,
         {
           signal: controller.signal,
-          onProgress: (index, status, percent) => {
+          onProgress: (index, status, percent, isStalled) => {
             rows[index].status = status;
             rows[index].percent = percent;
+            stalled = isStalled === true;
           },
         },
       );
@@ -417,6 +427,10 @@
 
             {#if errorMessage}
               <Alert tone="destructive">{errorMessage}</Alert>
+            {/if}
+
+            {#if phase === "sending" && stalled}
+              <Alert tone="warning">{t.reconnecting}</Alert>
             {/if}
 
             {#if phase === "sending"}

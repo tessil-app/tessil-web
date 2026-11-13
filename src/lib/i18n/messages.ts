@@ -118,6 +118,7 @@ export interface DepositStrings {
   send: string;
   sendMany: (count: number) => string;
   cancel: string;
+  reconnecting: string;
   remove: (name: string) => string;
   sentOne: string;
   sentMany: (count: number) => string;
@@ -167,6 +168,7 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     send: "Send",
     sendMany: (count) => `Send ${count} files`,
     cancel: "Cancel",
+    reconnecting: "Connection lost. Sending continues as soon as it is back. Keep this page open.",
     remove: (name) => `Remove ${name}`,
     sentOne: "Your file was sent",
     sentMany: (count) => `Your ${count} files were sent`,
@@ -234,6 +236,7 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     send: "Versturen",
     sendMany: (count) => `${count} bestanden versturen`,
     cancel: "Annuleren",
+    reconnecting: "Verbinding verbroken. Het versturen gaat verder zodra die terug is. Houd deze pagina open.",
     remove: (name) => `${name} verwijderen`,
     sentOne: "Je bestand is verstuurd",
     sentMany: (count) => `Je ${count} bestanden zijn verstuurd`,

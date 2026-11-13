@@ -2,7 +2,9 @@
   import { goto } from "$app/navigation";
   import { api, ApiError } from "$lib/api/client";
   import { checkFileType } from "$lib/upload/fileTypeCheck";
+  import { holdWhileUploading } from "$lib/upload/keepAwake";
   import { uploadEncryptedStreamMultipart } from "$lib/upload/multipart";
+  import { runFiles } from "$lib/upload/pool";
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import CircularProgress from "$lib/components/CircularProgress.svelte";
@@ -136,6 +138,8 @@
   let copied = $state(false);
   let uploadSpeed = $state<number | null>(null);
   let uploadEta = $state<number | null>(null);
+  // The connection dropped mid-file; the upload continues by itself when it is back.
+  let uploadStalled = $state(false);
   let lastSpeedTs = 0;
   let uploadController: AbortController | null = null;
   let lastUploadVaulted = $state(false);
@@ -262,6 +266,7 @@
     uploadStore.clearError();
     uploadSpeed = null;
     uploadEta = null;
+    uploadStalled = false;
   }
 
   // Re-run the upload with the same files (from the error state's "Try again").
@@ -394,6 +399,7 @@
 
     uploadSpeed = null;
     uploadEta = null;
+    uploadStalled = false;
     lastSpeedTs = 0;
 
     const controller = new AbortController();
@@ -453,84 +459,95 @@
 
       uploadStore.setStatus("encrypting");
 
-      let uploadFailed = false;
-      let uploadFailure: unknown = null;
-      for (let i = 0; i < files.length; i++) {
-        if (controller.signal.aborted)
-          throw new DOMException("aborted", "AbortError");
-        uploadStore.setCurrentFileIndex(i);
-        const fileState = files[i];
-        const file = fileState.file;
+      // Per file: its smoothed speed, and whether it is waiting for the
+      // connection. The readout shows the sum and "any".
+      const speeds = new Map<number, number>();
+      const waiting = new Set<number>();
+      const totalBytes = files.reduce((sum, f) => sum + f.file.size, 0);
 
-        try {
-          uploadStore.setFileStatus(i, "encrypting", 0);
-          const { encryptedName, iv: nameIv } = await encryptFilename(
-            file.name,
-            key,
-          );
+      try {
+        await runFiles(
+          files,
+          (fileState) => fileState.file.size,
+          async (fileState, i, fileSignal) => {
+            const file = fileState.file;
+            try {
+              uploadStore.setFileStatus(i, "encrypting", 0);
+              const { encryptedName, iv: nameIv } = await encryptFilename(file.name, key);
 
-          // Streaming encryption: the ciphertext is produced lazily as Parts are
-          // read off the stream, so memory stays bounded to a few Parts
-          // regardless of file size, and the upload starts immediately instead
-          // of after a whole-file encrypt. Encryption now overlaps upload, so
-          // there is no separate encrypt progress phase.
-          const encryptor = encryptFileStream(file, key);
+              // Streaming encryption: the ciphertext is produced lazily as Parts are
+              // read off the stream, so memory stays bounded to a few Parts
+              // regardless of file size, and the upload starts immediately instead
+              // of after a whole-file encrypt.
+              const encryptor = encryptFileStream(file, key);
 
-          if (controller.signal.aborted)
-            throw new DOMException("aborted", "AbortError");
+              if (fileSignal.aborted) throw new DOMException("aborted", "AbortError");
 
-          uploadStore.setFileStatus(i, "uploading", 0);
+              uploadStore.setFileStatus(i, "uploading", 0);
 
-          const initResponse = await api.initMultipartUpload({
-            transferId: transfer.transferId,
-            contentType: file.type || "application/octet-stream",
-            encryptedName,
-            encryptedNameIv: nameIv,
-            fileIv: encryptor.ivB64,
-            size: encryptor.size,
-          });
+              const initResponse = await api.initMultipartUpload({
+                transferId: transfer.transferId,
+                contentType: file.type || "application/octet-stream",
+                encryptedName,
+                encryptedNameIv: nameIv,
+                fileIv: encryptor.ivB64,
+                size: encryptor.size,
+              });
 
-          await uploadEncryptedStreamMultipart({
-            uploadId: initResponse.uploadId,
-            fileId: initResponse.fileId,
-            transferId: transfer.transferId,
-            r2Key: initResponse.r2Key,
-            source: encryptor.stream,
-            partUrls: initResponse.partUrls,
-            signal: controller.signal,
-            onProgress: (p) => {
-              uploadStore.setFileStatus(i, "uploading", p.percent);
-              // Throttle the displayed speed/ETA to ~1s so the readout stays
-              // steady instead of flickering on every progress event.
-              const now = performance.now();
-              if (p.percent >= 100 || now - lastSpeedTs > 1000) {
-                uploadSpeed = p.bytesPerSecond;
-                uploadEta = p.etaSeconds;
-                lastSpeedTs = now;
+              await uploadEncryptedStreamMultipart({
+                uploadId: initResponse.uploadId,
+                fileId: initResponse.fileId,
+                transferId: transfer.transferId,
+                r2Key: initResponse.r2Key,
+                source: encryptor.stream,
+                partUrls: initResponse.partUrls,
+                signal: fileSignal,
+                onProgress: (p) => {
+                  uploadStore.setFileStatus(i, "uploading", p.percent);
+                  speeds.set(i, p.bytesPerSecond ?? 0);
+                  if (p.stalled) waiting.add(i);
+                  else waiting.delete(i);
+                  uploadStalled = waiting.size > 0;
+                  // Throttle the displayed speed/ETA to ~1s so the readout stays
+                  // steady instead of flickering on every progress event.
+                  const now = performance.now();
+                  if (now - lastSpeedTs > 1000) {
+                    let rate = 0;
+                    for (const v of speeds.values()) rate += v;
+                    const left = totalBytes * (1 - uploadStore.overallProgress / 100);
+                    uploadSpeed = rate > 0 ? rate : null;
+                    uploadEta = rate > 0 ? left / rate : null;
+                    lastSpeedTs = now;
+                  }
+                },
+              });
+
+              uploadStore.setFileStatus(i, "complete", 100);
+            } catch (err) {
+              if ((err as DOMException)?.name !== "AbortError") {
+                uploadStore.setFileStatus(
+                  i,
+                  "error",
+                  0,
+                  err instanceof Error ? err.message : "Upload failed",
+                );
               }
-            },
-          });
-
-          uploadStore.setFileStatus(i, "complete", 100);
-        } catch (err) {
-          if ((err as DOMException)?.name === "AbortError") throw err;
-          uploadStore.setFileStatus(
-            i,
-            "error",
-            0,
-            err instanceof Error ? err.message : "Upload failed",
-          );
-          uploadFailure = err;
-          uploadFailed = true;
-          break;
-        }
-      }
-
-      if (uploadFailed) {
+              throw err;
+            } finally {
+              speeds.delete(i);
+              waiting.delete(i);
+              uploadStalled = waiting.size > 0;
+            }
+          },
+          controller.signal,
+        );
+      } catch (err) {
+        // A user's Stop is handled further down, with the transfer cleaned up there.
+        if (controller.signal.aborted) throw new DOMException("aborted", "AbortError");
         api.abortTransfer(transfer.transferId).catch(() => {});
         // Re-throw the original error (keeps ApiError type, so tier-limit
         // messages + upgradeUrl survive through to friendlyUploadError).
-        throw uploadFailure ?? new Error("Upload failed");
+        throw err ?? new Error("Upload failed");
       }
 
       uploadStore.setStatus("uploading");
@@ -577,6 +594,12 @@
       uploadStore.status === "uploading",
   );
 
+  // A locked phone or a closed tab ends the upload; prevent the first, ask before the second.
+  $effect(() => {
+    if (!isProcessing) return;
+    return holdWhileUploading();
+  });
+
   const totalSize = $derived(
     uploadStore.files.reduce((sum, f) => sum + f.file.size, 0),
   );
@@ -601,10 +624,12 @@
     return () => clearTimeout(morphTimer);
   });
 
-  const currentFile = $derived(uploadStore.files[uploadStore.currentFileIndex]);
+  // Several files can be in flight at once.
+  const isSending = $derived(uploadStore.files.some((f) => f.status === "uploading"));
+  const filesDone = $derived(uploadStore.files.filter((f) => f.status === "complete").length);
   const phaseLabel = $derived.by(() => {
     if (uploadStore.status === "validating") return "Checking…";
-    return currentFile?.status === "uploading" ? "Uploading…" : "Encrypting…";
+    return isSending ? "Uploading…" : "Encrypting…";
   });
 
   const passwordTooShort = $derived(
@@ -856,13 +881,17 @@
                     sublabel={phaseLabel}
                   />
                   <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
-                    {#if currentFile?.status === "uploading" && uploadSpeed}
+                    {#if isSending && uploadStalled}
+                      <p class="text-warning-foreground">
+                        Connection lost. Continuing as soon as it is back. Keep this tab open.
+                      </p>
+                    {:else if isSending && uploadSpeed}
                       <p class="tabular-nums">
                         {formatSpeed(uploadSpeed)}{#if uploadEta} · {formatEta(uploadEta)} left{/if}
                       </p>
                     {/if}
                     {#if uploadStore.files.length > 1}
-                      <p>File {uploadStore.currentFileIndex + 1} of {uploadStore.files.length}</p>
+                      <p>{filesDone} of {uploadStore.files.length} files done</p>
                     {/if}
                   </div>
                 </div>

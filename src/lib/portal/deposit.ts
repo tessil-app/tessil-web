@@ -8,6 +8,7 @@ import { sealTo } from "$lib/crypto/seal";
 import { encryptFileStream } from "$lib/crypto/streaming";
 import { blockedKind } from "$lib/upload/fileTypeCheck";
 import { uploadEncryptedStreamMultipart } from "$lib/upload/multipart";
+import { runFiles } from "$lib/upload/pool";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
 import type { Locale } from "$lib/i18n/locale";
 import {
@@ -108,6 +109,8 @@ export type FileProgress = (
   index: number,
   status: "uploading" | "complete" | "error",
   percent: number,
+  /** The connection dropped; the upload continues when it is back. */
+  stalled?: boolean,
 ) => void;
 
 export type DepositErrorCode =
@@ -162,7 +165,6 @@ export async function sendDeposit(
   options: { signal?: AbortSignal; onProgress?: FileProgress } = {},
 ): Promise<{ transferId: string; sentAt: Date }> {
   const { signal, onProgress } = options;
-  const aborted = () => new DOMException("aborted", "AbortError");
   const files = entries.map((e) => e.file);
 
   for (const file of files) {
@@ -190,41 +192,52 @@ export async function sendDeposit(
   }
 
   try {
-    for (let i = 0; i < files.length; i++) {
-      if (signal?.aborted) throw aborted();
-      const file = files[i];
-      try {
-        const { encryptedName, iv } = await encryptFilename(
-          encodeDepositFileName(file.name, entries[i].itemId ?? null),
-          key,
-        );
-        const encryptor = encryptFileStream(file, key);
-        onProgress?.(i, "uploading", 0);
-        const init = await api.initMultipartUpload({
-          transferId,
-          contentType: file.type || "application/octet-stream",
-          encryptedName,
-          encryptedNameIv: iv,
-          fileIv: encryptor.ivB64,
-          size: encryptor.size,
-        });
-        await uploadEncryptedStreamMultipart({
-          uploadId: init.uploadId,
-          fileId: init.fileId,
-          transferId,
-          r2Key: init.r2Key,
-          source: encryptor.stream,
-          partUrls: init.partUrls,
-          signal,
-          onProgress: (p) => onProgress?.(i, "uploading", p.percent),
-        });
-        onProgress?.(i, "complete", 100);
-      } catch (err) {
-        if ((err as DOMException)?.name === "AbortError") throw err;
-        onProgress?.(i, "error", 0);
-        throw new DepositError(codeFor(err), file.name);
-      }
-    }
+    // Which files are waiting for the connection; any one is enough to say so.
+    const waiting = new Set<number>();
+    await runFiles(
+      files,
+      (file) => file.size,
+      async (file, i, fileSignal) => {
+        try {
+          const { encryptedName, iv } = await encryptFilename(
+            encodeDepositFileName(file.name, entries[i].itemId ?? null),
+            key,
+          );
+          const encryptor = encryptFileStream(file, key);
+          onProgress?.(i, "uploading", 0);
+          const init = await api.initMultipartUpload({
+            transferId,
+            contentType: file.type || "application/octet-stream",
+            encryptedName,
+            encryptedNameIv: iv,
+            fileIv: encryptor.ivB64,
+            size: encryptor.size,
+          });
+          await uploadEncryptedStreamMultipart({
+            uploadId: init.uploadId,
+            fileId: init.fileId,
+            transferId,
+            r2Key: init.r2Key,
+            source: encryptor.stream,
+            partUrls: init.partUrls,
+            signal: fileSignal,
+            onProgress: (p) => {
+              if (p.stalled) waiting.add(i);
+              else waiting.delete(i);
+              onProgress?.(i, "uploading", p.percent, waiting.size > 0);
+            },
+          });
+          waiting.delete(i);
+          onProgress?.(i, "complete", 100, waiting.size > 0);
+        } catch (err) {
+          waiting.delete(i);
+          if ((err as DOMException)?.name === "AbortError") throw err;
+          onProgress?.(i, "error", 0);
+          throw new DepositError(codeFor(err), file.name);
+        }
+      },
+      signal,
+    );
 
     // Anonymous sealing is right here: anyone may deposit, and the members
     // gain nothing by knowing which browser sealed the key.
