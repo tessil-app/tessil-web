@@ -13,11 +13,15 @@
     actions?: ActionsWidth;
     /** Column titles, one element per column. Hidden on a phone. */
     header?: Snippet;
+    /** Rows have a narrow cell on the left (a checkbox). Not shown on a phone. */
+    selectable?: boolean;
+    /** What sits above that cell in the header, such as "select all". */
+    headerLeading?: Snippet;
     children: Snippet;
     class?: string;
   }
 
-  let { cols, actions = "none", header, children, class: className }: Props = $props();
+  let { cols, actions = "none", header, selectable = false, headerLeading, children, class: className }: Props = $props();
 
   setTableContext({
     get cols() {
@@ -29,12 +33,20 @@
     get hasHeader() {
       return header !== undefined;
     },
+    get hasLeading() {
+      return selectable;
+    },
   });
 </script>
 
 <div class={cn("rounded-lg bg-card", className)}>
   {#if header}
     <div class="hidden sm:flex items-center rounded-t-lg bg-muted/40">
+      {#if selectable}
+        <div class="flex w-10 shrink-0 items-center justify-end">
+          {#if headerLeading}{@render headerLeading()}{/if}
+        </div>
+      {/if}
       <div
         class={cn(
           "grid flex-1 min-w-0 gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide",

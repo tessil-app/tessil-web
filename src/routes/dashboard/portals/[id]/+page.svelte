@@ -70,13 +70,17 @@
   let copied = $state(false);
 
   // ─── finding a delivery ───────────────────────────────────────────────────
-  type Filter = "all" | "incomplete" | "soon";
+  type Filter = "all" | "new" | "incomplete" | "soon";
   const SOON_DAYS = 7;
 
   let query = $state("");
   let filter = $state<Filter>("all");
   let openDepositId = $state<string | null>(null);
   let listOpen = $state(false);
+  // When this account last looked, as it was before this visit. Kept for
+  // the whole visit so the markers do not vanish under the reader.
+  let seenBefore = $state<string | null>(null);
+  let selected = $state<Set<string>>(new Set());
 
   function daysUntil(iso: string): number {
     return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
@@ -91,6 +95,7 @@
         coverage,
         complete: coverage.missing.length === 0,
         soon: daysUntil(deposit.expiresAt) <= SOON_DAYS,
+        isNew: seenBefore !== null && deposit.createdAt > seenBefore,
         haystack: [deposit.note ?? "", deposit.reference, ...deposit.files.map((f) => f.name)]
           .join("\n")
           .toLowerCase(),
@@ -99,11 +104,13 @@
   );
   const counts = $derived({
     all: rows.length,
+    new: rows.filter((r) => r.isNew).length,
     incomplete: rows.filter((r) => !r.complete).length,
     soon: rows.filter((r) => r.soon).length,
   });
   const filters = $derived<{ id: Filter; label: string }[]>([
     { id: "all", label: "All" },
+    ...(rows.some((r) => r.isNew) ? [{ id: "new" as const, label: "New" }] : []),
     ...(checklist.length > 0 ? [{ id: "incomplete" as const, label: "Incomplete" }] : []),
     { id: "soon", label: "Deleted soon" },
   ]);
@@ -111,7 +118,8 @@
     const needle = query.trim().toLowerCase();
     return rows.filter(
       (r) =>
-        (filter === "all" || (filter === "incomplete" ? !r.complete : r.soon)) &&
+        (filter === "all" ||
+          (filter === "new" ? r.isNew : filter === "incomplete" ? !r.complete : r.soon)) &&
         (needle === "" || r.haystack.includes(needle)),
     );
   });
@@ -119,6 +127,38 @@
 
   function allSaved(deposit: OpenedDeposit): boolean {
     return deposit.files.every((f) => fileStates[f.id]?.status === "complete");
+  }
+
+  const selectedVisible = $derived(visible.filter((r) => selected.has(r.deposit.id)));
+  const allVisibleSelected = $derived(
+    visible.length > 0 && selectedVisible.length === visible.length,
+  );
+
+  function toggleSelected(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selected = next;
+  }
+
+  function toggleAllVisible() {
+    selected = allVisibleSelected ? new Set() : new Set(visible.map((r) => r.deposit.id));
+  }
+
+  let downloadingSelected = $state(false);
+
+  // One delivery after another, like "Download all" on each of them.
+  async function downloadSelected() {
+    if (downloadingSelected || downloadingAll) return;
+    downloadingSelected = true;
+    try {
+      for (const row of selectedVisible) {
+        await downloadAll(row.deposit);
+        if (row.deposit.files.some((f) => fileStates[f.id]?.status === "error")) break;
+      }
+    } finally {
+      downloadingSelected = false;
+    }
   }
 
   function closeList() {
@@ -202,6 +242,11 @@
       draft = opened.portal.checklist;
       void reloadSharing();
       const first = await loadDeposits(opened.portal);
+      if (seenBefore === null) {
+        seenBefore = first.lastSeenAt;
+        // They are on screen now; the next visit starts clean.
+        void api.markPortalSeen(opened.portal.id).catch(() => {});
+      }
       deposits = first.deposits;
       unreadable = first.unreadable;
       nextCursor = first.nextCursor;
@@ -314,6 +359,7 @@
     try {
       await api.deleteDeposit(portal.id, confirmDeleteId);
       deposits = deposits.filter((d) => d.id !== confirmDeleteId);
+      if (selected.has(confirmDeleteId)) toggleSelected(confirmDeleteId);
       if (openDepositId === confirmDeleteId) openDepositId = null;
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : "Couldn't delete these files.";
@@ -340,6 +386,9 @@
       ? "grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]"
       : "grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]",
   );
+
+  const checkbox =
+    "size-4 rounded border-input bg-card accent-primary cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
   const shortFmt = new Intl.DateTimeFormat(undefined, {
     month: "short",
@@ -474,6 +523,22 @@
             value={filter}
             onChange={(v) => (filter = v)}
           />
+          {#if selectedVisible.length > 0}
+            <div class="hidden sm:flex items-center gap-2 sm:ml-auto">
+              <Button
+                variant="secondary"
+                fullWidth={false}
+                class="py-2 px-3 text-sm whitespace-nowrap"
+                onclick={downloadSelected}
+                disabled={downloadingSelected || downloadingAll !== null}
+              >
+                {downloadingSelected ? "Downloading…" : `Download ${selectedVisible.length} selected`}
+              </Button>
+              <TextLink class="text-sm text-muted-foreground" onclick={() => (selected = new Set())}>
+                Clear
+              </TextLink>
+            </div>
+          {/if}
         </div>
 
         {#if visible.length === 0}
@@ -481,7 +546,16 @@
             Nothing matches. Search looks at notes, references and file names.
           </div>
         {:else}
-          <Table.Root {cols} actions="sm">
+          <Table.Root {cols} actions="sm" selectable>
+            {#snippet headerLeading()}
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onchange={toggleAllVisible}
+                aria-label="Select all shown"
+                class={checkbox}
+              />
+            {/snippet}
             {#snippet header()}
               <div>Reference</div>
               <div>Received</div>
@@ -495,9 +569,23 @@
             {#each visible as row (row.deposit.id)}
               {@const deposit = row.deposit}
               <Table.Row onclick={() => (openDepositId = deposit.id)}>
+                {#snippet leading()}
+                  <input
+                    type="checkbox"
+                    checked={selected.has(deposit.id)}
+                    onchange={() => toggleSelected(deposit.id)}
+                    aria-label="Select {deposit.reference}"
+                    class={checkbox}
+                  />
+                {/snippet}
                 {#snippet cells()}
                   <div class="min-w-0">
-                    <div class="font-medium font-mono text-foreground">{deposit.reference}</div>
+                    <div class="flex items-center gap-2 font-medium font-mono text-foreground">
+                      {deposit.reference}
+                      {#if row.isNew}
+                        <Badge tone="info" class="font-sans">New</Badge>
+                      {/if}
+                    </div>
                     {#if deposit.note}
                       <div class="truncate text-xs text-muted-foreground" title={deposit.note}>
                         {deposit.note}
@@ -528,7 +616,12 @@
                   <div class="space-y-2">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">
-                        <p class="font-medium font-mono text-foreground">{deposit.reference}</p>
+                        <p class="flex items-center gap-2 font-medium font-mono text-foreground">
+                          {deposit.reference}
+                          {#if row.isNew}
+                            <Badge tone="info" class="font-sans">New</Badge>
+                          {/if}
+                        </p>
                         {#if deposit.note}
                           <p class="truncate text-xs text-muted-foreground">{deposit.note}</p>
                         {/if}

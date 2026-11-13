@@ -167,7 +167,7 @@
     <section class="space-y-4">
       {@render section(
         "Table",
-        "For any list of more than a few things. A row opens its details; quick actions sit on the right. On a phone the row stacks and the actions move into the details.",
+        "For any list of more than a few things. A row opens its details; quick actions sit on the right. Checkboxes on the left only where something can be done to several rows at once. On a phone the row stacks and the actions move into the details.",
       )}
       <div class="flex flex-col sm:flex-row sm:items-center gap-3">
         <SearchField bind:value={query} label="Search" placeholder="Search by name" class="sm:w-80" />
@@ -187,7 +187,7 @@
           Nothing matches.
         </div>
       {:else}
-        <Table.Root cols="grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]" actions="sm">
+        <Table.Root cols="grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]" actions="sm" selectable>
           {#snippet header()}
             <div>Name</div>
             <div>Files</div>
@@ -195,6 +195,9 @@
           {/snippet}
           {#each rows as person (person.id)}
             <Table.Row onclick={() => (openId = person.id)}>
+              {#snippet leading()}
+                <input type="checkbox" aria-label="Select {person.name}" class="size-4 accent-primary" />
+              {/snippet}
               {#snippet cells()}
                 <div class="min-w-0">
                   <div class="truncate font-medium text-foreground">{person.name}</div>
