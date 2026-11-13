@@ -22,6 +22,7 @@
   import { api, type OwnedTransferSummary, type UsageResponse } from "$lib/api/client";
   import { base64UrlToBytes } from "$lib/crypto/base64url";
   import { decryptFilename, decryptString } from "$lib/crypto/decrypt";
+  import { plaintextSize } from "$lib/crypto/streaming";
   import { isHandedCopy } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
@@ -222,7 +223,8 @@
           title = null;
         }
       }
-      vaultStates[t.id] = { status: "unlocked", names, title };
+      const sizes = files.map((f) => plaintextSize(f.size));
+      vaultStates[t.id] = { status: "unlocked", names, sizes, title };
     } catch {
       vaultStates[t.id] = { status: "blind-error" };
     }
@@ -442,7 +444,14 @@
       title="Your transfers"
       tagline="Everything you've sent while signed in."
       align="left"
-    />
+    >
+      {#snippet actions()}
+        <!-- The empty state has its own button; two would be one too many. -->
+        {#if transfers.length > 0}
+          <Button href="/" fullWidth={false} class="whitespace-nowrap">New transfer</Button>
+        {/if}
+      {/snippet}
+    </PageHeader>
 
     <UsageBanner {usage} />
 

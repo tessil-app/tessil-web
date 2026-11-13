@@ -7,6 +7,7 @@
   import DetailList from "$lib/components/DetailList.svelte";
   import Drawer from "$lib/components/Drawer.svelte";
   import DrawerSection from "$lib/components/DrawerSection.svelte";
+  import FileRow from "$lib/components/FileRow.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import { encryptString } from "$lib/crypto/encrypt";
@@ -20,7 +21,7 @@
   export type VaultRowState =
     | { status: "locked" }
     | { status: "unlocking" }
-    | { status: "unlocked"; names: string[]; title: string | null }
+    | { status: "unlocked"; names: string[]; sizes?: number[]; title: string | null }
     | { status: "blind-error" };
 
   interface Props {
@@ -241,9 +242,10 @@
     {@const status = statusOf(transfer)}
     {@const canRecover = vaultState?.status === "unlocked"}
     {@const decryptedNames = vaultState?.status === "unlocked" ? vaultState.names : null}
+    {@const decryptedSizes = vaultState?.status === "unlocked" ? vaultState.sizes : undefined}
 
     <div class="space-y-3">
-      <section class="space-y-2 rounded-lg bg-card p-4">
+      <DrawerSection>
         <label
           for="transfer-title-input"
           class="block text-sm font-medium text-foreground"
@@ -288,30 +290,30 @@
             editable name. The download page still shows its files.
           </p>
         {/if}
-      </section>
+      </DrawerSection>
 
-      <section class="space-y-3 rounded-lg bg-card p-4">
-        <h3 class="text-sm font-medium text-foreground">
-          Files
-          <span class="text-muted-foreground font-normal">
-            · {transfer.fileCount} {transfer.fileCount === 1 ? "file" : "files"}
-            · {formatSize(transfer.totalBytes)}
+      <DrawerSection title="Files">
+        {#snippet aside()}
+          <span class="text-xs text-muted-foreground">
+            {transfer.fileCount}
+            {transfer.fileCount === 1 ? "file" : "files"} · {formatSize(transfer.totalBytes)}
           </span>
-        </h3>
+        {/snippet}
         {#if decryptedNames}
           {#if decryptedNames.length > 0}
-            <div>
-              <div class="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Name
-              </div>
-              <ul class="border-y border-border divide-y divide-border">
-                {#each decryptedNames as name, i (`${transfer.id}-${i}`)}
-                  <li class="px-3 py-2 text-sm text-foreground truncate" title={name}>
+            <!-- Same rows as a delivery's files; a sender has nothing to download here. -->
+            <ul class="space-y-2">
+              {#each decryptedNames as name, i (`${transfer.id}-${i}`)}
+                <li>
+                  <FileRow
                     {name}
-                  </li>
-                {/each}
-              </ul>
-            </div>
+                    size={decryptedSizes?.[i] !== undefined ? formatSize(decryptedSizes[i]) : undefined}
+                    kind="download"
+                    trailingHidden
+                  />
+                </li>
+              {/each}
+            </ul>
           {:else}
             <p class="text-sm text-muted-foreground">No files in this transfer.</p>
           {/if}
@@ -320,7 +322,7 @@
             Filenames are end-to-end encrypted. Unlock the vault to see them.
           </p>
         {/if}
-      </section>
+      </DrawerSection>
 
       <DrawerSection title="Details">
         <DetailList>

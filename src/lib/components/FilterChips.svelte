@@ -28,7 +28,7 @@
       aria-pressed={value === option.value}
       onclick={() => onChange(option.value)}
       class={cn(
-        "rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors duration-150 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         value === option.value
           ? "border-foreground bg-foreground text-background"
           : "border-border bg-card text-foreground hover:bg-accent",

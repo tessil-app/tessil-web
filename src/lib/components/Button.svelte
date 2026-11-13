@@ -34,7 +34,7 @@
   }: Props = $props();
 
   const base =
-    "inline-flex items-center justify-center gap-2 font-medium transition-[background-color,color,border-color] duration-200 ease-out hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+    "inline-flex items-center justify-center gap-2 text-sm font-medium transition-[background-color,color,border-color] duration-200 ease-out hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
   const radiusFor: Record<Variant, string> = {
     primary: "rounded-md",
@@ -55,7 +55,8 @@
   };
 
   const sizing = $derived(
-    iconOnly ? "p-2" : variant === "primary" ? "py-3 px-6" : "py-3 px-4",
+    // 40px tall with the 20px line of text-sm.
+    iconOnly ? "p-2" : variant === "primary" ? "py-2.5 px-5" : "py-2.5 px-4",
   );
   const widthClass = $derived(fullWidth && !iconOnly ? "w-full" : "");
 </script>
