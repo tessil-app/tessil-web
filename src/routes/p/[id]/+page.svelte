@@ -190,7 +190,7 @@
           onProgress: (index, status, percent, isStalled) => {
             rows[index].status = status;
             rows[index].percent = percent;
-            stalled = status === "uploading" && isStalled === true;
+            stalled = isStalled === true;
           },
         },
       );
