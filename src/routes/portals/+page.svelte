@@ -67,7 +67,7 @@
 />
 
 <!-- Pulled up behind the header, which turns dark while this is under it. -->
-<div class="hero -mt-14" data-header-tone="dark">
+<div class="hero -mt-16" data-header-tone="dark">
   <!-- One screen exactly, the header included. -->
   <div class="mx-auto flex h-[100svh] min-h-[38rem] max-w-6xl flex-col items-center justify-center gap-4 px-4 sm:px-6 pt-20 pb-6 text-center sm:gap-5">
     <p class="inline-flex items-center gap-2 rounded-full border border-white/15 py-1 pl-1 pr-3.5 text-sm text-white/80">

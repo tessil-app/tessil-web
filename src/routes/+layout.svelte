@@ -112,10 +112,13 @@
   // marks itself with data-header-tone="dark"; while one sits behind the
   // header, the header uses the dark palette.
   let isDarkTop = $state(false);
+  // Nothing has scrolled under the header yet.
+  let atTop = $state(true);
   let headerEl = $state<HTMLElement | null>(null);
 
   function readHeaderTone() {
     if (!headerEl) return;
+    atTop = window.scrollY < 4;
     const line = headerEl.getBoundingClientRect().bottom / 2;
     isDarkTop = [...document.querySelectorAll<HTMLElement>('[data-header-tone="dark"]')].some((el) => {
       const r = el.getBoundingClientRect();
@@ -258,8 +261,15 @@
   <header
     bind:this={headerEl}
     class={cn(
-      "sticky top-0 z-40 border-b border-border/40 bg-background/40 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/30 transition-[background-color,border-color] duration-200 ease-out",
-      isDarkTop && "dark",
+      "sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200 ease-out",
+      // On a dark page the bar is invisible until something scrolls under
+      // it. A blur at the very top would pull in the light page edge and
+      // show as a pale strip.
+      isDarkTop
+        ? atTop
+          ? "dark border-transparent bg-transparent"
+          : "dark border-white/10 bg-[#07080d]/55 backdrop-blur-2xl backdrop-saturate-150"
+        : "border-border/40 bg-background/40 supports-[backdrop-filter]:bg-background/30 backdrop-blur-2xl backdrop-saturate-150",
     )}
   >
     <div

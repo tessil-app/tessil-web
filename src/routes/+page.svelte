@@ -1247,104 +1247,111 @@
     </section>
   {/if}
 
-  <div class="max-w-3xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20 border-t border-border pt-16">
-    <section class="space-y-3 text-sm text-muted-foreground leading-relaxed">
-      <h2 class="text-base font-semibold text-foreground">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20 border-t border-border pt-16 sm:pt-24">
+    <!-- A heading on the left, the text in a readable column on the right. -->
+    <section class="grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-tight">
         Tessil, explained
       </h2>
-      <p>
-        Tessil is an end-to-end encrypted file transfer service.
-        Files are scrambled in your browser before they leave your
-        device. The decryption key lives in the URL fragment of the
-        share link, the part after <code>#</code> that browsers
-        don't send to servers. We never see your files, your
-        filenames, or your keys.
-      </p>
-      <p>
-        You don't have to take that on faith.
-        <a href="/verify" class="text-primary underline underline-offset-2">Verify it yourself</a>
-        walks through four checks you can run against this site in about two
-        minutes, using the developer tools already in your browser.
-      </p>
-      <p>
-        Anonymous transfers expire in hours; signed-in transfers
-        can run longer and live on your dashboard. Password
-        protection adds a second factor independent of the link.
-        Read more about the security model on the
-        <a href="/security" class="text-primary underline underline-offset-2">security page</a>.
-      </p>
-      <p>
-        New to encrypted transfer? See how Tessil compares to
-        <a href="/compare" class="text-primary underline underline-offset-2">WeTransfer, Proton Drive, and other tools</a>.
-      </p>
-      <p>
-        Built and run by one person, and free to use. If Tessil saves you a
-        headache, you can support the project. The link's in the footer below.
-      </p>
+      <div class="max-w-2xl space-y-4 text-base text-muted-foreground leading-relaxed">
+        <p>
+          Tessil is an end-to-end encrypted file transfer service.
+          Files are scrambled in your browser before they leave your
+          device. The decryption key lives in the URL fragment of the
+          share link, the part after <code>#</code> that browsers
+          don't send to servers. We never see your files, your
+          filenames, or your keys.
+        </p>
+        <p>
+          You don't have to take that on faith.
+          <a href="/verify" class="text-primary underline underline-offset-2">Verify it yourself</a>
+          walks through four checks you can run against this site in about two
+          minutes, using the developer tools already in your browser.
+        </p>
+        <p>
+          Anonymous transfers expire in hours; signed-in transfers
+          can run longer and live on your dashboard. Password
+          protection adds a second factor independent of the link.
+          Read more about the security model on the
+          <a href="/security" class="text-primary underline underline-offset-2">security page</a>.
+        </p>
+        <p>
+          New to encrypted transfer? See how Tessil compares to
+          <a href="/compare" class="text-primary underline underline-offset-2">WeTransfer, Proton Drive, and other tools</a>.
+        </p>
+        <p>
+          Built and run by one person, and free to use. If Tessil saves you a
+          headache, you can support the project. The link's in the footer below.
+        </p>
+      </div>
     </section>
 
-    <section class="mt-14 pt-10 border-t border-border/60">
-      <h2 class="text-base font-semibold text-foreground mb-4">Frequently asked questions</h2>
-      <div class="divide-y divide-border/60 border-y border-border/60 text-sm">
-        <details class="group py-4">
+    <section class="mt-16 sm:mt-24 pt-16 sm:pt-24 border-t border-border grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-tight">
+        Questions
+      </h2>
+      <div class="max-w-2xl divide-y divide-border border-y border-border text-base">
+        <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
             Is Tessil really end-to-end encrypted?
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
-          <p class="mt-2 text-muted-foreground leading-relaxed">
+          <p class="mt-3 text-muted-foreground leading-relaxed">
             Yes. Your files are encrypted in your browser with AES-GCM before they upload, and the decryption key lives in the share link, never on our servers. We can't read your files, your filenames, or your keys.
           </p>
         </details>
-        <details class="group py-4">
+        <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
             Do I need an account to send files?
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
-          <p class="mt-2 text-muted-foreground leading-relaxed">
+          <p class="mt-3 text-muted-foreground leading-relaxed">
             No. You can send and receive files anonymously. A free account is optional and just adds a dashboard to manage the transfers you create. It doesn't change how files are encrypted.
           </p>
         </details>
-        <details class="group py-4">
+        <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
             How is Tessil different from WeTransfer or Dropbox?
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
-          <p class="mt-2 text-muted-foreground leading-relaxed">
+          <p class="mt-3 text-muted-foreground leading-relaxed">
             Those services can read what you upload. Tessil can't, because encryption happens in your browser before anything is sent. Tessil is also open source, EU-hosted, and shows no ads.
             <a href="/compare" class="text-primary underline underline-offset-2">See the full comparison</a>.
           </p>
         </details>
-        <details class="group py-4">
+        <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
             How large can the files be?
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
-          <p class="mt-2 text-muted-foreground leading-relaxed">
+          <p class="mt-3 text-muted-foreground leading-relaxed">
             Large files are supported through multi-part uploads, so big transfers stay reliable even on slower connections. Signed-in transfers allow larger sizes than anonymous ones.
           </p>
         </details>
-        <details class="group py-4">
+        <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
             Is Tessil free?
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
-          <p class="mt-2 text-muted-foreground leading-relaxed">
+          <p class="mt-3 text-muted-foreground leading-relaxed">
             Yes, completely free, with no ads and no selling of data. Tessil is open source under the AGPL-3.0 licence, so anyone can audit exactly how it handles encryption.
           </p>
         </details>
-        <details class="group py-4">
+        <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
             How long do transfers last?
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
-          <p class="mt-2 text-muted-foreground leading-relaxed">
+          <p class="mt-3 text-muted-foreground leading-relaxed">
             Transfers expire automatically based on the time limit and download count you choose. Once a transfer expires, the encrypted data is deleted.
           </p>
         </details>
       </div>
     </section>
 
-    <SiteFooter current="home" />
+    <div class="pt-16">
+      <SiteFooter current="home" />
+    </div>
   </div>
 </div>
 

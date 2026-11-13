@@ -1,10 +1,7 @@
 <script lang="ts">
-  import * as Frame from "$lib/components/frame";
-  import PageHeader from "$lib/components/PageHeader.svelte";
-  import PageLayout from "$lib/components/PageLayout.svelte";
+  import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import { PORTALS_ANNOUNCED } from "$lib/config/launch";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
 </script>
 
 <Seo
@@ -13,17 +10,12 @@
   path="/terms"
 />
 
-<PageLayout width="3xl">
-  <PageHeader
-    title="Terms of Service"
-    tagline="End-to-end encrypted file transfer."
-  />
-
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: November 13, 2026</p>
-
+<ProsePage
+  title="Terms of Service"
+  tagline="End-to-end encrypted file transfer."
+  updated="November 13, 2026"
+  current="terms"
+>
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
             <p class="text-muted-foreground">
@@ -280,9 +272,4 @@
               <a href="mailto:legal@tessil.app" class="text-primary underline underline-offset-2">legal@tessil.app</a>
             </p>
           </section>
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
-
-  <SiteFooter current="terms" />
-</PageLayout>
+</ProsePage>

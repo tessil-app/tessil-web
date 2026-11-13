@@ -1,10 +1,7 @@
 <script lang="ts">
-  import * as Frame from "$lib/components/frame";
-  import PageHeader from "$lib/components/PageHeader.svelte";
-  import PageLayout from "$lib/components/PageLayout.svelte";
+  import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import { PORTALS_ANNOUNCED } from "$lib/config/launch";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
 
   const sectionClass = "space-y-3";
   const headingClass = "text-lg font-semibold text-foreground";
@@ -24,15 +21,11 @@
   path="/verify"
 />
 
-<PageLayout width="3xl">
-  <PageHeader
-    title="Verify it yourself"
-    tagline="Every encrypted transfer service claims it cannot read your files. Here is how to check ours, in about two minutes, with tools already in your browser."
-  />
-
-  <Frame.Root>
-    <Frame.Panel>
-      <div class="space-y-8">
+<ProsePage
+  title="Verify it yourself"
+  tagline="Every encrypted transfer service claims it cannot read your files. Here is how to check ours, in about two minutes, with tools already in your browser."
+  current="verify"
+>
         <section class={sectionClass}>
           <p class={bodyClass}>
             You should not have to trust us, and these checks do not ask you to.
@@ -221,9 +214,4 @@
             >. Acknowledgement within 72 hours.
           </p>
         </section>
-      </div>
-    </Frame.Panel>
-  </Frame.Root>
-
-  <SiteFooter current="verify" />
-</PageLayout>
+</ProsePage>
