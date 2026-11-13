@@ -80,6 +80,12 @@ export interface PortalRow {
   keyVersion: number;
   isDisabled: boolean;
   createdAt: string;
+  /** Live deliveries; absent from an older server. */
+  deliveries?: number;
+  /** Deliveries that arrived since this member last looked. */
+  unseen?: number;
+  storedBytes?: number;
+  lastDeliveryAt?: string | null;
   /** Who made the portal. Their public key is what a handed copy is checked against. */
   owner?: { userId: string; email: string; publicKey: string | null };
 }
@@ -110,6 +116,8 @@ export interface DepositRow {
 
 export interface ListDepositsResponse {
   deposits: DepositRow[];
+  /** When this member last looked; newer deliveries are new to them. */
+  lastSeenAt?: string | null;
   nextCursor: string | null;
 }
 
@@ -733,6 +741,11 @@ class ApiClient {
         response.status,
       );
     }
+  }
+
+  /** Tells the server this member has looked at everything that arrived so far. */
+  async markPortalSeen(portalId: string): Promise<{ ok: true }> {
+    return this.request(`/api/portals/${encodeURIComponent(portalId)}/seen`, { method: "POST" });
   }
 
   // ── Sharing a portal ────────────────────────────────────────────────────

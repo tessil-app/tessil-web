@@ -138,6 +138,8 @@ export interface DepositPage {
   /** Deposits whose key did not open with this portal's key. */
   unreadable: number;
   nextCursor: string | null;
+  /** When this member last looked, as the server had it before this visit. */
+  lastSeenAt: string | null;
 }
 
 async function openDeposit(
@@ -197,5 +199,6 @@ export async function loadDeposits(
     deposits,
     unreadable: opened.length - deposits.length,
     nextCursor: res.nextCursor,
+    lastSeenAt: res.lastSeenAt ?? null,
   };
 }

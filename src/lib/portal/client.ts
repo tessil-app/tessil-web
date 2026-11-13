@@ -33,6 +33,11 @@ export interface MyPortal {
   state: "open" | "locked" | "unreadable" | "invited";
   title: string | null;
   link: string | null;
+  /** Live deliveries, how many are new to this account, and what they take up. */
+  deliveries: number;
+  unseen: number;
+  storedBytes: number;
+  lastDeliveryAt: string | null;
   /** On portals shared with this account: who shared it, and their key to compare. */
   sharedBy: { email: string; fingerprint: string | null } | null;
 }
@@ -63,6 +68,10 @@ async function readRow(
     isDisabled: row.isDisabled,
     createdAt: row.createdAt,
     sharedBy,
+    deliveries: row.deliveries ?? 0,
+    unseen: row.unseen ?? 0,
+    storedBytes: row.storedBytes ?? 0,
+    lastDeliveryAt: row.lastDeliveryAt ?? null,
   };
   // Says who shared it even while the vault is locked.
   if (isHandedCopy(base64UrlToBytes(row.sealedKeys))) {
@@ -132,6 +141,10 @@ export async function createMyPortal(
       isDisabled: false,
       createdAt: created.createdAt,
       sharedBy: null,
+      deliveries: 0,
+      unseen: 0,
+      storedBytes: 0,
+      lastDeliveryAt: null,
       state: "open",
       title: title.trim(),
       link: portalLink(origin, made.id, made.linkKey),

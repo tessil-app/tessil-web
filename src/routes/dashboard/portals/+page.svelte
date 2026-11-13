@@ -358,6 +358,12 @@
                 {#if portal.role === "member"}
                   · shared by {portal.sharedBy?.email ?? "someone else"}
                 {/if}
+                <span class="sm:hidden">
+                  · {portal.deliveries}
+                  {portal.deliveries === 1 ? "delivery" : "deliveries"}{portal.unseen > 0
+                    ? `, ${portal.unseen} new`
+                    : ""}
+                </span>
               {/if}
             </div>
           </div>
@@ -372,9 +378,15 @@
           </Badge>
         {/snippet}
 
-        <Table.Root cols="grid-cols-[minmax(0,1fr)_9rem]" actions="md">
+        <Table.Root
+          cols="grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_9rem]"
+          actions="md"
+        >
           {#snippet header()}
             <div>Portal</div>
+            <div>Deliveries</div>
+            <div>Last delivery</div>
+            <div>Stored</div>
             <div>Status</div>
           {/snippet}
 
@@ -385,6 +397,18 @@
             >
               {#snippet cells()}
                 {@render nameCell(portal)}
+                <div class="flex items-center gap-2 text-muted-foreground">
+                  {portal.deliveries}
+                  {#if portal.unseen > 0}
+                    <Badge tone="info">{portal.unseen} new</Badge>
+                  {/if}
+                </div>
+                <div class="text-muted-foreground">
+                  {portal.lastDeliveryAt ? dateFmt.format(new Date(portal.lastDeliveryAt)) : "None yet"}
+                </div>
+                <div class="text-muted-foreground">
+                  {portal.storedBytes > 0 ? formatSize(portal.storedBytes) : "0"}
+                </div>
                 <div>{@render statusBadge(portal)}</div>
               {/snippet}
               {#snippet stacked()}

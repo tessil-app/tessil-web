@@ -9,6 +9,8 @@ export interface TableContext {
   readonly cols: string;
   readonly actions: ActionsWidth;
   readonly hasHeader: boolean;
+  /** Rows have a narrow cell on the left, such as a checkbox. */
+  readonly hasLeading: boolean;
 }
 
 export const actionsWidthClass: Record<ActionsWidth, string> = {

@@ -6,6 +6,8 @@
   interface Props {
     /** One element per column. */
     cells: Snippet;
+    /** The narrow cell on the left, when the table is `selectable`. */
+    leading?: Snippet;
     /** Shown instead of the columns on a phone. */
     stacked?: Snippet;
     /** Controls on the right. Their clicks never trigger the row. */
@@ -17,7 +19,7 @@
     class?: string;
   }
 
-  let { cells, stacked, actions, actionsOnPhone = false, onclick, href, class: className }: Props = $props();
+  let { cells, leading, stacked, actions, actionsOnPhone = false, onclick, href, class: className }: Props = $props();
 
   const table = getTableContext();
   const interactive = $derived(href !== undefined || onclick !== undefined);
@@ -43,6 +45,11 @@
     className,
   )}
 >
+  {#if table.hasLeading}
+    <div class="hidden sm:flex w-10 shrink-0 items-center justify-end">
+      {#if leading}{@render leading()}{/if}
+    </div>
+  {/if}
   {#if href}
     <a {href} class={main}>{@render body()}</a>
   {:else if onclick}
