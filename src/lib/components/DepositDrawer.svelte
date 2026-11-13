@@ -84,12 +84,10 @@
   {#snippet header()}
     {#if deposit}
       <div class="space-y-1">
-        <h2 class="font-semibold text-base leading-snug text-foreground break-words">
-          {deposit.note ?? "No note"}
+        <p class="text-xs text-muted-foreground">Delivery</p>
+        <h2 class="font-semibold text-base leading-snug text-foreground font-mono">
+          {deposit.reference}
         </h2>
-        <p class="text-xs text-muted-foreground">
-          Reference <span class="font-mono">{deposit.reference}</span>
-        </p>
       </div>
     {/if}
   {/snippet}
@@ -106,6 +104,12 @@
           </DetailItem>
         </DetailList>
       </DrawerSection>
+
+      {#if deposit.note}
+        <DrawerSection title="Note from the sender">
+          <p class="text-sm text-foreground whitespace-pre-wrap break-words">{deposit.note}</p>
+        </DrawerSection>
+      {/if}
 
       {#if checklist.length > 0}
         <DrawerSection title="What you asked for">

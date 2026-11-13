@@ -483,7 +483,7 @@
         {:else}
           <Table.Root {cols} actions="sm">
             {#snippet header()}
-              <div>Note</div>
+              <div>Reference</div>
               <div>Received</div>
               <div>Files</div>
               {#if checklist.length > 0}
@@ -497,15 +497,12 @@
               <Table.Row onclick={() => (openDepositId = deposit.id)}>
                 {#snippet cells()}
                   <div class="min-w-0">
-                    <div
-                      class="truncate font-medium {deposit.note
-                        ? 'text-foreground'
-                        : 'text-muted-foreground'}"
-                      title={deposit.note ?? undefined}
-                    >
-                      {deposit.note ?? "No note"}
-                    </div>
-                    <div class="text-xs text-muted-foreground font-mono">{deposit.reference}</div>
+                    <div class="font-medium font-mono text-foreground">{deposit.reference}</div>
+                    {#if deposit.note}
+                      <div class="truncate text-xs text-muted-foreground" title={deposit.note}>
+                        {deposit.note}
+                      </div>
+                    {/if}
                   </div>
                   <div class="text-muted-foreground">
                     {shortFmt.format(new Date(deposit.createdAt))}
@@ -531,14 +528,10 @@
                   <div class="space-y-2">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">
-                        <p
-                          class="font-medium truncate {deposit.note
-                            ? 'text-foreground'
-                            : 'text-muted-foreground'}"
-                        >
-                          {deposit.note ?? "No note"}
-                        </p>
-                        <p class="text-xs text-muted-foreground font-mono">{deposit.reference}</p>
+                        <p class="font-medium font-mono text-foreground">{deposit.reference}</p>
+                        {#if deposit.note}
+                          <p class="truncate text-xs text-muted-foreground">{deposit.note}</p>
+                        {/if}
                       </div>
                       {#if checklist.length > 0}
                         <Badge tone={row.complete ? "success" : "warning"}>
