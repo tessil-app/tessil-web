@@ -157,7 +157,7 @@
       {:else}
         <DrawerSection
           title="Waiting for {invite.email}"
-          description="Ask them to sign in at Tessil with this address and set up a vault. A free account is enough. When they have, come back here to give access."
+          description="We emailed them an invitation. They need to sign in with this address and set up a vault; a free account is enough. We'll email you when they have, so you can give access here."
         />
       {/if}
       <DrawerSection title="Changed your mind?">
@@ -190,8 +190,9 @@
           </Button>
         </form>
         <p class="text-xs text-muted-foreground">
-          We don't email them. Let them know yourself, then come back here to give access once
-          they have signed in.
+          We email them the invitation. When they have signed in and set up a vault, we email
+          you, and you give access here. That last step needs your browser, because only you
+          hold this portal's keys.
         </p>
       </DrawerSection>
     {/if}
