@@ -1302,10 +1302,10 @@
         <div class="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
           <div class="max-w-xl space-y-3">
             <h2 id="pricing-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
-              Sending is free. Receiving is the plan.
+              Pay for portals. Never for privacy.
             </h2>
             <p class="text-base sm:text-lg leading-relaxed text-muted-foreground">
-              Encryption is never what you pay for. A plan adds portals.
+              Sending is free, encrypted, and stays that way. A plan adds portals.
             </p>
           </div>
           <TextLink href="/pricing" class="text-primary">See what each plan includes</TextLink>

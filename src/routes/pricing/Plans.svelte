@@ -3,6 +3,7 @@
 
   import { goto } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
+  import Badge from "$lib/components/Badge.svelte";
   import PlanCards from "$lib/components/PlanCards.svelte";
   import SegmentedControl from "$lib/components/SegmentedControl.svelte";
   import Seo from "$lib/components/Seo.svelte";
@@ -10,7 +11,7 @@
   import TextLink from "$lib/components/TextLink.svelte";
   import { api, ApiError } from "$lib/api/client";
   import type { Cycle, PlanId } from "$lib/config/plans";
-  import { SUPPORT_EMAIL, SUPPORT_POLAR_PORTAL_URL } from "$lib/config/support";
+  import { SUPPORT_EMAIL } from "$lib/config/support";
   import { auth } from "$lib/stores/auth.svelte";
 
   let cycle = $state<Cycle>("monthly");
@@ -87,7 +88,7 @@
 
 <Seo
   title="Pricing - Tessil"
-  description="Sending files is free. A plan adds portals: links where people send files that only you can open. Encryption is never the paid part."
+  description="Sending files is free and encrypted. A plan adds portals: links where people send files that only you can open. You never pay for privacy."
   path="/pricing"
 />
 
@@ -95,20 +96,22 @@
   <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-20">
     <header class="mx-auto flex max-w-3xl flex-col items-center gap-5 pb-10 text-center sm:pb-12">
       <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-none" style="letter-spacing: -0.035em">
-        Sending is free.<br />Receiving is the plan.
+        Pay for portals.<br />Never for privacy.
       </h1>
       <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
-        Encryption is never what you pay for. A plan adds portals: links where other people
-        send files that only you can open.
+        Sending files is free, encrypted, and stays that way. A plan adds portals: links
+        where other people send files that only you can open.
       </p>
-      <SegmentedControl
-        label="Billing period"
-        class="[&>span]:sr-only"
-        options={cycleOptions}
-        value={cycle}
-        onChange={(v) => (cycle = v)}
-      />
-      <p class="-mt-2 text-sm text-muted-foreground">Pay yearly and two months are free.</p>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <SegmentedControl
+          label="Billing period"
+          class="[&>span]:sr-only"
+          options={cycleOptions}
+          value={cycle}
+          onChange={(v) => (cycle = v)}
+        />
+        <Badge tone="success">2 months free yearly</Badge>
+      </div>
     </header>
 
     {#if message}
@@ -151,27 +154,6 @@
         </div>
         <p class="text-sm text-muted-foreground">
           The full wording is in the <TextLink href="/terms#billing">terms</TextLink>.
-        </p>
-      </div>
-    </section>
-
-    <!-- Earlier supporters must always be able to find how to stop. -->
-    <section id="cancel" class="mt-16 border-t border-border pt-16 sm:mt-24 sm:pt-24 grid gap-x-12 gap-y-6 scroll-mt-24 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-      <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
-        Supported Tessil before there were plans?
-      </h2>
-      <div class="max-w-2xl space-y-4 text-base leading-relaxed text-muted-foreground">
-        <p>
-          Thank you. That kept this running. A monthly contribution is separate from a plan
-          and does not turn into one.
-        </p>
-        <p>
-          To stop it, open
-          <TextLink href={SUPPORT_POLAR_PORTAL_URL} rel="noopener noreferrer" class="text-primary">Polar's customer portal</TextLink>
-          from any receipt email and cancel there; it ends with the period you already paid
-          for. GitHub Sponsors is cancelled from your GitHub sponsorship settings. If you
-          can't find either, write to
-          <TextLink href="mailto:{SUPPORT_EMAIL}" class="text-primary">{SUPPORT_EMAIL}</TextLink>.
         </p>
       </div>
     </section>
