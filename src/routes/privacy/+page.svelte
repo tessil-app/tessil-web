@@ -74,8 +74,11 @@
               </li>
               <li>
                 <strong>Sign-in records.</strong> Hashed sign-in tokens (we store only the SHA-256 hash, never the
-                token itself), the IP address and browser user-agent of each sign-in attempt and active session, and
-                session expiry timestamps.
+                token itself), the browser user-agent of each sign-in attempt and active session, the country and
+                network operator derived from your IP address at that moment, and session expiry timestamps. We
+                do not store the IP address itself; to recognise the same connection again we keep a keyed
+                fingerprint of it that cannot be turned back into the address and becomes useless once its key
+                is deleted.
               </li>
               <li>
                 <strong>Account tier.</strong> Which plan the account is on.{#if PORTALS_ANNOUNCED}
@@ -129,7 +132,11 @@
               To operate the service, prevent abuse, and meet legal recordkeeping needs, we process:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>IP addresses (for rate limiting and abuse prevention)</li>
+              <li>
+                Your IP address, in passing only: each request's address is turned into a keyed fingerprint for
+                rate limiting and abuse prevention. The key rotates and the address itself is not stored in our
+                database
+              </li>
               <li>
                 Authentication audit events (sign-in requests, sign-in successes, session revocations, transfer
                 deletions, and account deletions) - stored for up to 90 days
@@ -280,6 +287,13 @@
                   a portal{/if}. Receives your email address and the message
                 contents. Transactional mail only, never marketing.
               </li>
+              {#if PORTALS_ANNOUNCED}
+                <li>
+                  <strong>Polar:</strong> Sells the paid plans as merchant of record. If you buy a
+                  plan, Polar receives your email address and your payment details and issues your
+                  invoice. We receive only whether a subscription exists and when it renews or ends.
+                </li>
+              {/if}
               <li>
                 <strong>Cloudflare:</strong> Encrypted file storage (R2, restricted to the EU
                 jurisdiction so objects stay in EU data centres), plus CDN and DDoS protection in

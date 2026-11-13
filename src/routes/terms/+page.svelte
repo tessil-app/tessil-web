@@ -79,6 +79,29 @@
                 to them go to the person who gave you the link.
               </p>
             </section>
+
+            <section class="space-y-3" id="billing">
+              <h2 class="text-xl font-semibold text-foreground">Paid plans and billing</h2>
+              <p class="text-muted-foreground">
+                Paid plans are sold through Polar, which acts as the merchant
+                of record. That means Polar is the seller on your invoice,
+                takes the payment, and handles tax. We never receive your
+                card details; Polar tells us only that a subscription exists
+                and when it renews or ends.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li><strong>Renewal.</strong> A plan is paid in advance, per month or per year, and renews automatically until you cancel</li>
+                <li><strong>Cancelling.</strong> You can cancel at any time from your account settings. The plan then runs until the end of the period you have paid for and does not renew</li>
+                <li><strong>After a plan ends.</strong> Your account returns to the free plan. Your portals stop accepting files; what they already hold stays available to you until it expires. Sending keeps working as before</li>
+                <li><strong>Refunds.</strong> If you change your mind within 14 days of your first payment, write to <a href="mailto:hello@tessil.app" class="text-primary underline underline-offset-2">hello@tessil.app</a> and you get it back in full. After that, a period that has started is not refunded, except where the law gives you that right</li>
+                <li><strong>Failed payments.</strong> If a renewal cannot be collected, Polar tries again. If it still fails, the plan ends</li>
+                <li><strong>Price changes.</strong> We tell you by email at least 30 days before a new price applies to your renewal, so you can cancel first</li>
+              </ul>
+              <p class="text-muted-foreground">
+                Encryption, password protection, passkeys and automatic expiry
+                are never part of what a plan sells. They stay free.
+              </p>
+            </section>
           {/if}
 
           <section class="space-y-3">
