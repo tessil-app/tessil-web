@@ -4,6 +4,7 @@ import { openSealed, sealTo } from "$lib/crypto/seal";
 import { importVaultDerivationKey } from "$lib/vault/keypair";
 import {
   acceptPortalKeys,
+  accessTokenFor,
   createPortalKeys,
   depositTokenFor,
   handPortalKeys,
@@ -329,5 +330,18 @@ describe("portal options", () => {
     const info = await openPortalBundle(portal.id, portal.linkKey, bundle);
     expect(info?.twoWay).toBe(true);
     expect(info?.returns).toEqual([good]);
+  });
+});
+
+describe("a portal's password token", () => {
+  it("is the same for the same portal, link and password, and differs when any changes", async () => {
+    const link = new Uint8Array(32).fill(1);
+    const other = new Uint8Array(32).fill(2);
+    const token = await accessTokenFor("portal-a", link, "tulips-2025");
+    expect(token).toHaveLength(32);
+    expect(await accessTokenFor("portal-a", link, "tulips-2025")).toEqual(token);
+    expect(await accessTokenFor("portal-a", link, "tulips-2026")).not.toEqual(token);
+    expect(await accessTokenFor("portal-b", link, "tulips-2025")).not.toEqual(token);
+    expect(await accessTokenFor("portal-a", other, "tulips-2025")).not.toEqual(token);
   });
 });

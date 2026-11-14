@@ -8,6 +8,7 @@
   import Button from "$lib/components/Button.svelte";
   import DepositView from "$lib/components/portal/DepositView.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
+  import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Reveal from "$lib/components/Reveal.svelte";
   import Switch from "$lib/components/Switch.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
@@ -21,6 +22,8 @@
     CHECKLIST_MAX_ITEMS,
     PORTAL_FIELD_LABEL_MAX,
     PORTAL_MESSAGE_MAX,
+    PORTAL_PASSWORD_MAX,
+    PORTAL_PASSWORD_MIN,
     PORTAL_THANKS_MAX,
     PORTAL_TITLE_MAX,
     newChecklistItemId,
@@ -41,7 +44,7 @@
     cancelHref: string;
     /** Most that one delivery may hold on the owner's plan, for the preview. */
     maxTotalSize?: number;
-    /** The plan includes the Max options: a logo and sending files back. */
+    /** The plan includes the Max options: logo, sending files back, password. */
     canBrand?: boolean;
   }
 
@@ -85,6 +88,17 @@
   // Files already sent back stay; a plan without the option cannot switch it on.
   const twoWayLocked = $derived(!canBrand && !start.twoWay);
 
+  let passwordOn = $state(start.hasPassword);
+  let newPassword = $state("");
+  const passwordLocked = $derived(!canBrand && !start.hasPassword);
+  // On, with nothing typed, is only fine when one is already set.
+  const passwordMissing = $derived(
+    passwordOn && !start.hasPassword && newPassword.length < PORTAL_PASSWORD_MIN,
+  );
+  const passwordShort = $derived(
+    passwordOn && newPassword.length > 0 && newPassword.length < PORTAL_PASSWORD_MIN,
+  );
+
   let closeOn = $state(start.closesAt !== null);
   // The day in the owner's own time zone; the portal closes when it ends.
   let closeDay = $state(start.closesAt ? dayOf(new Date(start.closesAt)) : "");
@@ -121,12 +135,20 @@
     returns: start.returns,
     closesAt: closeOn ? endOfDay(closeDay) : null,
     notifyOnDelivery: notify,
+    hasPassword: passwordOn,
+    newPassword: passwordOn ? newPassword : "",
   });
 
   // What was last saved; in create mode, what the form opened with.
   let baseline = $state(untrack(() => JSON.stringify(settings)));
   const dirty = $derived(JSON.stringify(settings) !== baseline);
-  const canSave = $derived(settings.title.length > 0 && (mode === "create" || dirty) && !isSaving);
+  const canSave = $derived(
+    settings.title.length > 0 &&
+      (mode === "create" || dirty) &&
+      !isSaving &&
+      !passwordMissing &&
+      !passwordShort,
+  );
 
   $effect(() => {
     if (dirty) saved = false;
@@ -182,6 +204,7 @@
     logo: settings.logo,
     twoWay,
     returns: [],
+    accessToken: null,
   });
 
   const card = "rounded-lg bg-card p-4 sm:p-5";
@@ -461,6 +484,34 @@
           <Alert tone="warning">
             Everyone who has this portal's link can download what you put on it.
           </Alert>
+        </Reveal>
+      </div>
+
+      <div class="border-t border-border pt-5">
+        {@render option(
+          "opt-password",
+          "Password",
+          "The page asks for it before showing anything or taking files. Pass it on separately from the link.",
+          passwordOn,
+          (v) => (passwordOn = v),
+          passwordLocked,
+        )}
+        <Reveal open={passwordOn}>
+          <PasswordInput
+            id="portal-new-password"
+            label={start.hasPassword ? "New password (leave empty to keep the current one)" : "Password"}
+            autocomplete="new-password"
+            minlength={PORTAL_PASSWORD_MIN}
+            maxlength={PORTAL_PASSWORD_MAX}
+            bind:value={newPassword}
+            disabled={isSaving}
+            error={passwordShort ? `Use at least ${PORTAL_PASSWORD_MIN} characters.` : undefined}
+            class="max-w-xs"
+          />
+          <p class="mt-2 text-xs text-muted-foreground">
+            We never see it and can't show it to you again, so keep it somewhere. The link stays
+            the same.
+          </p>
         </Reveal>
       </div>
 

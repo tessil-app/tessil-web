@@ -5,7 +5,9 @@
 
   import TextLink from "$lib/components/TextLink.svelte";
   import { page } from "$app/stores";
+  import Button from "$lib/components/Button.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
+  import PasswordInput from "$lib/components/PasswordInput.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
   import DepositView from "$lib/components/portal/DepositView.svelte";
   import Seo from "$lib/components/Seo.svelte";
@@ -15,7 +17,7 @@
   import { depositStrings } from "$lib/i18n/messages";
   import { onDestroy, onMount } from "svelte";
 
-  type Phase = "loading" | "invalid" | "ready";
+  type Phase = "loading" | "invalid" | "locked" | "ready";
 
   let phase = $state<Phase>("loading");
   let portal = $state<OpenedPortal | null>(null);
@@ -41,14 +43,26 @@
     }
   });
 
-  onMount(async () => {
-    const wanted = (navigator.languages ?? [navigator.language]).map((l) => l.toLowerCase().slice(0, 2));
-    browserLocale = LOCALES.find((l) => wanted.includes(l)) ?? DEFAULT_LOCALE;
+  let password = $state("");
+  let passwordError = $state<"wrong" | "wait" | null>(null);
+  let unlocking = $state(false);
+
+  async function open(withPassword?: string) {
     try {
-      const result = await openPortalFromLink($page.params.id ?? "", window.location.hash);
+      const result = await openPortalFromLink($page.params.id ?? "", window.location.hash, withPassword);
       if (result.ok) {
         portal = result.portal;
+        password = "";
         phase = "ready";
+        return;
+      }
+      if (result.reason === "password_required") {
+        phase = "locked";
+        return;
+      }
+      if (result.reason === "password_wrong" || result.reason === "password_wait") {
+        passwordError = result.reason === "password_wrong" ? "wrong" : "wait";
+        phase = "locked";
         return;
       }
       // "untrusted": do not offer an upload. The key we were given cannot be trusted.
@@ -58,6 +72,21 @@
       invalidReason = "offline";
       phase = "invalid";
     }
+  }
+
+  async function unlock(e: Event) {
+    e.preventDefault();
+    if (unlocking || password.length === 0) return;
+    unlocking = true;
+    passwordError = null;
+    await open(password);
+    unlocking = false;
+  }
+
+  onMount(() => {
+    const wanted = (navigator.languages ?? [navigator.language]).map((l) => l.toLowerCase().slice(0, 2));
+    browserLocale = LOCALES.find((l) => wanted.includes(l)) ?? DEFAULT_LOCALE;
+    void open();
   });
 </script>
 
@@ -72,6 +101,23 @@
   {:else if phase === "invalid"}
     <EmptyState title={t.invalid[invalidReason].title} level={1}>
       <p>{t.invalid[invalidReason].body}</p>
+    </EmptyState>
+  {:else if phase === "locked"}
+    <EmptyState title={t.password.title} level={1}>
+      <p>{t.password.body}</p>
+      <form onsubmit={unlock} class="mx-auto mt-2 w-full max-w-xs space-y-3 text-left">
+        <PasswordInput
+          id="portal-password"
+          label={t.password.label}
+          autocomplete="off"
+          bind:value={password}
+          disabled={unlocking}
+          error={passwordError ? t.password[passwordError] : undefined}
+        />
+        <Button type="submit" disabled={unlocking || password.length === 0}>
+          {unlocking ? t.password.opening : t.password.open}
+        </Button>
+      </form>
     </EmptyState>
   {:else if portal}
     <DepositView {portal} {locale} />
