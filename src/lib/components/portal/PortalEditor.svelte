@@ -41,7 +41,7 @@
     cancelHref: string;
     /** Most that one delivery may hold on the owner's plan, for the preview. */
     maxTotalSize?: number;
-    /** The plan includes a logo on the upload page. */
+    /** The plan includes the Max options: a logo and sending files back. */
     canBrand?: boolean;
   }
 
@@ -81,6 +81,10 @@
     }
   }
 
+  let twoWay = $state(start.twoWay);
+  // Files already sent back stay; a plan without the option cannot switch it on.
+  const twoWayLocked = $derived(!canBrand && !start.twoWay);
+
   let closeOn = $state(start.closesAt !== null);
   // The day in the owner's own time zone; the portal closes when it ends.
   let closeDay = $state(start.closesAt ? dayOf(new Date(start.closesAt)) : "");
@@ -113,6 +117,8 @@
     thanks: thanksOn ? thanks.trim() : "",
     fieldLabel: fieldOn ? fieldLabel.trim() || depositStrings[lang].fieldDefault : "",
     logo: logoOn ? logo : null,
+    twoWay,
+    returns: start.returns,
     closesAt: closeOn ? endOfDay(closeDay) : null,
     notifyOnDelivery: notify,
   });
@@ -174,6 +180,8 @@
     fieldLabel: settings.fieldLabel,
     closesAt: settings.closesAt,
     logo: settings.logo,
+    twoWay,
+    returns: [],
   });
 
   const card = "rounded-lg bg-card p-4 sm:p-5";
@@ -434,6 +442,26 @@
           {#if logoError}
             <p role="alert" class="mt-1 text-xs text-destructive-foreground">{logoError}</p>
           {/if}
+        </Reveal>
+      </div>
+
+      <div class="border-t border-border pt-5">
+        {@render option(
+          "opt-twoway",
+          "Send files back",
+          "You can put files on the portal for the other side to download, such as a finished report.",
+          twoWay,
+          (v) => {
+            twoWay = v;
+            if (v) view = "form";
+          },
+          twoWayLocked,
+        )}
+        <Reveal open={twoWay}>
+          <Alert tone="warning">
+            Everyone who has this portal's link can download what you put on it. Use it for a
+            portal you give to one person or one client.
+          </Alert>
         </Reveal>
       </div>
 

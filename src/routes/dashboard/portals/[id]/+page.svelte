@@ -16,6 +16,7 @@
   import PageHeader from "$lib/components/PageHeader.svelte";
   import Notice from "$lib/components/Notice.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
+  import PortalReturnsDrawer from "$lib/components/PortalReturnsDrawer.svelte";
   import PortalSharingDrawer from "$lib/components/PortalSharingDrawer.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
@@ -155,6 +156,7 @@
   // ─── sharing with one other account ───────────────────────────────────────
   let sharing = $state<PortalSharing | null>(null);
   let sharingOpen = $state(false);
+  let returnsOpen = $state(false);
 
   const readyInvite = $derived(sharing?.invites.find((i) => i.ready) ?? null);
   const sharingLabel = $derived(
@@ -412,6 +414,16 @@
           >
             Settings
           </Button>
+          {#if portal.twoWay}
+            <Button
+              variant="secondary"
+              fullWidth={false}
+              class="whitespace-nowrap"
+              onclick={() => (returnsOpen = true)}
+            >
+              Send files{portal.returns.length > 0 ? ` (${portal.returns.length})` : ""}
+            </Button>
+          {/if}
           <Button
             variant="secondary"
             fullWidth={false}
@@ -668,6 +680,15 @@
     {sharing}
     onClose={() => (sharingOpen = false)}
     onChanged={reloadSharing}
+  />
+  <PortalReturnsDrawer
+    open={returnsOpen}
+    userId={auth.user.id}
+    {portal}
+    onClose={() => (returnsOpen = false)}
+    onChanged={(returns) => {
+      if (portal) portal = { ...portal, returns };
+    }}
   />
 {/if}
 

@@ -32,6 +32,33 @@ export const PORTAL_FIELD_LABEL_MAX = 40;
 // The server refuses a larger bundle.
 const BUNDLE_MAX_BYTES = 32 * 1024;
 
+export const PORTAL_RETURNS_MAX = 20;
+
+/** A batch of files the owner sends back: a transfer and the key that opens it. */
+export interface PortalReturn {
+  id: string;
+  /** The transfer's key, as it would stand in its own link. */
+  key: string;
+}
+
+function cleanReturns(raw: unknown): PortalReturn[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PortalReturn[] = [];
+  for (const entry of raw.slice(0, PORTAL_RETURNS_MAX)) {
+    const item = entry as { id?: unknown; key?: unknown };
+    if (
+      typeof item?.id === "string" &&
+      /^[A-Za-z0-9_-]{21}$/.test(item.id) &&
+      typeof item.key === "string" &&
+      /^[A-Za-z0-9_-]{43}$/.test(item.key) &&
+      !out.some((r) => r.id === item.id)
+    ) {
+      out.push({ id: item.id, key: item.key });
+    }
+  }
+  return out;
+}
+
 export const PORTAL_LOGO_MAX_BYTES = 16 * 1024;
 export const LOGO_TYPES = ["image/webp", "image/png", "image/jpeg"] as const;
 export type LogoType = (typeof LOGO_TYPES)[number];
@@ -123,6 +150,9 @@ export interface PortalPublicInfo {
   fieldLabel?: string;
   /** Shown above the name. */
   logo?: PortalLogo;
+  /** The owner can send files back; the page shows them to every visitor. */
+  twoWay?: boolean;
+  returns?: PortalReturn[];
 }
 
 /**
@@ -138,6 +168,9 @@ export interface PortalSettings {
   /** Empty: no extra field. */
   fieldLabel: string;
   logo: PortalLogo | null;
+  twoWay: boolean;
+  /** Kept as it is by the settings form; changed where files are sent back. */
+  returns: PortalReturn[];
   /** When new deliveries stop, as an ISO moment. Null: no closing date. */
   closesAt: string | null;
   /** Email the members when files arrive. */
@@ -160,6 +193,8 @@ export function settingsOf(
     thanks: info.thanks ?? "",
     fieldLabel: info.fieldLabel ?? "",
     logo: info.logo ?? null,
+    twoWay: info.twoWay === true,
+    returns: info.returns ?? [],
   };
 }
 
@@ -241,6 +276,8 @@ export async function sealPortalBundle(
       ? { fieldLabel: cleanText(info.fieldLabel, PORTAL_FIELD_LABEL_MAX) }
       : {}),
     ...(cleanLogo(info.logo) ? { logo: cleanLogo(info.logo) } : {}),
+    ...(info.twoWay ? { twoWay: true } : {}),
+    ...(cleanReturns(info.returns).length > 0 ? { returns: cleanReturns(info.returns) } : {}),
   });
   // Padded with spaces so the stored size does not give away the title's length.
   const raw = encoder.encode(json);
@@ -293,6 +330,8 @@ export async function openPortalBundle(
       thanks?: unknown;
       fieldLabel?: unknown;
       logo?: unknown;
+      twoWay?: unknown;
+      returns?: unknown;
     };
     if (
       typeof parsed.publicKey !== "string" ||
@@ -319,6 +358,8 @@ export async function openPortalBundle(
       ...(thanks ? { thanks } : {}),
       ...(fieldLabel ? { fieldLabel } : {}),
       ...(cleanLogo(parsed.logo) ? { logo: cleanLogo(parsed.logo)! } : {}),
+      ...(parsed.twoWay === true ? { twoWay: true } : {}),
+      ...(cleanReturns(parsed.returns).length > 0 ? { returns: cleanReturns(parsed.returns) } : {}),
     };
   } catch {
     return null;
@@ -518,7 +559,7 @@ export async function createPortalKeys(
   title: string,
   owner: MemberVault,
   lang?: Locale,
-  extras: Pick<PortalPublicInfo, "checklist" | "message" | "thanks" | "fieldLabel" | "logo"> = {},
+  extras: Pick<PortalPublicInfo, "checklist" | "message" | "thanks" | "fieldLabel" | "logo" | "twoWay"> = {},
 ): Promise<NewPortal> {
   const id = newPortalId();
   const keyVersion = 1;

@@ -12,8 +12,10 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import { api, ApiError } from "$lib/api/client";
   import { DEFAULT_LOCALE, LOCALES } from "$lib/i18n/locale";
+  import { page } from "$app/stores";
   import { createMyPortal } from "$lib/portal/client";
-  import type { PortalSettings } from "$lib/portal/keys";
+  import { openMemberPortal } from "$lib/portal/deposits";
+  import { PORTAL_TITLE_MAX, type PortalSettings } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
   import { isUnlocked, subscribeToVaultState } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
@@ -31,7 +33,7 @@
     typeof navigator === "undefined"
       ? []
       : (navigator.languages ?? [navigator.language]).map((l) => l.toLowerCase().slice(0, 2));
-  const initial: PortalSettings = {
+  let initial = $state<PortalSettings>({
     title: "",
     lang: LOCALES.find((l) => wanted.includes(l)) ?? DEFAULT_LOCALE,
     checklist: [],
@@ -39,9 +41,35 @@
     thanks: "",
     fieldLabel: "",
     logo: null,
+    twoWay: false,
+    returns: [],
     closesAt: null,
     notifyOnDelivery: false,
-  };
+  });
+
+  // "Duplicate" on an existing portal lands here with its ID.
+  const copyFrom = $derived($page.url.searchParams.get("from"));
+
+  async function prefill(userId: string) {
+    if (!copyFrom) return;
+    const opened = await openMemberPortal(userId, copyFrom, window.location.origin).catch(() => null);
+    if (!opened?.ok) return;
+    const from = opened.portal;
+    initial = {
+      title: `${from.title} (copy)`.slice(0, PORTAL_TITLE_MAX),
+      lang: from.lang,
+      checklist: from.checklist,
+      message: from.message,
+      thanks: from.thanks,
+      fieldLabel: from.fieldLabel,
+      logo: from.logo,
+      twoWay: from.twoWay,
+      // Files sent back belong to the original, as does its closing date.
+      returns: [],
+      closesAt: null,
+      notifyOnDelivery: from.notifyOnDelivery,
+    };
+  }
 
   async function load() {
     if (!auth.user) return;
@@ -59,7 +87,10 @@
       if (maxPortals === 0) phase = "no_plan";
       else if (owned >= maxPortals) phase = "full";
       else if (auth.needsVaultSetup || !(await isUnlocked(auth.user.id))) phase = "locked";
-      else phase = "ready";
+      else {
+        await prefill(auth.user.id);
+        phase = "ready";
+      }
     } catch {
       // The form still works; the server has the last word on limits.
       phase = "ready";
@@ -104,8 +135,10 @@
 
 <PageLayout width="5xl">
   <PageHeader
-    title="New portal"
-    tagline="A link where other people send you files. Set it up the way you want them to see it."
+    title={copyFrom ? "Duplicate portal" : "New portal"}
+    tagline={copyFrom
+      ? "A new portal with its own link, set up like the one you copied. Deliveries are not copied."
+      : "A link where other people send you files. Set it up the way you want them to see it."}
     back={{ href: "/dashboard/portals", label: "All portals" }}
     align="left"
   />

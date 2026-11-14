@@ -118,6 +118,8 @@
         thanks: portal.thanks,
         fieldLabel: portal.fieldLabel,
         logo: portal.logo,
+        twoWay: portal.twoWay,
+        returns: portal.returns,
         closesAt: portal.closesAt,
         notifyOnDelivery: portal.notifyOnDelivery,
       }}

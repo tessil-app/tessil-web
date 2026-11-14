@@ -141,6 +141,10 @@ export interface DepositStrings {
   closedTitle: string;
   closedBody: (title: string) => string;
   openUntil: (date: string) => string;
+  forYouHeading: (title: string) => string;
+  forYouUntil: (date: string) => string;
+  download: string;
+  downloadFailed: string;
   closedOnTitle: string;
   closedOnBody: (title: string, date: string) => string;
   footnote: (title: string) => string;
@@ -200,6 +204,10 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     closedBody: (title) =>
       `This portal has been switched off. Let ${title} know, and they can switch it back on.`,
     openUntil: (date) => `You can send files until ${date}.`,
+    forYouHeading: (title) => `Files from ${title}`,
+    forYouUntil: (date) => `Available until ${date}`,
+    download: "Download",
+    downloadFailed: "The download failed. Try again.",
     closedOnTitle: "This portal has closed",
     closedOnBody: (title, date) =>
       `It took files until ${date}. If you still need to send something, ask ${title} to open it again.`,
@@ -276,6 +284,10 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     closedBody: (title) =>
       `Dit portaal is uitgezet. Laat het ${title} weten, dan kan het weer worden aangezet.`,
     openUntil: (date) => `Je kunt bestanden versturen tot en met ${date}.`,
+    forYouHeading: (title) => `Bestanden van ${title}`,
+    forYouUntil: (date) => `Beschikbaar tot en met ${date}`,
+    download: "Downloaden",
+    downloadFailed: "Het downloaden is mislukt. Probeer het opnieuw.",
     closedOnTitle: "Dit portaal is gesloten",
     closedOnBody: (title, date) =>
       `Het nam bestanden aan tot en met ${date}. Moet je toch nog iets versturen, vraag ${title} dan om het weer open te zetten.`,

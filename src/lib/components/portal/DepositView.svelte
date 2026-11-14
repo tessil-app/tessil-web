@@ -7,6 +7,7 @@
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import DropZone from "$lib/components/DropZone.svelte";
+  import ReturnsBlock from "$lib/components/portal/ReturnsBlock.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
   import * as Frame from "$lib/components/frame";
@@ -252,6 +253,10 @@
     <p class="text-sm text-muted-foreground">{t.openUntil(closingDay)}</p>
   {/if}
 </header>
+
+{#if portal.twoWay && phase !== "done"}
+  <ReturnsBlock title={portal.title} returns={portal.returns} {locale} preview={preview !== undefined} />
+{/if}
 
 {#if phase === "done"}
   <EmptyState title={sentCount === 1 ? t.sentOne : t.sentMany(sentCount)} announce>
