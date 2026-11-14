@@ -113,7 +113,11 @@ export interface DepositStrings {
   maxTotal: (size: string) => string;
   takePhoto: string;
   filesCount: (count: number, size: string) => string;
+  senderLabel: string;
+  senderPlaceholder: string;
+  senderMissing: string;
   noteLabel: string;
+  notePlaceholderNamed: string;
   notePlaceholder: string;
   send: string;
   sendMany: (count: number) => string;
@@ -163,7 +167,11 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     maxTotal: (size) => `Up to ${size} in total`,
     takePhoto: "Take a photo",
     filesCount: (count, size) => `${count} ${count === 1 ? "file" : "files"} · ${size}`,
+    senderLabel: "Your name",
+    senderPlaceholder: "So they know who this is from",
+    senderMissing: "Fill in your name so they know who this is from.",
     noteLabel: "Note (optional)",
+    notePlaceholderNamed: "What these files are",
     notePlaceholder: "Your name, or what these files are",
     send: "Send",
     sendMany: (count) => `Send ${count} files`,
@@ -231,7 +239,11 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     maxTotal: (size) => `Maximaal ${size} in totaal`,
     takePhoto: "Foto maken",
     filesCount: (count, size) => `${count} ${count === 1 ? "bestand" : "bestanden"} · ${size}`,
+    senderLabel: "Je naam",
+    senderPlaceholder: "Zodat duidelijk is van wie dit komt",
+    senderMissing: "Vul je naam in, zodat duidelijk is van wie dit komt.",
     noteLabel: "Opmerking (optioneel)",
+    notePlaceholderNamed: "Wat deze bestanden zijn",
     notePlaceholder: "Je naam, of wat deze bestanden zijn",
     send: "Versturen",
     sendMany: (count) => `${count} bestanden versturen`,

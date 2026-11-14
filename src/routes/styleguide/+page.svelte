@@ -21,6 +21,7 @@
   import SearchField from "$lib/components/SearchField.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
+  import Switch from "$lib/components/Switch.svelte";
   import * as Table from "$lib/components/table";
   import TextInput from "$lib/components/TextInput.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
@@ -49,6 +50,7 @@
     ),
   );
   const opened = $derived(people.find((p) => p.id === openId) ?? null);
+  let switchOn = $state(true);
 </script>
 
 <Seo title="Components - Tessil" robots="noindex" />
@@ -252,6 +254,20 @@
           <Button fullWidth={false}>Copy link</Button>
         {/snippet}
       </EmptyState>
+    </section>
+
+    <section class="space-y-4">
+      {@render section(
+        "Switch",
+        "For an option that is on or off and saved with the rest of a form. Name and one line of explanation on the left, the switch on the right; anything the option needs appears below it when on.",
+      )}
+      <div class="flex items-start justify-between gap-4 rounded-lg bg-card p-4">
+        <div class="space-y-0.5">
+          <p id="sg-switch-name" class="text-sm font-medium text-foreground">Ask for their name</p>
+          <p class="text-sm text-muted-foreground">They fill in their name before sending.</p>
+        </div>
+        <Switch bind:checked={switchOn} labelledby="sg-switch-name" />
+      </div>
     </section>
 
     <section class="space-y-4">

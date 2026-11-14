@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { decodeDepositFileName, encodeDepositFileName } from "./deposit";
+import {
+  decodeDepositFileName,
+  decodeDepositNote,
+  encodeDepositFileName,
+  encodeDepositNote,
+} from "./deposit";
 import { coverageOf } from "./deposits";
 import {
   CHECKLIST_MAX_ITEMS,
@@ -124,5 +129,29 @@ describe("what a delivery covers", () => {
 
   it("has nothing missing when nothing is asked for", () => {
     expect(coverageOf([], [{ itemId: null }])).toEqual({ provided: [], missing: [] });
+  });
+});
+
+describe("the sender's name in a note", () => {
+  it("round-trips a name with and without a note", () => {
+    expect(decodeDepositNote(encodeDepositNote("Tax 2025", "A. Jansen"))).toEqual({
+      note: "Tax 2025",
+      sender: "A. Jansen",
+    });
+    expect(decodeDepositNote(encodeDepositNote("", "A. Jansen"))).toEqual({
+      note: null,
+      sender: "A. Jansen",
+    });
+  });
+
+  it("reads a note from before names existed", () => {
+    expect(decodeDepositNote("Just a note")).toEqual({ note: "Just a note", sender: null });
+    expect(decodeDepositNote("")).toEqual({ note: null, sender: null });
+  });
+
+  it("stays inside what the server stores, whatever the script", () => {
+    const stored = encodeDepositNote("\u{1F4C4}".repeat(200), "\u{1F464}".repeat(60));
+    expect(new TextEncoder().encode(stored).length).toBeLessThanOrEqual(720);
+    expect(decodeDepositNote(stored).sender).not.toBeNull();
   });
 });

@@ -19,6 +19,9 @@ import {
 } from "./keys";
 
 export const DEPOSIT_NOTE_MAX = 200;
+export const DEPOSIT_SENDER_MAX = 60;
+// The note travels encrypted in a field the server caps; this keeps it inside.
+const NOTE_FIELD_MAX_BYTES = 720;
 // Shown until the API reports the owner's real limit.
 const DEFAULT_MAX_TOTAL_SIZE = 10 * 1024 * 1024 * 1024;
 
@@ -34,6 +37,12 @@ export interface OpenedPortal {
   lang: Locale | null;
   /** What the owner asks for. Empty: anything goes. */
   checklist: ChecklistItem[];
+  /** The owner's words under the name, or empty. */
+  message: string;
+  /** The owner's words after sending, or empty. */
+  thanks: string;
+  /** The visitor must give their name. */
+  askSender: boolean;
 }
 
 export type OpenPortalResult =
@@ -74,6 +83,9 @@ export async function openPortalFromLink(
       maxTotalSize: res.maxTotalSize ?? DEFAULT_MAX_TOTAL_SIZE,
       lang: info.lang ?? null,
       checklist: info.checklist ?? [],
+      message: info.message ?? "",
+      thanks: info.thanks ?? "",
+      askSender: info.askSender === true,
     },
   };
 }
@@ -92,6 +104,25 @@ export function encodeDepositFileName(name: string, itemId: string | null): stri
 export function decodeDepositFileName(stored: string): { name: string; itemId: string | null } {
   const match = TAGGED_NAME.exec(stored);
   return match ? { name: match[2], itemId: match[1] } : { name: stored, itemId: null };
+}
+
+// The sender's name rides in the encrypted note, ahead of the same separator.
+export function encodeDepositNote(note: string, sender: string): string {
+  const name = sender.replaceAll(ITEM_SEPARATOR, "").trim().slice(0, DEPOSIT_SENDER_MAX);
+  let text = note.replaceAll(ITEM_SEPARATOR, "").trim().slice(0, DEPOSIT_NOTE_MAX);
+  const encoder = new TextEncoder();
+  const full = () => (name ? `${name}${ITEM_SEPARATOR}${text}` : text);
+  while (text.length > 0 && encoder.encode(full()).length > NOTE_FIELD_MAX_BYTES) {
+    text = text.slice(0, -1);
+  }
+  return full();
+}
+
+export function decodeDepositNote(stored: string): { note: string | null; sender: string | null } {
+  const at = stored.indexOf(ITEM_SEPARATOR);
+  const sender = at === -1 ? "" : stored.slice(0, at).trim();
+  const note = (at === -1 ? stored : stored.slice(at + 1)).trim();
+  return { note: note || null, sender: sender || null };
 }
 
 export interface DepositFileInput {
@@ -162,7 +193,7 @@ export async function sendDeposit(
   portal: OpenedPortal,
   entries: DepositFileInput[],
   note: string,
-  options: { signal?: AbortSignal; onProgress?: FileProgress } = {},
+  options: { signal?: AbortSignal; onProgress?: FileProgress; sender?: string } = {},
 ): Promise<{ transferId: string; sentAt: Date }> {
   const { signal, onProgress } = options;
   const files = entries.map((e) => e.file);
@@ -175,7 +206,7 @@ export async function sendDeposit(
   }
 
   const key = await generateKey();
-  const trimmedNote = note.trim().slice(0, DEPOSIT_NOTE_MAX);
+  const trimmedNote = encodeDepositNote(note, options.sender ?? "");
   const encryptedNote = trimmedNote ? await encryptString(trimmedNote, key) : null;
 
   let transferId: string;

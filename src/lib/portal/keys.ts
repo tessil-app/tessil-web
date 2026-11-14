@@ -26,6 +26,18 @@ const TOKEN_CONTEXT = "tessil/portal-deposit-token/v1";
 const ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
 
 export const PORTAL_TITLE_MAX = 80;
+export const PORTAL_MESSAGE_MAX = 600;
+export const PORTAL_THANKS_MAX = 300;
+// The server refuses a larger bundle.
+const BUNDLE_MAX_BYTES = 8192;
+
+/** The name, texts and list together are more than a bundle may hold. */
+export class PortalBundleTooLargeError extends Error {
+  constructor() {
+    super("That is more text than a portal can hold. Shorten the message or the list.");
+    this.name = "PortalBundleTooLargeError";
+  }
+}
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -68,6 +80,37 @@ export interface PortalPublicInfo {
   lang?: Locale;
   /** What the owner asks visitors to send. Empty or absent: anything goes. */
   checklist?: ChecklistItem[];
+  /** Shown under the name, e.g. what to send and by when. */
+  message?: string;
+  /** Shown after sending, in place of nothing. */
+  thanks?: string;
+  /** Ask the visitor for their name before they can send. */
+  askSender?: boolean;
+}
+
+/** What an owner can set on a portal. All of it lives in the public bundle. */
+export interface PortalSettings {
+  title: string;
+  lang: Locale | null;
+  checklist: ChecklistItem[];
+  message: string;
+  thanks: string;
+  askSender: boolean;
+}
+
+export function settingsOf(info: PortalPublicInfo): PortalSettings {
+  return {
+    title: info.title,
+    lang: info.lang ?? null,
+    checklist: info.checklist ?? [],
+    message: info.message ?? "",
+    thanks: info.thanks ?? "",
+    askSender: info.askSender === true,
+  };
+}
+
+function cleanText(raw: unknown, max: number): string {
+  return typeof raw === "string" ? raw.trim().slice(0, max) : "";
 }
 
 /** One thing the owner asks for, e.g. "Copy of your ID". */
@@ -138,11 +181,16 @@ export async function sealPortalBundle(
     keyVersion: info.keyVersion,
     ...(info.lang ? { lang: info.lang } : {}),
     ...(info.checklist && info.checklist.length > 0 ? { checklist: cleanChecklist(info.checklist) } : {}),
+    ...(cleanText(info.message, PORTAL_MESSAGE_MAX) ? { message: cleanText(info.message, PORTAL_MESSAGE_MAX) } : {}),
+    ...(cleanText(info.thanks, PORTAL_THANKS_MAX) ? { thanks: cleanText(info.thanks, PORTAL_THANKS_MAX) } : {}),
+    ...(info.askSender ? { askSender: true } : {}),
   });
   // Padded with spaces so the stored size does not give away the title's length.
   const raw = encoder.encode(json);
   const padded = new Uint8Array(Math.ceil(raw.length / BUNDLE_PAD) * BUNDLE_PAD).fill(0x20);
   padded.set(raw);
+  // version + iv + ciphertext + tag
+  if (1 + IV_BYTES + padded.length + 16 > BUNDLE_MAX_BYTES) throw new PortalBundleTooLargeError();
 
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const ciphertext = await crypto.subtle.encrypt(
@@ -184,6 +232,9 @@ export async function openPortalBundle(
       keyVersion?: unknown;
       lang?: unknown;
       checklist?: unknown;
+      message?: unknown;
+      thanks?: unknown;
+      askSender?: unknown;
     };
     if (
       typeof parsed.publicKey !== "string" ||
@@ -197,12 +248,17 @@ export async function openPortalBundle(
     await crypto.subtle.importKey("raw", buffer(publicKey), ECDH, true, []);
     const lang = LOCALES.find((l) => l === parsed.lang);
     const checklist = cleanChecklist(parsed.checklist);
+    const message = cleanText(parsed.message, PORTAL_MESSAGE_MAX);
+    const thanks = cleanText(parsed.thanks, PORTAL_THANKS_MAX);
     return {
       publicKey,
       title: parsed.title,
       keyVersion: parsed.keyVersion,
       ...(lang ? { lang } : {}),
       ...(checklist.length > 0 ? { checklist } : {}),
+      ...(message ? { message } : {}),
+      ...(thanks ? { thanks } : {}),
+      ...(parsed.askSender === true ? { askSender: true } : {}),
     };
   } catch {
     return null;
@@ -402,6 +458,7 @@ export async function createPortalKeys(
   title: string,
   owner: MemberVault,
   lang?: Locale,
+  extras: Pick<PortalPublicInfo, "checklist" | "message" | "thanks" | "askSender"> = {},
 ): Promise<NewPortal> {
   const id = newPortalId();
   const keyVersion = 1;
@@ -414,7 +471,7 @@ export async function createPortalKeys(
   material.set(pkcs8, LINK_KEY_BYTES);
   try {
     const [publicBundle, sealedKeys, depositToken] = await Promise.all([
-      sealPortalBundle(id, linkKey, { publicKey, title, keyVersion, lang }),
+      sealPortalBundle(id, linkKey, { ...extras, publicKey, title, keyVersion, lang }),
       keep(owner, id, keyVersion, material),
       depositTokenFor(linkKey),
     ]);
