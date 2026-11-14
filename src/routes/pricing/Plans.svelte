@@ -138,7 +138,7 @@
       </ul>
     </section>
 
-    <section class="mt-16 border-t border-border pt-16 sm:mt-24 sm:pt-24 grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+    <section id="cancel" class="mt-16 border-t border-border pt-16 sm:mt-24 sm:pt-24 scroll-mt-20 grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">About paying</h2>
       <div class="max-w-2xl space-y-6">
         <div class="divide-y divide-border border-y border-border text-base">
