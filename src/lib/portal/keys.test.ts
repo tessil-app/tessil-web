@@ -282,18 +282,39 @@ describe("portal options", () => {
     expect(info).not.toHaveProperty("fieldLabel");
   });
 
-  it("refuses more text than the server stores", async () => {
+  it("holds the longest list and texts together with a full-size logo", async () => {
     const owner = await member("owner-1");
     const checklist = Array.from({ length: 20 }, (_, i) => ({
       id: `item${String(i).padStart(2, "0")}`,
       label: "\u6587".repeat(80),
     }));
-    await expect(
-      createPortalKeys("T", owner, undefined, {
-        checklist,
-        message: "\u6587".repeat(600),
-        thanks: "\u6587".repeat(300),
-      }),
-    ).rejects.toThrow(/more text/);
+    const portal = await createPortalKeys("\u6587".repeat(80), owner, undefined, {
+      checklist,
+      message: "\u6587".repeat(600),
+      thanks: "\u6587".repeat(300),
+      fieldLabel: "\u6587".repeat(40),
+      logo: { type: "image/webp", data: "A".repeat(Math.ceil((16 * 1024) / 3) * 4) },
+    });
+    expect(portal.publicBundle.length).toBeLessThanOrEqual(32 * 1024);
+    const info = await openPortalBundle(portal.id, portal.linkKey, portal.publicBundle);
+    expect(info?.checklist).toHaveLength(20);
+    expect(info?.logo?.data.length).toBeGreaterThan(21_000);
+  });
+
+  it("carries a small logo and drops anything that is not a known bitmap", async () => {
+    const owner = await member("owner-1");
+    const logo = { type: "image/png" as const, data: btoa("not really a png") };
+    const portal = await createPortalKeys("T", owner, undefined, { logo });
+    const info = await openPortalBundle(portal.id, portal.linkKey, portal.publicBundle);
+    expect(info?.logo).toEqual(logo);
+
+    for (const bad of [
+      { type: "image/svg+xml", data: btoa("<svg/>") },
+      { type: "image/png", data: "not base64!" },
+      { type: "image/png", data: "A".repeat(30_000) },
+    ]) {
+      const made = await createPortalKeys("T", owner, undefined, { logo: bad as never });
+      expect(await openPortalBundle(made.id, made.linkKey, made.publicBundle)).not.toHaveProperty("logo");
+    }
   });
 });

@@ -4,6 +4,7 @@
 
   import { beforeNavigate } from "$app/navigation";
   import Alert from "$lib/components/Alert.svelte";
+  import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
   import DepositView from "$lib/components/portal/DepositView.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
@@ -24,8 +25,11 @@
     PORTAL_TITLE_MAX,
     newChecklistItemId,
     type ChecklistItem,
+    logoSrc,
+    type PortalLogo,
     type PortalSettings,
   } from "$lib/portal/keys";
+  import { prepareLogo } from "$lib/portal/logo";
   import { cn } from "$lib/utils";
   import { untrack } from "svelte";
 
@@ -37,9 +41,11 @@
     cancelHref: string;
     /** Most that one delivery may hold on the owner's plan, for the preview. */
     maxTotalSize?: number;
+    /** The plan includes a logo on the upload page. */
+    canBrand?: boolean;
   }
 
-  let { initial, mode, onSave, cancelHref, maxTotalSize = 0 }: Props = $props();
+  let { initial, mode, onSave, cancelHref, maxTotalSize = 0, canBrand = false }: Props = $props();
 
   const start = untrack(() => initial);
   let title = $state(start.title);
@@ -51,6 +57,30 @@
   let thanks = $state(start.thanks);
   let fieldOn = $state(start.fieldLabel.length > 0);
   let fieldLabel = $state(start.fieldLabel);
+  let logoOn = $state(start.logo !== null);
+  let logo = $state<PortalLogo | null>(start.logo);
+  let logoError = $state<string | null>(null);
+  let logoBusy = $state(false);
+  let logoInput = $state<HTMLInputElement | null>(null);
+  // A logo set on a higher plan stays and can be removed, not replaced.
+  const brandLocked = $derived(!canBrand && start.logo === null);
+
+  async function pickLogo(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    logoBusy = true;
+    logoError = null;
+    try {
+      logo = await prepareLogo(file);
+    } catch (err) {
+      logoError = err instanceof Error ? err.message : "That image could not be used.";
+    } finally {
+      logoBusy = false;
+    }
+  }
+
   let closeOn = $state(start.closesAt !== null);
   // The day in the owner's own time zone; the portal closes when it ends.
   let closeDay = $state(start.closesAt ? dayOf(new Date(start.closesAt)) : "");
@@ -82,6 +112,7 @@
     message: messageOn ? message.trim() : "",
     thanks: thanksOn ? thanks.trim() : "",
     fieldLabel: fieldOn ? fieldLabel.trim() || depositStrings[lang].fieldDefault : "",
+    logo: logoOn ? logo : null,
     closesAt: closeOn ? endOfDay(closeDay) : null,
     notifyOnDelivery: notify,
   });
@@ -142,15 +173,30 @@
     thanks: settings.thanks,
     fieldLabel: settings.fieldLabel,
     closesAt: settings.closesAt,
+    logo: settings.logo,
   });
 
   const card = "rounded-lg bg-card p-4 sm:p-5";
 </script>
 
-{#snippet option(id: string, name: string, about: string, on: boolean, set: (v: boolean) => void)}
+{#snippet option(
+  id: string,
+  name: string,
+  about: string,
+  on: boolean,
+  set: (v: boolean) => void,
+  locked: boolean = false,
+)}
   <div class="flex items-start justify-between gap-4">
     <div class="min-w-0 space-y-0.5">
-      <p id="{id}-name" class="text-sm font-medium text-foreground">{name}</p>
+      <p id="{id}-name" class="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
+        {name}
+        {#if locked}
+          <a href="/pricing" class="focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-full">
+            <Badge tone="info">Max plan</Badge>
+          </a>
+        {/if}
+      </p>
       <p id="{id}-about" class="text-sm text-muted-foreground">{about}</p>
     </div>
     <Switch
@@ -158,7 +204,7 @@
       onChange={set}
       labelledby="{id}-name"
       describedby="{id}-about"
-      disabled={isSaving}
+      disabled={isSaving || locked}
     />
   </div>
 {/snippet}
@@ -332,6 +378,62 @@
             onfocus={() => (view = "sent")}
             disabled={isSaving}
           />
+        </Reveal>
+      </div>
+
+      <div class="border-t border-border pt-5">
+        {@render option(
+          "opt-logo",
+          "Your logo",
+          "Shown above the name on the upload page. Encrypted like the name: we can't see it.",
+          logoOn,
+          (v) => {
+            logoOn = v;
+            if (v) view = "form";
+          },
+          brandLocked,
+        )}
+        <Reveal open={logoOn}>
+          <input
+            bind:this={logoInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            class="hidden"
+            onchange={pickLogo}
+          />
+          <div class="flex flex-wrap items-center gap-3">
+            {#if logo}
+              <span class="flex h-14 items-center rounded-md border border-border bg-background px-3">
+                <img src={logoSrc(logo)} alt="Your logo" class="max-h-9 max-w-[140px] object-contain" />
+              </span>
+            {/if}
+            {#if canBrand || !logo}
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth={false}
+                onclick={() => logoInput?.click()}
+                disabled={isSaving || logoBusy || !canBrand}
+              >
+                {logoBusy ? "Preparing…" : logo ? "Replace" : "Choose image"}
+              </Button>
+            {/if}
+            {#if logo}
+              <TextLink
+                onclick={() => (logo = null)}
+                disabled={isSaving}
+                class="text-sm text-muted-foreground"
+              >
+                Remove
+              </TextLink>
+            {/if}
+          </div>
+          <p class="mt-2 text-xs text-muted-foreground">
+            PNG, JPG or WebP. It is made smaller here in your browser before it is stored.
+          </p>
+          {#if logoError}
+            <p role="alert" class="mt-1 text-xs text-destructive-foreground">{logoError}</p>
+          {/if}
         </Reveal>
       </div>
 

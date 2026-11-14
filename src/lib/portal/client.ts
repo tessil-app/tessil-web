@@ -134,6 +134,7 @@ export async function createMyPortal(
     message: settings.message,
     thanks: settings.thanks,
     fieldLabel: settings.fieldLabel,
+    ...(settings.logo ? { logo: settings.logo } : {}),
   });
   const created = await api.createPortal({
     id: made.id,

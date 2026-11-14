@@ -30,7 +30,41 @@ export const PORTAL_MESSAGE_MAX = 600;
 export const PORTAL_THANKS_MAX = 300;
 export const PORTAL_FIELD_LABEL_MAX = 40;
 // The server refuses a larger bundle.
-const BUNDLE_MAX_BYTES = 8192;
+const BUNDLE_MAX_BYTES = 32 * 1024;
+
+export const PORTAL_LOGO_MAX_BYTES = 16 * 1024;
+export const LOGO_TYPES = ["image/webp", "image/png", "image/jpeg"] as const;
+export type LogoType = (typeof LOGO_TYPES)[number];
+
+/** A small image, already shrunk and re-encoded by the owner's browser. */
+export interface PortalLogo {
+  type: LogoType;
+  /** Standard base64. */
+  data: string;
+}
+
+/** What an `<img>` can show. Only ever one of the bitmap types above. */
+export function logoSrc(logo: PortalLogo): string {
+  return `data:${logo.type};base64,${logo.data}`;
+}
+
+const LOGO_DATA_MAX_CHARS = Math.ceil(PORTAL_LOGO_MAX_BYTES / 3) * 4;
+
+/** Keeps a logo only when it is a bitmap of a known type and size. */
+function cleanLogo(raw: unknown): PortalLogo | null {
+  const logo = raw as { type?: unknown; data?: unknown } | null | undefined;
+  const type = LOGO_TYPES.find((t) => t === logo?.type);
+  if (
+    !type ||
+    typeof logo?.data !== "string" ||
+    logo.data.length === 0 ||
+    logo.data.length > LOGO_DATA_MAX_CHARS ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(logo.data)
+  ) {
+    return null;
+  }
+  return { type, data: logo.data };
+}
 
 /** The name, texts and list together are more than a bundle may hold. */
 export class PortalBundleTooLargeError extends Error {
@@ -87,6 +121,8 @@ export interface PortalPublicInfo {
   thanks?: string;
   /** One thing the visitor must fill in, named by the owner, e.g. "Your name". */
   fieldLabel?: string;
+  /** Shown above the name. */
+  logo?: PortalLogo;
 }
 
 /**
@@ -101,6 +137,7 @@ export interface PortalSettings {
   thanks: string;
   /** Empty: no extra field. */
   fieldLabel: string;
+  logo: PortalLogo | null;
   /** When new deliveries stop, as an ISO moment. Null: no closing date. */
   closesAt: string | null;
   /** Email the members when files arrive. */
@@ -122,6 +159,7 @@ export function settingsOf(
     message: info.message ?? "",
     thanks: info.thanks ?? "",
     fieldLabel: info.fieldLabel ?? "",
+    logo: info.logo ?? null,
   };
 }
 
@@ -202,6 +240,7 @@ export async function sealPortalBundle(
     ...(cleanText(info.fieldLabel, PORTAL_FIELD_LABEL_MAX)
       ? { fieldLabel: cleanText(info.fieldLabel, PORTAL_FIELD_LABEL_MAX) }
       : {}),
+    ...(cleanLogo(info.logo) ? { logo: cleanLogo(info.logo) } : {}),
   });
   // Padded with spaces so the stored size does not give away the title's length.
   const raw = encoder.encode(json);
@@ -253,6 +292,7 @@ export async function openPortalBundle(
       message?: unknown;
       thanks?: unknown;
       fieldLabel?: unknown;
+      logo?: unknown;
     };
     if (
       typeof parsed.publicKey !== "string" ||
@@ -278,6 +318,7 @@ export async function openPortalBundle(
       ...(message ? { message } : {}),
       ...(thanks ? { thanks } : {}),
       ...(fieldLabel ? { fieldLabel } : {}),
+      ...(cleanLogo(parsed.logo) ? { logo: cleanLogo(parsed.logo)! } : {}),
     };
   } catch {
     return null;
@@ -477,7 +518,7 @@ export async function createPortalKeys(
   title: string,
   owner: MemberVault,
   lang?: Locale,
-  extras: Pick<PortalPublicInfo, "checklist" | "message" | "thanks" | "fieldLabel"> = {},
+  extras: Pick<PortalPublicInfo, "checklist" | "message" | "thanks" | "fieldLabel" | "logo"> = {},
 ): Promise<NewPortal> {
   const id = newPortalId();
   const keyVersion = 1;
