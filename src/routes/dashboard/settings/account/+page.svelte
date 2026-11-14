@@ -7,6 +7,7 @@
   import TextInput from "$lib/components/TextInput.svelte";
   import { api } from "$lib/api/client";
   import { auth } from "$lib/stores/auth.svelte";
+  import PlanRow from "./PlanRow.svelte";
 
   let isExporting = $state(false);
   let exportError = $state<string | null>(null);
@@ -64,6 +65,8 @@
     }
   }
 </script>
+
+<PlanRow />
 
 <DividerRow
   title="Your data"
