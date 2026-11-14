@@ -22,6 +22,16 @@
   let busy = $state<PlanId | null>(null);
   let message = $state<string | null>(null);
 
+  // Whether the account's plan comes from a subscription that can be managed.
+  let billed = $state<boolean | null>(null);
+  $effect(() => {
+    if (!auth.user || auth.user.tier === "free") return;
+    api
+      .getBillingStatus()
+      .then(({ subscription }) => (billed = subscription !== null && subscription.canceledAt === null))
+      .catch(() => (billed = true));
+  });
+
   async function choose(plan: "pro" | "max") {
     if (busy) return;
     if (!auth.user) {
@@ -118,7 +128,7 @@
       <Alert tone="warning" class="mx-auto mb-6 max-w-xl">{message}</Alert>
     {/if}
 
-    <PlanCards {cycle} current={auth.user?.tier ?? null} {busy} onChoose={choose} onManage={manage} />
+    <PlanCards {cycle} current={auth.user?.tier ?? null} {billed} {busy} onChoose={choose} onManage={manage} />
 
     <p class="mt-5 text-center text-sm text-muted-foreground">
       Without an account you can still send up to 500 MB. Prices include tax where it applies.

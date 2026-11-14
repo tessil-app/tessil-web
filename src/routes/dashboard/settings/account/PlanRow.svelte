@@ -33,13 +33,16 @@
   });
 
   const sub = $derived(status?.subscription ?? null);
-  const paid = $derived(status !== null && status.tier !== "free" && sub !== null);
+  const onPaidPlan = $derived(status !== null && status.tier !== "free");
+  const paid = $derived(onPaidPlan && sub !== null && sub.canceledAt === null);
   const planName = $derived(PLANS.find((p) => p.id === status?.tier)?.name ?? "Free");
-  const visible = $derived(paid || PORTALS_ANNOUNCED || arrival !== null);
+  const visible = $derived(onPaidPlan || PORTALS_ANNOUNCED || arrival !== null);
 
   const body = $derived.by(() => {
     // Not "Free" in the moment between paying and the plan arriving.
     if (!status || arrival === "waiting") return "";
+    // A plan set by hand: nothing to renew or manage.
+    if (onPaidPlan && !paid) return `${planName}. Given to your account. Nothing is billed.`;
     if (!paid || !sub) {
       return "Free. A plan adds portals: links where other people send you files.";
     }
@@ -97,7 +100,7 @@
           {/if}
           Manage plan
         </Button>
-      {:else if status && PORTALS_ANNOUNCED && arrival === null}
+      {:else if status && !onPaidPlan && PORTALS_ANNOUNCED && arrival === null}
         <Button variant="secondary" fullWidth={false} href="/pricing">See plans</Button>
       {/if}
     {/snippet}
