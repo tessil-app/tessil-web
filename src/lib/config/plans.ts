@@ -40,14 +40,11 @@ export const PLANS: Plan[] = [
     price: { monthly: 9, annual: 90 },
     lead: "Everything in Free, and:",
     features: [
-      "3 portals",
+      "3 portals, each with its own checklist and texts",
       "20 GB of storage",
-      "Deliveries kept for 30 days",
+      "Transfers and deliveries kept up to 30 days",
       "Send up to 5 GB per file",
-      "Links that last up to 30 days",
       "Share a portal with one person",
-      "Your own message, checklist and closing date",
-      "An email when files arrive",
     ],
   },
   {
@@ -59,11 +56,96 @@ export const PLANS: Plan[] = [
     features: [
       "10 portals",
       "100 GB of storage",
-      "Deliveries kept for 90 days",
-      "Links that last up to 90 days",
-      "Your logo on the upload page",
-      "Send files back through a portal",
-      "A password on a portal",
+      "Transfers and deliveries kept up to 90 days",
+      "Your logo, a password and files going back",
+    ],
+  },
+];
+
+/** A cell in the comparison: a limit in words, or simply included or not. */
+export type PlanValue = string | boolean;
+
+export interface ComparisonRow {
+  label: string;
+  /** A short clarification under the label. */
+  note?: string;
+  values: Record<PlanId, PlanValue>;
+}
+
+export interface ComparisonGroup {
+  title: string;
+  rows: ComparisonRow[];
+}
+
+const all = (value: PlanValue): Record<PlanId, PlanValue> => ({ free: value, pro: value, max: value });
+const paid = { free: false, pro: true, max: true } as const;
+const maxOnly = { free: false, pro: false, max: true } as const;
+
+// Every limit per plan. Same source as the lists above: the API's tiers.
+export const COMPARISON: ComparisonGroup[] = [
+  {
+    title: "Sending",
+    rows: [
+      { label: "Size of one transfer", values: { free: "1 GB", pro: "10 GB", max: "10 GB" } },
+      { label: "Size of one file", values: { free: "1 GB", pro: "5 GB", max: "5 GB" } },
+      {
+        label: "How long a link can last",
+        note: "You pick per transfer, from one hour up to this.",
+        values: { free: "3 days", pro: "30 days", max: "90 days" },
+      },
+      {
+        label: "Sent per month",
+        note: "On the paid plans a fair-use ceiling; storage is the limit that counts.",
+        values: { free: "2 GB", pro: "100 GB", max: "500 GB" },
+      },
+      { label: "Transfers per day", values: { free: "20", pro: "100", max: "100" } },
+      { label: "Password and download limit on a link", values: all(true) },
+      { label: "Dashboard of what you sent", values: all(true) },
+    ],
+  },
+  {
+    title: "Receiving through portals",
+    rows: [
+      { label: "Portals", values: { free: false, pro: "3", max: "10" } },
+      {
+        label: "Storage",
+        note: "Everything you hold at one time: deliveries and your own transfers.",
+        values: { free: false, pro: "20 GB", max: "100 GB" },
+      },
+      { label: "How long a delivery is kept", values: { free: false, pro: "30 days", max: "90 days" } },
+      { label: "Size of one delivery", values: { free: false, pro: "10 GB", max: "10 GB" } },
+      { label: "Checklist of what you ask for", values: paid },
+      { label: "Confirmation for the sender, record for you", values: paid },
+      { label: "Share a portal with one person", values: paid },
+      {
+        label: "Be invited to someone else's portal",
+        values: all(true),
+      },
+    ],
+  },
+  {
+    title: "Options per portal",
+    rows: [
+      { label: "Welcome message and thank-you note", values: paid },
+      { label: "A field of your own", note: "A name, client number or reference.", values: paid },
+      { label: "Closing date", values: paid },
+      { label: "Email when files arrive", values: paid },
+      { label: "Duplicate a portal", values: paid },
+      { label: "Your logo on the page", values: maxOnly },
+      {
+        label: "Send files back",
+        note: "Kept as long as your links can last.",
+        values: maxOnly,
+      },
+      { label: "Password on a portal", values: maxOnly },
+    ],
+  },
+  {
+    title: "On every plan",
+    rows: [
+      { label: "End-to-end encryption", note: "Files, names, titles and notes.", values: all(true) },
+      { label: "No tracking, no ads, no data selling", values: all(true) },
+      { label: "Vault with passkeys and a recovery phrase", values: all(true) },
     ],
   },
 ];
