@@ -21,6 +21,20 @@
   let head = $state<HTMLElement | null>(null);
   let headHidden = $state(false);
   let tip = $state<{ x: number; y: number; name: string } | null>(null);
+  // The row and column under the pointer, lit up as a cross.
+  let over = $state<{ row: string | null; plan: string | null }>({ row: null, plan: null });
+
+  const BASE = "bg-primary/[0.04]";
+  const LIT = "bg-primary/[0.09]";
+  const CROSS = "bg-primary/[0.17]";
+
+  function shade(planId: PlanId, planName: string, row: string | null): string {
+    const inColumn = over.plan === planName;
+    const inRow = row !== null && over.row === row;
+    if (inColumn && inRow) return CROSS;
+    if (inColumn || inRow) return LIT;
+    return planId === "pro" ? BASE : "";
+  }
 
   $effect(() => {
     if (!head || typeof IntersectionObserver === "undefined") return;
@@ -34,8 +48,16 @@
 
   function track(e: PointerEvent) {
     if (e.pointerType !== "mouse") return;
-    const cell = (e.target as HTMLElement).closest<HTMLElement>("td[data-plan]");
+    const target = e.target as HTMLElement;
+    const cell = target.closest<HTMLElement>("td[data-plan]");
+    const row = target.closest<HTMLElement>("tr[data-row]");
+    over = { row: row?.dataset.row ?? null, plan: cell?.dataset.plan ?? null };
     tip = cell ? { x: e.clientX, y: e.clientY, name: cell.dataset.plan ?? "" } : null;
+  }
+
+  function leave() {
+    tip = null;
+    over = { row: null, plan: null };
   }
 </script>
 
@@ -55,7 +77,7 @@
   <table
     class="w-full table-fixed border-collapse text-[0.8125rem] sm:text-sm"
     onpointermove={track}
-    onpointerleave={() => (tip = null)}
+    onpointerleave={leave}
   >
     <caption class="sr-only">What each plan includes</caption>
     <colgroup>
@@ -71,8 +93,9 @@
           <th
             scope="col"
             class={cn(
-              "px-1 py-3 text-center text-sm font-semibold text-foreground sm:px-3 sm:text-base",
-              plan.id === "pro" && "rounded-t-lg bg-primary/[0.04]",
+              "rounded-t-lg px-1 py-3 text-center text-sm font-semibold transition-colors duration-150 ease-out sm:px-3 sm:text-base",
+              over.plan === plan.name ? "text-primary" : "text-foreground",
+              shade(plan.id, plan.name, null),
             )}
           >
             {plan.name}
@@ -98,12 +121,21 @@
             {group.title}
           </th>
           {#each PLANS as plan (plan.id)}
-            <td class={plan.id === "pro" ? "bg-primary/[0.04]" : ""}></td>
+            <td
+              data-plan={plan.name}
+              class={cn("transition-colors duration-150 ease-out", shade(plan.id, plan.name, null))}
+            ></td>
           {/each}
         </tr>
         {#each group.rows as row (row.label)}
-          <tr class="border-b border-border">
-            <th scope="row" class="py-3 pr-2 text-left font-normal text-foreground break-words sm:pr-4">
+          <tr class="border-b border-border" data-row={row.label}>
+            <th
+              scope="row"
+              class={cn(
+                "py-3 pr-2 text-left font-normal text-foreground break-words transition-colors duration-150 ease-out sm:pr-4",
+                over.row === row.label && LIT,
+              )}
+            >
               {row.label}
               {#if row.note}
                 <span class="block text-xs text-muted-foreground">{row.note}</span>
@@ -113,8 +145,8 @@
               <td
                 data-plan={plan.name}
                 class={cn(
-                  "px-1 py-3 text-center align-middle text-foreground sm:px-3",
-                  plan.id === "pro" && "bg-primary/[0.04]",
+                  "px-1 py-3 text-center align-middle text-foreground transition-colors duration-150 ease-out sm:px-3",
+                  shade(plan.id, plan.name, row.label),
                 )}
               >
                 {@render cell(row.values[plan.id], plan.name)}
