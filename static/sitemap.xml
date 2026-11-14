@@ -31,8 +31,14 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tessil.app/portals</loc>
+    <lastmod>2026-11-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://tessil.app/pricing</loc>
-    <lastmod>2026-07-25</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
