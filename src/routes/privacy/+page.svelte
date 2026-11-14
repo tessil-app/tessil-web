@@ -1,9 +1,7 @@
 <script lang="ts">
-  import * as Frame from "$lib/components/frame";
-  import PageHeader from "$lib/components/PageHeader.svelte";
-  import PageLayout from "$lib/components/PageLayout.svelte";
+  import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
 </script>
 
 <Seo
@@ -12,17 +10,12 @@
   path="/privacy"
 />
 
-<PageLayout width="3xl">
-  <PageHeader
-    title="Privacy Policy"
-    tagline="End-to-end encrypted file transfer."
-  />
-
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 12, 2026</p>
-
+<ProsePage
+  title="Privacy Policy"
+  tagline="End-to-end encrypted file transfer."
+  updated="November 13, 2026"
+  current="privacy"
+>
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Introduction</h2>
             <p class="text-muted-foreground">
@@ -73,11 +66,16 @@
               </li>
               <li>
                 <strong>Sign-in records.</strong> Hashed sign-in tokens (we store only the SHA-256 hash, never the
-                token itself), the IP address and browser user-agent of each sign-in attempt and active session, and
-                session expiry timestamps.
+                token itself), the browser user-agent of each sign-in attempt and active session, the country and
+                network operator derived from your IP address at that moment, and session expiry timestamps. We
+                do not store the IP address itself; to recognise the same connection again we keep a keyed
+                fingerprint of it that cannot be turned back into the address and becomes useless once its key
+                is deleted.
               </li>
               <li>
-                <strong>Account tier.</strong> Currently always <code>free</code>.
+                <strong>Account tier.</strong> Which plan the account is on.{#if PORTALS_ANNOUNCED}
+                  {" "}For a paid plan, our payment provider tells us that a subscription exists and
+                  when it renews or ends. We never receive your card details.{/if}
               </li>
               <li>
                 <strong>Ownership link on transfers.</strong> Transfers you create while signed in are tagged with
@@ -89,12 +87,48 @@
               never reaches our servers - signed in or not.
             </p>
 
+            {#if PORTALS_ANNOUNCED}
+              <h3 class="text-lg font-medium text-foreground">Portals</h3>
+              <p class="text-muted-foreground">
+                A portal is a link through which other people send files to an account holder.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li>
+                  <strong>If you own a portal.</strong> We store that it exists and belongs to your
+                  account, whether it is switched on, and when you last opened it. Its name, its
+                  language and the list of documents you ask for are stored only in encrypted form
+                  that we cannot read.
+                </li>
+                <li>
+                  <strong>If you send files through a portal.</strong> You need no account and we do
+                  not ask who you are. We store the encrypted files, their encrypted names, your
+                  encrypted note if you add one, their sizes and when they arrived. Only the
+                  portal's owner, and one person they may share it with, can decrypt them.
+                </li>
+                <li>
+                  <strong>If you are invited to a portal.</strong> The owner gives us your email
+                  address so we can send you the invitation and match it to your account. We keep
+                  it with the invitation until it is accepted, declined or withdrawn.
+                </li>
+              </ul>
+              <p class="text-muted-foreground">
+                What people send through a portal may contain personal data about them or others.
+                We cannot see it. The portal's owner decides what to ask for and what to do with
+                it, and is responsible for that under data protection law; we store it on their
+                behalf.
+              </p>
+            {/if}
+
             <h3 class="text-lg font-medium text-foreground">2.3 Security and Audit Data</h3>
             <p class="text-muted-foreground">
               To operate the service, prevent abuse, and meet legal recordkeeping needs, we process:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>IP addresses (for rate limiting and abuse prevention)</li>
+              <li>
+                Your IP address, in passing only: each request's address is turned into a keyed fingerprint for
+                rate limiting and abuse prevention. The key rotates and the address itself is not stored in our
+                database
+              </li>
               <li>
                 Authentication audit events (sign-in requests, sign-in successes, session revocations, transfer
                 deletions, and account deletions) - stored for up to 90 days
@@ -152,6 +186,16 @@
             <h2 class="text-xl font-semibold text-foreground">5. Data Retention</h2>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li><strong>Uploaded files:</strong> Automatically deleted after 1, 6, 12, 24, or 72 hours (your choice)</li>
+              {#if PORTALS_ANNOUNCED}
+                <li>
+                  <strong>Files sent through a portal:</strong> Automatically deleted 30 days after they
+                  arrive, or 90 days on the larger plan. The portal's owner can delete them sooner.
+                  Deleting a portal or its owner's account deletes them as well.
+                </li>
+                <li>
+                  <strong>Portal invitations:</strong> Deleted when accepted, declined or withdrawn.
+                </li>
+              {/if}
               <li>
                 <strong>Account record:</strong> Retained as long as your account exists. Deleted immediately and
                 irreversibly when you delete your account from the dashboard.
@@ -231,9 +275,17 @@
               </li>
               <li>
                 <strong>Scaleway Transactional Email (France):</strong> Sends one-time sign-in
-                links and account notifications. Receives your email address and the message
+                links and account notifications{#if PORTALS_ANNOUNCED}, including invitations to
+                  a portal{/if}. Receives your email address and the message
                 contents. Transactional mail only, never marketing.
               </li>
+              {#if PORTALS_ANNOUNCED}
+                <li>
+                  <strong>Polar:</strong> Sells the paid plans as merchant of record. If you buy a
+                  plan, Polar receives your email address and your payment details and issues your
+                  invoice. We receive only whether a subscription exists and when it renews or ends.
+                </li>
+              {/if}
               <li>
                 <strong>Cloudflare:</strong> Encrypted file storage (R2, restricted to the EU
                 jurisdiction so objects stay in EU data centres), plus CDN and DDoS protection in
@@ -269,9 +321,4 @@
               <a href="mailto:privacy@tessil.app" class="text-primary underline underline-offset-2">privacy@tessil.app</a>
             </p>
           </section>
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
-
-  <SiteFooter current="privacy" />
-</PageLayout>
+</ProsePage>

@@ -872,10 +872,13 @@ class ApiClient {
     return this.request("/api/billing/status");
   }
 
-  async createBillingCheckout(cycle: "monthly" | "annual"): Promise<{ url: string }> {
+  async createBillingCheckout(
+    cycle: "monthly" | "annual",
+    plan: "pro" | "max" = "pro",
+  ): Promise<{ url: string }> {
     return this.request("/api/billing/checkout", {
       method: "POST",
-      body: JSON.stringify({ cycle }),
+      body: JSON.stringify({ cycle, plan }),
     });
   }
 

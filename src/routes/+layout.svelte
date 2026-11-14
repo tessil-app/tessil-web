@@ -25,6 +25,10 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import Alert from "$lib/components/Alert.svelte";
   import IconGearRegular from "phosphor-icons-svelte/IconGearRegular.svelte";
+  import IconListRegular from "phosphor-icons-svelte/IconListRegular.svelte";
+  import IconTrayRegular from "phosphor-icons-svelte/IconTrayRegular.svelte";
+  import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
   import IconLockOpenRegular from "phosphor-icons-svelte/IconLockOpenRegular.svelte";
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
@@ -73,12 +77,10 @@
 
   // Dark mode is scoped to /dashboard; afterNavigate (not $effect) avoids the mode-watcher reactive loop.
   const isApp = $derived($page.url.pathname.startsWith("/dashboard"));
-  // Home and the download page run the wide (max-w-7xl) picture-frame layout;
-  // the nav matches them so the wordmark/menu align with the content edges.
-  // Everywhere else (dashboard + narrow content pages) stays compact at max-w-5xl.
-  const isWideNav = $derived(
-    $page.url.pathname === "/" || $page.url.pathname.startsWith("/d/"),
-  );
+  // A new page has its own sections; wait for it to render, then look again.
+  afterNavigate(() => {
+    requestAnimationFrame(readHeaderTone);
+  });
 
   afterNavigate(({ to }) => {
     const path = to?.url.pathname ?? "/";
@@ -87,11 +89,62 @@
     }
   });
 
+  // For plans that include portals, and accounts someone shared one with.
+  const showPortals = $derived(
+    auth.user?.tier === "pro" || auth.user?.tier === "max" || hasSharedPortals,
+  );
+
+  // Signed-out visitors get the pages that help them decide. Signed-in
+  // people get their own pages instead; these stay in the footer for them.
+  const publicLinks = [
+    ...(PORTALS_ANNOUNCED ? [{ href: "/portals", label: "Portals" }] : []),
+    { href: "/pricing", label: "Pricing" },
+    { href: "/security", label: "Security" },
+  ];
+
+  // Header links are plain text; the current page is the darker one.
   const navLinkBase =
-    "px-3 py-2 rounded-md focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-  const navLinkInactive =
-    "text-muted-foreground hover:text-foreground hover:bg-accent";
-  const navLinkActive = "bg-accent text-foreground";
+    "px-3 py-2 rounded-md transition-colors duration-150 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  const navLinkInactive = "text-muted-foreground hover:text-foreground";
+  const navLinkActive = "text-foreground font-medium";
+
+  // The glass header takes the tone of what is under it. A dark section
+  // marks itself with data-header-tone="dark"; while one sits behind the
+  // header, the header uses the dark palette.
+  let isDarkTop = $state(false);
+  // Nothing has scrolled under the header yet.
+  let atTop = $state(true);
+  let headerEl = $state<HTMLElement | null>(null);
+
+  function readHeaderTone() {
+    if (!headerEl) return;
+    atTop = window.scrollY < 4;
+    const line = headerEl.getBoundingClientRect().bottom / 2;
+    isDarkTop = [...document.querySelectorAll<HTMLElement>('[data-header-tone="dark"]')].some((el) => {
+      const r = el.getBoundingClientRect();
+      return r.top <= line && r.bottom > line;
+    });
+  }
+
+  $effect(() => {
+    if (!headerEl) return;
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        readHeaderTone();
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    readHeaderTone();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  });
 
   function isActive(path: string, exact = false) {
     const current = $page.url.pathname;
@@ -205,11 +258,24 @@
   Skip to main content
 </a>
 <div class="min-h-screen bg-background text-foreground">
-  <header class="sticky top-0 z-40 border-b border-border/40 bg-background/40 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/30">
+  <header
+    bind:this={headerEl}
+    class={cn(
+      "sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200 ease-out",
+      // On a dark page the bar is invisible until something scrolls under
+      // it. A blur at the very top would pull in the light page edge and
+      // show as a pale strip.
+      isDarkTop
+        ? atTop
+          ? "dark border-transparent bg-transparent"
+          : "dark border-white/10 bg-[#07080d]/55 backdrop-blur-2xl backdrop-saturate-150"
+        : "border-border/40 bg-background/40 supports-[backdrop-filter]:bg-background/30 backdrop-blur-2xl backdrop-saturate-150",
+    )}
+  >
     <div
       class={cn(
         "mx-auto py-3 flex items-center justify-between gap-4",
-        isWideNav ? "max-w-7xl px-4 sm:px-6" : "max-w-5xl px-4",
+        "max-w-6xl px-4 sm:px-6",
       )}
     >
       <a
@@ -226,16 +292,15 @@
             <a
               href="/dashboard"
               aria-current={isActive("/dashboard", true) ? "page" : undefined}
-              class={cn(navLinkBase, isActive("/dashboard", true) ? navLinkActive : navLinkInactive)}
+              class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard", true) ? navLinkActive : navLinkInactive)}
             >
               Dashboard
             </a>
-            <!-- For plans that include portals, and accounts someone shared one with. -->
-            {#if auth.user.tier === "pro" || auth.user.tier === "max" || hasSharedPortals}
+            {#if showPortals}
               <a
                 href="/dashboard/portals"
                 aria-current={isActive("/dashboard/portals") ? "page" : undefined}
-                class={cn(navLinkBase, isActive("/dashboard/portals") ? navLinkActive : navLinkInactive)}
+                class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard/portals") ? navLinkActive : navLinkInactive)}
               >
                 Portals
               </a>
@@ -262,6 +327,34 @@
                   </p>
                   <p class="text-sm text-foreground truncate" title={email}>{email}</p>
                 </div>
+                <!-- On a phone the page links live here; there is no room for them beside the logo. -->
+                <DropdownMenuItem
+                  href="/"
+                  onSelect={() => { goto("/"); close(); }}
+                  class="sm:hidden"
+                >
+                  <IconUploadRegular class="size-4 opacity-70" />
+                  New transfer
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  href="/dashboard"
+                  onSelect={() => { goto("/dashboard"); close(); }}
+                  class={cn("sm:hidden", isActive("/dashboard", true) && "bg-accent")}
+                >
+                  <IconListRegular class="size-4 opacity-70" />
+                  Dashboard
+                </DropdownMenuItem>
+                {#if showPortals}
+                  <DropdownMenuItem
+                    href="/dashboard/portals"
+                    onSelect={() => { goto("/dashboard/portals"); close(); }}
+                    class={cn("sm:hidden", isActive("/dashboard/portals") && "bg-accent")}
+                  >
+                    <IconTrayRegular class="size-4 opacity-70" />
+                    Portals
+                  </DropdownMenuItem>
+                {/if}
+                <div class="my-1 h-px bg-border sm:hidden" role="separator"></div>
                 <DropdownMenuItem
                   href="/dashboard/settings/account"
                   onSelect={() => { goto("/dashboard/settings/account"); close(); }}
@@ -303,6 +396,37 @@
               {/snippet}
             </DropdownMenu>
           {:else}
+            {#each publicLinks as link (link.href)}
+              <a
+                href={link.href}
+                aria-current={isActive(link.href, true) ? "page" : undefined}
+                class={cn(navLinkBase, "hidden sm:inline-flex", isActive(link.href, true) ? navLinkActive : navLinkInactive)}
+              >
+                {link.label}
+              </a>
+            {/each}
+            <div class="sm:hidden">
+              <DropdownMenu
+                align="end"
+                label="Menu"
+                triggerClass="p-2 hover:bg-accent text-muted-foreground hover:text-foreground"
+              >
+                {#snippet trigger()}
+                  <IconListRegular class="size-5" />
+                {/snippet}
+                {#snippet children(close)}
+                  {#each publicLinks as link (link.href)}
+                    <DropdownMenuItem
+                      href={link.href}
+                      onSelect={() => { goto(link.href); close(); }}
+                      class={isActive(link.href, true) ? "bg-accent" : ""}
+                    >
+                      {link.label}
+                    </DropdownMenuItem>
+                  {/each}
+                {/snippet}
+              </DropdownMenu>
+            </div>
             <a
               href="/login"
               aria-current={isActive("/login", true) ? "page" : undefined}

@@ -1,9 +1,7 @@
 <script lang="ts">
-  import * as Frame from "$lib/components/frame";
-  import PageHeader from "$lib/components/PageHeader.svelte";
-  import PageLayout from "$lib/components/PageLayout.svelte";
+  import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
 
   const sectionClass = "space-y-3";
   const headingClass = "text-lg font-semibold text-foreground";
@@ -23,15 +21,11 @@
   path="/verify"
 />
 
-<PageLayout width="3xl">
-  <PageHeader
-    title="Verify it yourself"
-    tagline="Every encrypted transfer service claims it cannot read your files. Here is how to check ours, in about two minutes, with tools already in your browser."
-  />
-
-  <Frame.Root>
-    <Frame.Panel>
-      <div class="space-y-8">
+<ProsePage
+  title="Verify it yourself"
+  tagline="Every encrypted transfer service claims it cannot read your files. Here is how to check ours, in about two minutes, with tools already in your browser."
+  current="verify"
+>
         <section class={sectionClass}>
           <p class={bodyClass}>
             You should not have to trust us, and these checks do not ask you to.
@@ -187,6 +181,13 @@
             <li>How many times a transfer has been downloaded</li>
             <li>When a transfer expires, and when it was deleted</li>
             <li>Your email address, if you chose to create an account</li>
+            {#if PORTALS_ANNOUNCED}
+              <li>
+                For a portal: that it exists and who owns it, when deliveries arrive and how
+                large they are, the email address of someone you invite, and when you last
+                opened it
+              </li>
+            {/if}
             <li>
               For sign-in events, the country and network operator derived from
               your IP address at that moment. We do not store IP addresses.
@@ -194,7 +195,9 @@
           </ul>
           <p class={bodyClass}>
             File contents, filenames, and transfer titles are not on that list,
-            and cannot be, because they arrive encrypted. The full detail lives
+            and cannot be, because they arrive encrypted.{#if PORTALS_ANNOUNCED}
+              {" "}The same goes for a portal's name, what it asks for, and the notes
+              senders add.{/if} The full detail lives
             in the <a href="/security" class={linkClass}>security overview</a>
             and the <a href="/privacy" class={linkClass}>privacy policy</a>.
           </p>
@@ -211,9 +214,4 @@
             >. Acknowledgement within 72 hours.
           </p>
         </section>
-      </div>
-    </Frame.Panel>
-  </Frame.Root>
-
-  <SiteFooter current="verify" />
-</PageLayout>
+</ProsePage>

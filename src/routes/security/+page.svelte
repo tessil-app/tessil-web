@@ -1,9 +1,7 @@
 <script lang="ts">
-  import * as Frame from "$lib/components/frame";
-  import PageHeader from "$lib/components/PageHeader.svelte";
-  import PageLayout from "$lib/components/PageLayout.svelte";
+  import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
 </script>
 
 <Seo
@@ -12,17 +10,12 @@
   path="/security"
 />
 
-<PageLayout width="3xl">
-  <PageHeader
-    title="Security Overview"
-    tagline="How end-to-end encryption works on Tessil, and how to report a vulnerability."
-  />
-
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 14, 2026</p>
-
+<ProsePage
+  title="Security Overview"
+  tagline="How end-to-end encryption works on Tessil, and how to report a vulnerability."
+  updated="November 13, 2026"
+  current="security"
+>
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">Scope</h2>
             <p class="text-muted-foreground">
@@ -185,6 +178,7 @@
               <li>We store only a public key, a credential identifier, and basic device info</li>
               <li>Add, rename, and remove passkeys from your account settings at any time</li>
               <li>Passkeys don't replace email sign-in - both stay available, so a lost device doesn't lock you out</li>
+              <li>A passkey can also open your vault, if you choose that. See the vault section below</li>
             </ul>
             <p class="text-muted-foreground">
               Passkeys don't change the encryption model. File payloads stay
@@ -196,40 +190,87 @@
           </section>
 
           <section class="space-y-3">
-            <h2 class="text-lg font-semibold text-foreground">Vault for signed-in transfers</h2>
+            <h2 class="text-lg font-semibold text-foreground">The vault (optional)</h2>
             <p class="text-muted-foreground">
-              When you upload while signed in, your browser wraps the
-              transfer's encryption key under a per-account vault key
-              (<em>K<sub>vault</sub></em>) before sending the wrapped blob
-              to us. The vault key itself never touches our servers - it
-              is derived in your browser from your vault password using
-              Argon2id, and we only store the resulting wrapped blob.
+              An account works without a vault: you can sign in and send, and
+              your dashboard lists what you sent by size and date. A vault adds
+              the two things we cannot keep for you in readable form: the names
+              of what you sent, and the links to it.
             </p>
             <p class="text-muted-foreground">
-              On first sign-in you set a vault password and we generate a
-              12-word recovery phrase for you to save somewhere safe. Both
-              independently unwrap the vault key: the password is what you
-              type day to day, the phrase is your offline backup if you
-              forget the password. We never see either one in plaintext,
-              so neither can be recovered from us if you lose them.
+              When you set one up, your browser generates a random vault key
+              (<em>K<sub>vault</sub></em>). It never reaches our servers. We
+              store only copies of it that are locked, each under something
+              only you have:
+            </p>
+            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+              <li>a 12-word recovery phrase, always, as your offline backup</li>
+              <li>a vault password, if you choose one, stretched with Argon2id in your browser</li>
+              <li>a passkey, if your device supports it, using a secret only that passkey can produce</li>
+            </ul>
+            <p class="text-muted-foreground">
+              Any one of them opens the vault. We never see the phrase, the
+              password or the passkey's secret, so none of them can be
+              recovered from us. If you lose all of them, what the vault
+              protects is gone.
             </p>
             <p class="text-muted-foreground">
-              The vault unlocks once and stays unlocked on this device for
-              up to 24 hours, after which you'll be prompted to enter your
-              vault password again. You can also lock the vault manually
-              from the account menu, which drops the in-memory key
-              immediately.
+              When you send while signed in with the vault open, your browser
+              locks that transfer's key under the vault key and stores the
+              locked copy with us. That is how the dashboard can show names
+              and rebuild a link later. The vault also holds a key pair for
+              your account: we store the public half, and the private half
+              only in locked form.
             </p>
             <p class="text-muted-foreground">
-              <strong>What this protects:</strong> the dashboard can show
-              filenames and rebuild share links for past transfers without
-              keeping any of that information on our servers. Anyone with
-              your account password (or your recovery phrase) gets that
-              same capability - the underlying file payload itself is
-              always end-to-end encrypted under a per-transfer key carried
-              in the share link's URL fragment, separate from the vault.
+              The vault stays open on a device for up to 24 hours, then asks
+              again. You can lock it from the account menu at any time, which
+              drops the key from memory immediately.
+            </p>
+            <p class="text-muted-foreground">
+              <strong>What this protects:</strong> anyone who can open your
+              vault can see the names and links of your past transfers. The
+              files themselves are always encrypted under a separate key per
+              transfer, carried in the share link.
             </p>
           </section>
+
+          {#if PORTALS_ANNOUNCED}
+            <section class="space-y-3" id="portals">
+              <h2 class="text-lg font-semibold text-foreground">Portals</h2>
+              <p class="text-muted-foreground">
+                A portal is a link through which other people send files to
+                you. It uses the same idea as a transfer, turned around: the
+                sender's browser encrypts, and only your browser can decrypt.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li>Each portal has its own key pair, made in your browser. The private key is kept in your vault and never reaches us in readable form</li>
+                <li>The portal link carries a second key in its fragment. It unlocks the portal's name, its list of requested documents and its public key in the sender's browser. We store those only in locked form, so we can neither read them nor swap the public key for one of our own</li>
+                <li>A sender's browser encrypts each file, its name and the optional note with a fresh key, and locks that key so only the portal's private key can open it. The sender cannot read their own delivery back afterwards, and neither can other senders</li>
+                <li>Senders need no account. We do not ask who they are</li>
+                <li>Deliveries are deleted automatically after the period your plan sets, and earlier if you delete them</li>
+              </ul>
+              <p class="text-muted-foreground">
+                <strong>Sharing a portal.</strong> You can give one other
+                account access. Your browser hands that account the portal's
+                keys, locked to their public key and signed with yours, so
+                their browser accepts them only if they came from you. The
+                step we cannot prove for you is that a public key really
+                belongs to the person you mean. That is what the two short
+                codes on the sharing screen are for: if both of you see the
+                same codes, nobody replaced a key on the way. If you skip the
+                comparison, you are trusting our server for that one step.
+              </p>
+              <p class="text-muted-foreground">
+                <strong>What we can see about a portal:</strong> that it
+                exists and who owns it, whether it is switched on, when
+                deliveries arrive, how many files they hold and how large
+                they are, the email address you invite, and when you last
+                opened it. Not its name, not what you ask for, not the notes,
+                the file names or the files.
+              </p>
+            </section>
+          {/if}
 
           <section class="space-y-3">
             <h2 class="text-lg font-semibold text-foreground">Responsible disclosure</h2>
@@ -261,9 +302,4 @@
               >maxmind.com</a>. The databases are loaded locally on our servers -               no per-request data is sent to MaxMind.
             </p>
           </section>
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
-
-  <SiteFooter current="security" />
-</PageLayout>
+</ProsePage>

@@ -1,9 +1,7 @@
 <script lang="ts">
-  import * as Frame from "$lib/components/frame";
-  import PageHeader from "$lib/components/PageHeader.svelte";
-  import PageLayout from "$lib/components/PageLayout.svelte";
+  import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
 </script>
 
 <Seo
@@ -12,17 +10,12 @@
   path="/terms"
 />
 
-<PageLayout width="3xl">
-  <PageHeader
-    title="Terms of Service"
-    tagline="End-to-end encrypted file transfer."
-  />
-
-    <Frame.Root>
-      <Frame.Panel>
-        <div class="space-y-6">
-          <p class="text-sm text-muted-foreground">Last updated: May 6, 2026</p>
-
+<ProsePage
+  title="Terms of Service"
+  tagline="End-to-end encrypted file transfer."
+  updated="November 13, 2026"
+  current="terms"
+>
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
             <p class="text-muted-foreground">
@@ -37,12 +30,71 @@
               Tessil is an end-to-end encrypted file transfer service with
               temporary share links.
             </p>
-            <p class="text-muted-foreground">
-              Tessil is free to use. It works without an account; signing in adds
-              a dashboard and longer-lived transfers. There is no paid plan at
-              this time.
-            </p>
+            {#if PORTALS_ANNOUNCED}
+              <p class="text-muted-foreground">
+                Sending files is free. It works without an account; signing in adds
+                a dashboard and longer-lived transfers.
+              </p>
+              <p class="text-muted-foreground">
+                Paid plans add portals: links through which other people send
+                files to you. What a plan includes and costs is on the
+                <a href="/pricing" class="text-primary underline underline-offset-2">pricing page</a>.
+              </p>
+            {:else}
+              <p class="text-muted-foreground">
+                Tessil is free to use. It works without an account; signing in adds
+                a dashboard and longer-lived transfers. There is no paid plan at
+                this time.
+              </p>
+            {/if}
           </section>
+
+          {#if PORTALS_ANNOUNCED}
+            <section class="space-y-3">
+              <h2 class="text-xl font-semibold text-foreground">Portals</h2>
+              <p class="text-muted-foreground">
+                If you own a portal, you decide who gets its link, what you ask
+                people to send, and what you do with what arrives. You are
+                responsible for having a lawful reason to collect it and for
+                telling the people who send it how you will use it. We store
+                it for you in a form we cannot read.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li>Deliveries are deleted automatically after the period your plan sets. Download what you need to keep; we cannot restore it afterwards</li>
+                <li>If you lose every way into your vault, we cannot open your portals for you</li>
+                <li>Do not use a portal to collect content these terms prohibit. We may switch off a portal that is reported for abuse</li>
+                <li>If your plan ends, your portals stop accepting files. What they already hold stays until it expires</li>
+              </ul>
+              <p class="text-muted-foreground">
+                If you send files through someone's portal, you are sending
+                them to that person, not to us. Questions about what happens
+                to them go to the person who gave you the link.
+              </p>
+            </section>
+
+            <section class="space-y-3" id="billing">
+              <h2 class="text-xl font-semibold text-foreground">Paid plans and billing</h2>
+              <p class="text-muted-foreground">
+                Paid plans are sold through Polar, which acts as the merchant
+                of record. That means Polar is the seller on your invoice,
+                takes the payment, and handles tax. We never receive your
+                card details; Polar tells us only that a subscription exists
+                and when it renews or ends.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li><strong>Renewal.</strong> A plan is paid in advance, per month or per year, and renews automatically until you cancel</li>
+                <li><strong>Cancelling.</strong> You can cancel at any time from your account settings. The plan then runs until the end of the period you have paid for and does not renew</li>
+                <li><strong>After a plan ends.</strong> Your account returns to the free plan. Your portals stop accepting files; what they already hold stays available to you until it expires. Sending keeps working as before</li>
+                <li><strong>Refunds.</strong> If you change your mind within 14 days of your first payment, write to <a href="mailto:hello@tessil.app" class="text-primary underline underline-offset-2">hello@tessil.app</a> and you get it back in full. After that, a period that has started is not refunded, except where the law gives you that right</li>
+                <li><strong>Failed payments.</strong> If a renewal cannot be collected, Polar tries again. If it still fails, the plan ends</li>
+                <li><strong>Price changes.</strong> We tell you by email at least 30 days before a new price applies to your renewal, so you can cancel first</li>
+              </ul>
+              <p class="text-muted-foreground">
+                Encryption, password protection, passkeys and automatic expiry
+                are never part of what a plan sells. They stay free.
+              </p>
+            </section>
+          {/if}
 
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">3. Acceptable Use</h2>
@@ -220,9 +272,4 @@
               <a href="mailto:legal@tessil.app" class="text-primary underline underline-offset-2">legal@tessil.app</a>
             </p>
           </section>
-        </div>
-      </Frame.Panel>
-    </Frame.Root>
-
-  <SiteFooter current="terms" />
-</PageLayout>
+</ProsePage>
