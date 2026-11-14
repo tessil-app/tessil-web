@@ -459,8 +459,7 @@
         )}
         <Reveal open={twoWay}>
           <Alert tone="warning">
-            Everyone who has this portal's link can download what you put on it. Use it for a
-            portal you give to one person or one client.
+            Everyone who has this portal's link can download what you put on it.
           </Alert>
         </Reveal>
       </div>
