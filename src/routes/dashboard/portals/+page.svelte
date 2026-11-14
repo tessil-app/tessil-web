@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Portals the signed-in user is a member of: create, copy the link,
+  // Portals the signed-in user is a member of: copy the link,
   // switch off, delete. Titles and links are decrypted in the browser, so
   // they need an unlocked vault.
 
@@ -20,16 +20,8 @@
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import * as Table from "$lib/components/table";
-  import TextInput from "$lib/components/TextInput.svelte";
-  import { api, ApiError } from "$lib/api/client";
-  import { DEFAULT_LOCALE, LOCALES, type Locale } from "$lib/i18n/locale";
-  import { depositStrings } from "$lib/i18n/messages";
-  import {
-    PORTAL_TITLE_MAX,
-    createMyPortal,
-    loadMyPortals,
-    type MyPortal,
-  } from "$lib/portal/client";
+  import { api } from "$lib/api/client";
+  import { loadMyPortals, type MyPortal } from "$lib/portal/client";
   import { acceptShare, myFingerprint } from "$lib/portal/sharing";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
@@ -45,21 +37,12 @@
   let errorMessage = $state<string | null>(null);
   let vaultUnlocked = $state(false);
 
-  let createOpen = $state(false);
-  let newTitle = $state("");
-  // The language the owner's clients will read the page in.
-  let newLang = $state<Locale>(DEFAULT_LOCALE);
-  let isCreating = $state(false);
-  let createError = $state<string | null>(null);
-
   let copiedId = $state<string | null>(null);
   let busyId = $state<string | null>(null);
   let confirmDeleteId = $state<string | null>(null);
   let isDeleting = $state(false);
 
   const ownedCount = $derived(portals.filter((p) => p.role === "owner").length);
-  const canCreate = $derived(maxPortals > 0 && ownedCount < maxPortals);
-  const trimmedTitle = $derived(newTitle.trim());
   const confirmDeletePortal = $derived(
     confirmDeleteId ? (portals.find((p) => p.id === confirmDeleteId) ?? null) : null,
   );
@@ -98,51 +81,6 @@
     if (hasLoaded) void load();
   });
   onDestroy(unsubscribe);
-
-  function openCreate() {
-    // Making a portal needs the vault: its keys are stored there.
-    if (auth.needsVaultSetup) {
-      goto("/setup/vault");
-      return;
-    }
-    if (!vaultUnlocked) {
-      unlockPrompt.request();
-      return;
-    }
-    newTitle = "";
-    const wanted = (navigator.languages ?? [navigator.language]).map((l) => l.toLowerCase().slice(0, 2));
-    newLang = LOCALES.find((l) => wanted.includes(l)) ?? DEFAULT_LOCALE;
-    createError = null;
-    createOpen = true;
-  }
-
-  async function submitCreate(e?: Event) {
-    e?.preventDefault();
-    if (!auth.user || isCreating || trimmedTitle.length === 0) return;
-    isCreating = true;
-    createError = null;
-    try {
-      const result = await createMyPortal(auth.user.id, trimmedTitle, window.location.origin, newLang);
-      if (!result.ok) {
-        createError = "Your vault is locked. Unlock it and try again.";
-        return;
-      }
-      portals = [result.portal, ...portals];
-      createOpen = false;
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "portal_limit_reached") {
-        createError = err.message;
-      } else if (err instanceof ApiError && err.code === "portals_require_paid_plan") {
-        createError = "Portals are part of the paid plans.";
-      } else if (err instanceof ApiError && err.code === "keypair_required") {
-        createError = "Lock and unlock your vault once, then try again.";
-      } else {
-        createError = err instanceof Error ? err.message : "Couldn't create the portal.";
-      }
-    } finally {
-      isCreating = false;
-    }
-  }
 
   async function copyLink(portal: MyPortal) {
     if (!portal.link) return;
@@ -279,8 +217,7 @@
           <Button
             fullWidth={false}
             class="whitespace-nowrap"
-            onclick={openCreate}
-            disabled={!canCreate}
+            href="/dashboard/portals/new"
           >
             New portal
           </Button>
@@ -329,7 +266,7 @@
             Create one, share its link, and files people send through it appear here.
           </p>
           {#snippet actions()}
-            <Button fullWidth={false} onclick={openCreate}>Create your first portal</Button>
+            <Button fullWidth={false} href="/dashboard/portals/new">Create your first portal</Button>
           {/snippet}
         </EmptyState>
       {:else}
@@ -470,6 +407,16 @@
                         </DropdownMenuItem>
                       {/if}
                       {#if portal.role === "owner"}
+                        {#if portal.state === "open"}
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              close();
+                              void goto(`/dashboard/portals/${portal.id}/settings`);
+                            }}
+                          >
+                            Settings
+                          </DropdownMenuItem>
+                        {/if}
                         <DropdownMenuItem
                           disabled={busyId === portal.id}
                           onSelect={() => {
@@ -515,75 +462,6 @@
     </div>
   {/if}
 </PageLayout>
-
-<Modal
-  open={createOpen}
-  title="New portal"
-  description="People who open the link see this name, so they know who they're sending to."
-  onClose={() => (createOpen = false)}
->
-  <form onsubmit={submitCreate} class="space-y-4" novalidate>
-    <TextInput
-      id="portal-title"
-      label="Name"
-      placeholder="For example: Documents for Jansen Administratie"
-      maxlength={PORTAL_TITLE_MAX}
-      required
-      bind:value={newTitle}
-      disabled={isCreating}
-    />
-    <p class="text-xs text-muted-foreground">
-      The name is encrypted. We can't read it, and neither can anyone without the link.
-    </p>
-
-    <fieldset class="space-y-2" disabled={isCreating}>
-      <legend class="text-sm font-medium text-foreground">Language of the page they see</legend>
-      <div class="flex flex-wrap gap-x-5 gap-y-2">
-        {#each LOCALES as option (option)}
-          <label class="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-            <input
-              type="radio"
-              name="portal-language"
-              value={option}
-              bind:group={newLang}
-              class="size-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            />
-            {depositStrings[option].languageName}
-          </label>
-        {/each}
-      </div>
-      <p class="text-xs text-muted-foreground">Visitors can still switch on the page itself.</p>
-    </fieldset>
-    {#if createError}
-      <Alert tone="destructive">{createError}</Alert>
-    {/if}
-  </form>
-
-  {#snippet footer()}
-    <Button
-      type="button"
-      variant="ghost"
-      fullWidth={false}
-      onclick={() => (createOpen = false)}
-      disabled={isCreating}
-    >
-      Cancel
-    </Button>
-    <Button
-      type="button"
-      fullWidth={false}
-      onclick={() => submitCreate()}
-      disabled={isCreating || trimmedTitle.length === 0}
-    >
-      {#if isCreating}
-        <Spinner aria-hidden="true" />
-        Creating…
-      {:else}
-        Create portal
-      {/if}
-    </Button>
-  {/snippet}
-</Modal>
 
 <Modal
   open={confirmDeletePortal !== null}

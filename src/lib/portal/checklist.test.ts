@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { decodeDepositFileName, encodeDepositFileName } from "./deposit";
+import {
+  decodeDepositFileName,
+  decodeDepositNote,
+  encodeDepositFileName,
+  encodeDepositNote,
+} from "./deposit";
 import { coverageOf } from "./deposits";
 import {
   CHECKLIST_MAX_ITEMS,
@@ -124,5 +129,29 @@ describe("what a delivery covers", () => {
 
   it("has nothing missing when nothing is asked for", () => {
     expect(coverageOf([], [{ itemId: null }])).toEqual({ provided: [], missing: [] });
+  });
+});
+
+describe("the extra field's answer in a note", () => {
+  const answer = { label: "Client number", value: "2024-118" };
+
+  it("round-trips an answer with and without a note", () => {
+    expect(decodeDepositNote(encodeDepositNote("Tax 2025", answer))).toEqual({ note: "Tax 2025", answer });
+    expect(decodeDepositNote(encodeDepositNote("", answer))).toEqual({ note: null, answer });
+  });
+
+  it("reads a note from before the field existed", () => {
+    expect(decodeDepositNote("Just a note")).toEqual({ note: "Just a note", answer: null });
+    expect(decodeDepositNote("")).toEqual({ note: null, answer: null });
+    expect(encodeDepositNote("Just a note")).toBe("Just a note");
+  });
+
+  it("stays inside what the server stores, whatever the script", () => {
+    const stored = encodeDepositNote("\u6587".repeat(200), {
+      label: "\u6587".repeat(40),
+      value: "\u6587".repeat(60),
+    });
+    expect(new TextEncoder().encode(stored).length).toBeLessThanOrEqual(720);
+    expect(decodeDepositNote(stored).answer?.value).toHaveLength(60);
   });
 });

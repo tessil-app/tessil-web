@@ -9,13 +9,20 @@ import { decryptFilename, decryptString } from "$lib/crypto/decrypt";
 import { openSealed, type RecipientKeypair } from "$lib/crypto/seal";
 import { plaintextSize } from "$lib/crypto/streaming";
 import { readVaultDerivationKey } from "$lib/vault/session";
-import { decodeDepositFileName, depositKeyContext } from "./deposit";
+import {
+  decodeDepositFileName,
+  decodeDepositNote,
+  depositKeyContext,
+  type DepositAnswer,
+} from "./deposit";
 import {
   openPortalBundle,
   openPortalKeys,
   portalLink,
   sealPortalBundle,
+  settingsOf,
   type ChecklistItem,
+  type PortalSettings,
 } from "./keys";
 import { depositReference } from "./receipt";
 
@@ -33,6 +40,9 @@ export interface OpenedMemberPortal {
   linkKey: Uint8Array;
   keyVersion: number;
   lang: Locale | null;
+  message: string;
+  thanks: string;
+  fieldLabel: string;
 }
 
 export type OpenMemberPortalResult =
@@ -68,14 +78,12 @@ export async function openMemberPortal(
     portal: {
       id: row.id,
       role: row.role,
-      title: info.title,
       link: portalLink(origin, row.id, keys.linkKey),
       isDisabled: row.isDisabled,
       keypair: { privateKey: keys.privateKey, publicKey: info.publicKey },
-      checklist: info.checklist ?? [],
       linkKey: keys.linkKey,
       keyVersion: info.keyVersion,
-      lang: info.lang ?? null,
+      ...settingsOf(info),
     },
   };
 }
@@ -103,19 +111,22 @@ export function coverageOf(checklist: ChecklistItem[], files: { itemId: string |
 }
 
 /**
- * Replaces what a portal asks for. Re-seals the public bundle under the
- * same link key, so the portal's link does not change. Owner only.
+ * Replaces a portal's name, texts and switches. Re-seals the public bundle
+ * under the same link key, so the portal's link does not change. Owner only.
  */
-export async function saveChecklist(
+export async function savePortalSettings(
   portal: OpenedMemberPortal,
-  checklist: ChecklistItem[],
+  settings: PortalSettings,
 ): Promise<void> {
   const bundle = await sealPortalBundle(portal.id, portal.linkKey, {
     publicKey: portal.keypair.publicKey,
-    title: portal.title,
     keyVersion: portal.keyVersion,
-    ...(portal.lang ? { lang: portal.lang } : {}),
-    checklist,
+    title: settings.title.trim(),
+    ...(settings.lang ? { lang: settings.lang } : {}),
+    checklist: settings.checklist,
+    message: settings.message,
+    thanks: settings.thanks,
+    fieldLabel: settings.fieldLabel,
   });
   await api.updatePortal(portal.id, { publicBundle: bytesToBase64Url(bundle) });
 }
@@ -128,6 +139,8 @@ export interface OpenedDeposit {
   expiresAt: string;
   /** The depositor's note, if they left one. */
   note: string | null;
+  /** What the depositor filled in, when the portal has an extra field. */
+  answer: DepositAnswer | null;
   files: DepositFile[];
   totalBytes: number;
   key: CryptoKey;
@@ -169,16 +182,18 @@ async function openDeposit(
         return { ...f, plainSize: plaintextSize(f.size), name: decoded.name, itemId: decoded.itemId };
       }),
     );
-    let note: string | null = null;
+    let stored: string | null = null;
     if (row.encryptedTitle && row.encryptedTitleIv) {
-      note = await decryptString(row.encryptedTitle, row.encryptedTitleIv, key).catch(() => null);
+      stored = await decryptString(row.encryptedTitle, row.encryptedTitleIv, key).catch(() => null);
     }
+    const { note, answer } = decodeDepositNote(stored ?? "");
     return {
       id: row.id,
       reference: await depositReference(row.id),
       createdAt: row.createdAt,
       expiresAt: row.expiresAt,
-      note: note && note.length > 0 ? note : null,
+      note,
+      answer,
       files,
       totalBytes: files.reduce((sum, f) => sum + f.plainSize, 0),
       key,

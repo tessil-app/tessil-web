@@ -7,7 +7,6 @@
   import Alert from "$lib/components/Alert.svelte";
   import Button from "$lib/components/Button.svelte";
   import DepositDrawer from "$lib/components/DepositDrawer.svelte";
-  import Drawer from "$lib/components/Drawer.svelte";
   import FilterChips from "$lib/components/FilterChips.svelte";
   import IconButton from "$lib/components/IconButton.svelte";
   import SearchField from "$lib/components/SearchField.svelte";
@@ -24,21 +23,13 @@
   import { saveDecryptedFile, StreamInterruptedError } from "$lib/download/saveFile";
   import BackLink from "$lib/components/BackLink.svelte";
   import Badge from "$lib/components/Badge.svelte";
-  import TextInput from "$lib/components/TextInput.svelte";
   import {
     coverageOf,
     loadDeposits,
     openMemberPortal,
-    saveChecklist,
     type OpenedDeposit,
     type OpenedMemberPortal,
   } from "$lib/portal/deposits";
-  import {
-    CHECKLIST_LABEL_MAX,
-    CHECKLIST_MAX_ITEMS,
-    newChecklistItemId,
-    type ChecklistItem,
-  } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
   import { buildReceiptText, saveTextFile } from "$lib/portal/receipt";
   import { loadSharing, type PortalSharing } from "$lib/portal/sharing";
@@ -76,7 +67,6 @@
   let query = $state("");
   let filter = $state<Filter>("all");
   let openDepositId = $state<string | null>(null);
-  let listOpen = $state(false);
   // When this account last looked, as it was before this visit. Kept for
   // the whole visit so the markers do not vanish under the reader.
   let seenBefore = $state<string | null>(null);
@@ -96,7 +86,7 @@
         complete: coverage.missing.length === 0,
         soon: daysUntil(deposit.expiresAt) <= SOON_DAYS,
         isNew: seenBefore !== null && deposit.createdAt > seenBefore,
-        haystack: [deposit.note ?? "", deposit.reference, ...deposit.files.map((f) => f.name)]
+        haystack: [deposit.answer?.value ?? "", deposit.note ?? "", deposit.reference, ...deposit.files.map((f) => f.name)]
           .join("\n")
           .toLowerCase(),
       };
@@ -161,53 +151,6 @@
     }
   }
 
-  function closeList() {
-    listOpen = false;
-    if (portal) draft = portal.checklist;
-    newLabel = "";
-    listError = null;
-  }
-
-  // ─── what the portal asks for ─────────────────────────────────────────────
-  let draft = $state<ChecklistItem[]>([]);
-  let newLabel = $state("");
-  let isSavingList = $state(false);
-  let listError = $state<string | null>(null);
-  let listSaved = $state(false);
-
-  const listChanged = $derived(
-    portal !== null && JSON.stringify(draft) !== JSON.stringify(portal.checklist),
-  );
-
-  function addItem(e?: Event) {
-    e?.preventDefault();
-    const label = newLabel.trim().slice(0, CHECKLIST_LABEL_MAX);
-    if (!label || draft.length >= CHECKLIST_MAX_ITEMS) return;
-    draft = [...draft, { id: newChecklistItemId(), label }];
-    newLabel = "";
-    listSaved = false;
-  }
-
-  function removeItem(id: string) {
-    draft = draft.filter((item) => item.id !== id);
-    listSaved = false;
-  }
-
-  async function saveList() {
-    if (!portal || isSavingList || !listChanged) return;
-    isSavingList = true;
-    listError = null;
-    try {
-      await saveChecklist(portal, draft);
-      portal = { ...portal, checklist: draft };
-      listSaved = true;
-    } catch (err) {
-      listError = err instanceof Error ? err.message : "Couldn't save the list.";
-    } finally {
-      isSavingList = false;
-    }
-  }
-
   // ─── sharing with one other account ───────────────────────────────────────
   let sharing = $state<PortalSharing | null>(null);
   let sharingOpen = $state(false);
@@ -239,7 +182,6 @@
         return;
       }
       portal = opened.portal;
-      draft = opened.portal.checklist;
       void reloadSharing();
       const first = await loadDeposits(opened.portal);
       if (seenBefore === null) {
@@ -347,6 +289,7 @@
         reference: deposit.reference,
         at: new Date(deposit.createdAt),
         note: deposit.note,
+        answer: deposit.answer,
         files: deposit.files.map((f) => ({ name: f.name, size: formatSize(f.plainSize) })),
         deletedOn: new Date(deposit.expiresAt),
       }),
@@ -460,9 +403,9 @@
             variant="secondary"
             fullWidth={false}
             class="whitespace-nowrap"
-            onclick={() => (listOpen = true)}
+            href="/dashboard/portals/{portal.id}/settings"
           >
-            What you ask for{checklist.length > 0 ? ` (${checklist.length})` : ""}
+            Settings
           </Button>
           <Button
             variant="secondary"
@@ -543,9 +486,32 @@
 
         {#if visible.length === 0}
           <div class="rounded-lg bg-card px-4 py-10 text-center text-sm text-muted-foreground">
-            Nothing matches. Search looks at notes, references and file names.
+            Nothing matches. Search looks at notes, references, file names and what senders filled in.
           </div>
         {:else}
+          <!-- What the sender filled in leads when the portal has an extra field; the reference otherwise. -->
+          {#snippet who(deposit: OpenedDeposit, isNew: boolean)}
+            <div
+              class="flex min-w-0 items-center gap-2 font-medium text-foreground {deposit.answer
+                ? ''
+                : 'font-mono'}"
+            >
+              <span class="truncate">{deposit.answer?.value ?? deposit.reference}</span>
+              {#if isNew}
+                <Badge tone="info" class="font-sans">New</Badge>
+              {/if}
+            </div>
+          {/snippet}
+          {#snippet about(deposit: OpenedDeposit)}
+            {#if deposit.answer || deposit.note}
+              <div class="truncate text-xs text-muted-foreground" title={deposit.note ?? undefined}>
+                {#if deposit.answer}<span class="font-mono">{deposit.reference}</span>{/if}
+                {#if deposit.answer && deposit.note}<span aria-hidden="true"> · </span>{/if}
+                {deposit.note ?? ""}
+              </div>
+            {/if}
+          {/snippet}
+
           <Table.Root {cols} actions="sm" selectable>
             {#snippet headerLeading()}
               <input
@@ -557,7 +523,7 @@
               />
             {/snippet}
             {#snippet header()}
-              <div>Reference</div>
+              <div>Delivery</div>
               <div>Received</div>
               <div>Files</div>
               {#if checklist.length > 0}
@@ -580,17 +546,8 @@
                 {/snippet}
                 {#snippet cells()}
                   <div class="min-w-0">
-                    <div class="flex items-center gap-2 font-medium font-mono text-foreground">
-                      {deposit.reference}
-                      {#if row.isNew}
-                        <Badge tone="info" class="font-sans">New</Badge>
-                      {/if}
-                    </div>
-                    {#if deposit.note}
-                      <div class="truncate text-xs text-muted-foreground" title={deposit.note}>
-                        {deposit.note}
-                      </div>
-                    {/if}
+                    {@render who(deposit, row.isNew)}
+                    {@render about(deposit)}
                   </div>
                   <div class="text-muted-foreground">
                     {shortFmt.format(new Date(deposit.createdAt))}
@@ -616,15 +573,8 @@
                   <div class="space-y-2">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">
-                        <p class="flex items-center gap-2 font-medium font-mono text-foreground">
-                          {deposit.reference}
-                          {#if row.isNew}
-                            <Badge tone="info" class="font-sans">New</Badge>
-                          {/if}
-                        </p>
-                        {#if deposit.note}
-                          <p class="truncate text-xs text-muted-foreground">{deposit.note}</p>
-                        {/if}
+                        {@render who(deposit, row.isNew)}
+                        {@render about(deposit)}
                       </div>
                       {#if checklist.length > 0}
                         <Badge tone={row.complete ? "success" : "warning"}>
@@ -715,77 +665,6 @@
     onChanged={reloadSharing}
   />
 {/if}
-
-<Drawer open={listOpen} title="What you ask for" onClose={closeList}>
-  <div class="space-y-3">
-    <p class="text-sm text-muted-foreground">
-      People who open the link see this list and attach a file to each item, so you can see at
-      a glance what is still missing. Leave it empty to accept anything.
-    </p>
-
-    {#if draft.length > 0}
-      <ul class="divide-y divide-border rounded-lg bg-card">
-        {#each draft as item (item.id)}
-          <li class="flex items-center justify-between gap-3 px-3 py-2">
-            <span class="min-w-0 break-words text-sm text-foreground">{item.label}</span>
-            <TextLink
-              onclick={() => removeItem(item.id)}
-              disabled={isSavingList}
-              class="shrink-0 text-xs text-muted-foreground"
-            >
-              Remove<span class="sr-only"> {item.label}</span>
-            </TextLink>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-
-    {#if draft.length < CHECKLIST_MAX_ITEMS}
-      <form onsubmit={addItem} class="flex items-end gap-2">
-        <div class="min-w-0 flex-1">
-          <TextInput
-            id="checklist-new"
-            label="Add an item"
-            placeholder="For example: Copy of your ID"
-            maxlength={CHECKLIST_LABEL_MAX}
-            bind:value={newLabel}
-            disabled={isSavingList}
-          />
-        </div>
-        <Button
-          type="submit"
-          variant="secondary"
-          fullWidth={false}
-          class="whitespace-nowrap"
-          disabled={isSavingList || newLabel.trim().length === 0}
-        >
-          Add
-        </Button>
-      </form>
-    {/if}
-
-    {#if listError}
-      <Alert tone="destructive">{listError}</Alert>
-    {/if}
-    {#if listSaved && !listChanged}
-      <p class="text-sm text-muted-foreground" role="status">Saved. The link stays the same.</p>
-    {/if}
-  </div>
-
-  {#snippet footer()}
-    <Button type="button" variant="ghost" fullWidth={false} onclick={closeList} disabled={isSavingList}>
-      {listChanged ? "Cancel" : "Close"}
-    </Button>
-    <Button type="button" fullWidth={false} onclick={saveList} disabled={!listChanged || isSavingList}>
-      {#if isSavingList}
-        <Spinner aria-hidden="true" />
-        Saving…
-      {:else}
-        Save list
-      {/if}
-    </Button>
-  {/snippet}
-</Drawer>
 
 <Modal
   open={confirmDeleteId !== null}

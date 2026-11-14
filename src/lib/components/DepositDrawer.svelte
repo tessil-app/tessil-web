@@ -96,6 +96,9 @@
     <div class="space-y-3">
       <DrawerSection>
         <DetailList>
+          {#if deposit.answer}
+            <DetailItem label={deposit.answer.label || "From"}>{deposit.answer.value}</DetailItem>
+          {/if}
           <DetailItem label="Received">{dateFmt.format(new Date(deposit.createdAt))}</DetailItem>
           <DetailItem label="Deleted on">{dayFmt.format(new Date(deposit.expiresAt))}</DetailItem>
           <DetailItem label="Size">

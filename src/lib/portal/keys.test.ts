@@ -257,3 +257,43 @@ describe("the portal link", () => {
     expect(linkKeyFromFragment("#" + "!".repeat(43))).toBeNull();
   });
 });
+
+describe("portal options", () => {
+  it("round-trips the message, thank-you note and extra field", async () => {
+    const owner = await member("owner-1");
+    const portal = await createPortalKeys("T", owner, "nl", {
+      message: "  Send before 1 April.\nThanks  ",
+      thanks: "You will hear from us.",
+      fieldLabel: "Client number",
+    });
+    const info = await openPortalBundle(portal.id, portal.linkKey, portal.publicBundle);
+    expect(info?.message).toBe("Send before 1 April.\nThanks");
+    expect(info?.thanks).toBe("You will hear from us.");
+    expect(info?.fieldLabel).toBe("Client number");
+    expect(info?.lang).toBe("nl");
+  });
+
+  it("leaves a portal without options as it was", async () => {
+    const owner = await member("owner-1");
+    const portal = await createPortalKeys("T", owner);
+    const info = await openPortalBundle(portal.id, portal.linkKey, portal.publicBundle);
+    expect(info).not.toHaveProperty("message");
+    expect(info).not.toHaveProperty("thanks");
+    expect(info).not.toHaveProperty("fieldLabel");
+  });
+
+  it("refuses more text than the server stores", async () => {
+    const owner = await member("owner-1");
+    const checklist = Array.from({ length: 20 }, (_, i) => ({
+      id: `item${String(i).padStart(2, "0")}`,
+      label: "\u6587".repeat(80),
+    }));
+    await expect(
+      createPortalKeys("T", owner, undefined, {
+        checklist,
+        message: "\u6587".repeat(600),
+        thanks: "\u6587".repeat(300),
+      }),
+    ).rejects.toThrow(/more text/);
+  });
+});

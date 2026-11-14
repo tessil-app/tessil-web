@@ -26,6 +26,8 @@ export interface ReceiptInput {
   reference: string;
   at: Date;
   note: string | null;
+  /** The portal's extra field and what was filled in. */
+  answer?: { label: string; value: string } | null;
   files: { name: string; size: string }[];
   /** When the deposit is deleted automatically, if known. */
   deletedOn?: Date;
@@ -40,6 +42,7 @@ const LABELS: Record<Locale, Record<string, string>> = {
     sentAt: "Sent",
     receivedAt: "Received",
     reference: "Reference",
+    from: "From",
     note: "Note",
     files: "Files",
     deletedOn: "Deleted automatically on",
@@ -56,6 +59,7 @@ const LABELS: Record<Locale, Record<string, string>> = {
     sentAt: "Verstuurd",
     receivedAt: "Ontvangen",
     reference: "Referentie",
+    from: "Van",
     note: "Opmerking",
     files: "Bestanden",
     deletedOn: "Wordt automatisch verwijderd op",
@@ -81,6 +85,7 @@ export function buildReceiptText(input: ReceiptInput): string {
     `${sent ? l.sentAt : l.receivedAt}: ${when.format(input.at)}`,
     `${l.reference}: ${input.reference}`,
   ];
+  if (input.answer) lines.push(`${input.answer.label || l.from}: ${input.answer.value}`);
   if (input.note) lines.push(`${l.note}: ${input.note}`);
   if (input.deletedOn) lines.push(`${l.deletedOn}: ${day.format(input.deletedOn)}`);
   lines.push("", `${l.files} (${input.files.length}):`);
