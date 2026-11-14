@@ -1,18 +1,20 @@
 // Regenerate every favicon and OG variant from canonical brand SVGs.
 // Run with: bun run brand:build
 //
-// Reads:  static/brand/mark.svg, static/brand/og-image.svg
+// Reads, from static/brand: favicon.svg (follows light and dark), tile.svg
+//         (the mark on a rounded paper square), icon.svg (the mark with room
+//         around it for app icons), og-image.svg, profile.svg, profile-dark.svg
 // Writes: static/favicon.svg, favicon-32x32.png, apple-touch-icon.png,
 //         icon-192.png, icon-512.png, icon-512-maskable.png,
-//         site.webmanifest, og-image.png
+//         site.webmanifest, og-image.png, and brand/profile*.png for
+//         account avatars elsewhere
 //
 // favicon.ico is intentionally skipped — modern browsers prefer
 // favicon.svg, and the few legacy clients that still want .ico can
 // be served the 32x32 PNG renamed.
 //
-// Rasterizer: @resvg/resvg-js. Switzer-Variable.woff2 is loaded as
-// the default font family so og-image.svg renders correctly without
-// system Switzer installed.
+// Rasterizer: @resvg/resvg-js, with Switzer loaded from scripts/fonts so
+// og-image.svg renders without the font installed.
 
 import { Resvg } from "@resvg/resvg-js";
 import { copyFile, readFile, writeFile } from "node:fs/promises";
@@ -21,9 +23,13 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const staticDir = join(root, "static");
-const markSrc = join(staticDir, "brand/mark.svg");
+const brand = (name: string) => join(staticDir, "brand", name);
 const ogSrc = join(staticDir, "brand/og-image.svg");
-const switzerFont = join(staticDir, "fonts/Switzer-Variable.woff2");
+// The rasterizer reads neither woff2 nor a variable weight axis, so these
+// are the two weights the social image uses, cut from the same font.
+const switzerFonts = ["Regular", "Semibold"].map((w) =>
+  join(root, `scripts/fonts/Switzer-${w}.ttf`),
+);
 
 async function renderMarkPng(svg: Buffer, size: number, outName: string) {
   const resvg = new Resvg(svg, { fitTo: { mode: "width", value: size } });
@@ -35,7 +41,7 @@ async function renderOgPng(svg: Buffer) {
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: 1200 },
     font: {
-      fontFiles: [switzerFont],
+      fontFiles: switzerFonts,
       loadSystemFonts: false,
       defaultFontFamily: "Switzer",
     },
@@ -45,20 +51,23 @@ async function renderOgPng(svg: Buffer) {
 }
 
 async function main() {
-  const mark = await readFile(markSrc);
+  await copyFile(brand("favicon.svg"), join(staticDir, "favicon.svg"));
 
-  await copyFile(markSrc, join(staticDir, "favicon.svg"));
-
-  const variants: { name: string; size: number }[] = [
-    { name: "favicon-32x32.png", size: 32 },
-    { name: "apple-touch-icon.png", size: 180 },
-    { name: "icon-192.png", size: 192 },
-    { name: "icon-512.png", size: 512 },
-    { name: "icon-512-maskable.png", size: 512 },
+  // Dark tiles need a light ground wherever the surface behind is unknown.
+  const variants: { name: string; size: number; from: string }[] = [
+    { name: "favicon-32x32.png", size: 32, from: "tile.svg" },
+    { name: "apple-touch-icon.png", size: 180, from: "icon.svg" },
+    { name: "icon-192.png", size: 192, from: "icon.svg" },
+    { name: "icon-512.png", size: 512, from: "icon.svg" },
+    { name: "icon-512-maskable.png", size: 512, from: "icon.svg" },
+    { name: "brand/profile.png", size: 1024, from: "profile.svg" },
+    { name: "brand/profile-dark.png", size: 1024, from: "profile-dark.svg" },
   ];
 
   await Promise.all(
-    variants.map(({ name, size }) => renderMarkPng(mark, size, name)),
+    variants.map(async ({ name, size, from }) =>
+      renderMarkPng(await readFile(brand(from)), size, name),
+    ),
   );
 
   const og = await readFile(ogSrc);
@@ -71,7 +80,7 @@ async function main() {
     start_url: "/",
     display: "standalone",
     background_color: "#fafaf7",
-    theme_color: "#1B4DFF",
+    theme_color: "#fafaf7",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

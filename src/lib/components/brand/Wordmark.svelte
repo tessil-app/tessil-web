@@ -25,7 +25,7 @@
     className,
   )}
 >
-  <Mark size={markSize} class="text-primary shrink-0" />
+  <Mark size={markSize} class="text-foreground shrink-0" />
   <span
     class="font-semibold tracking-tight text-foreground leading-none"
     style="letter-spacing: -0.02em"
