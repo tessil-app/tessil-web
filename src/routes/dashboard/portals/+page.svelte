@@ -422,6 +422,14 @@
                           >
                             Settings
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              close();
+                              void goto(`/dashboard/portals/new?from=${portal.id}`);
+                            }}
+                          >
+                            Duplicate
+                          </DropdownMenuItem>
                         {/if}
                         <DropdownMenuItem
                           disabled={busyId === portal.id}

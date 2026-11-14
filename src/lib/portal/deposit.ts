@@ -17,6 +17,7 @@ import {
   openPortalBundle,
   type ChecklistItem,
   type PortalLogo,
+  type PortalReturn,
 } from "./keys";
 
 export const DEPOSIT_NOTE_MAX = 200;
@@ -47,6 +48,9 @@ export interface OpenedPortal {
   /** The owner's closing date, passed or not. */
   closesAt: string | null;
   logo: PortalLogo | null;
+  /** Files the owner sent back, when the portal works both ways. */
+  twoWay: boolean;
+  returns: PortalReturn[];
 }
 
 export type OpenPortalResult =
@@ -92,6 +96,8 @@ export async function openPortalFromLink(
       fieldLabel: info.fieldLabel ?? "",
       closesAt: res.closesAt ?? null,
       logo: info.logo ?? null,
+      twoWay: info.twoWay === true,
+      returns: info.returns ?? [],
     },
   };
 }

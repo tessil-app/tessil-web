@@ -317,4 +317,17 @@ describe("portal options", () => {
       expect(await openPortalBundle(made.id, made.linkKey, made.publicBundle)).not.toHaveProperty("logo");
     }
   });
+
+  it("lists files sent back, and drops entries that are not a transfer and a key", async () => {
+    const owner = await member("owner-1");
+    const good = { id: "A".repeat(21), key: "k".repeat(43) };
+    const portal = await createPortalKeys("T", owner, undefined, { twoWay: true });
+    const bundle = await sealPortalBundle(portal.id, portal.linkKey, {
+      ...(await openPortalBundle(portal.id, portal.linkKey, portal.publicBundle))!,
+      returns: [good, good, { id: "short", key: "k".repeat(43) }, { id: "B".repeat(21), key: "x" }] as never,
+    });
+    const info = await openPortalBundle(portal.id, portal.linkKey, bundle);
+    expect(info?.twoWay).toBe(true);
+    expect(info?.returns).toEqual([good]);
+  });
 });

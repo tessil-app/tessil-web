@@ -23,6 +23,7 @@ import {
   settingsOf,
   type ChecklistItem,
   type PortalLogo,
+  type PortalReturn,
   type PortalSettings,
 } from "./keys";
 import { depositReference } from "./receipt";
@@ -45,6 +46,8 @@ export interface OpenedMemberPortal {
   thanks: string;
   fieldLabel: string;
   logo: PortalLogo | null;
+  twoWay: boolean;
+  returns: PortalReturn[];
   closesAt: string | null;
   notifyOnDelivery: boolean;
 }
@@ -135,6 +138,8 @@ export async function savePortalSettings(
     thanks: settings.thanks,
     fieldLabel: settings.fieldLabel,
     ...(settings.logo ? { logo: settings.logo } : {}),
+    twoWay: settings.twoWay,
+    returns: settings.returns,
   });
   await api.updatePortal(portal.id, {
     publicBundle: bytesToBase64Url(bundle),
