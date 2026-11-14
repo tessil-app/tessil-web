@@ -14,15 +14,19 @@
     compact?: boolean;
     /** The signed-in account's plan, if any. */
     current?: string | null;
+    /** Whether that plan is paid for through a subscription. Null while unknown. */
+    billed?: boolean | null;
     /** The plan a purchase is being started for. */
     busy?: PlanId | null;
     onChoose?: (plan: "pro" | "max") => void;
     onManage?: () => void;
   }
 
-  let { cycle = "monthly", compact = false, current = null, busy = null, onChoose, onManage }: Props = $props();
+  let { cycle = "monthly", compact = false, current = null, billed = null, busy = null, onChoose, onManage }: Props = $props();
 
   const onPaidPlan = $derived(current === "pro" || current === "max");
+  // A plan set by hand has no subscription to manage.
+  const granted = $derived(onPaidPlan && billed === false);
 </script>
 
 <div class="grid gap-4 md:grid-cols-3">
@@ -55,8 +59,12 @@
         <div class="mt-6">
           {#if plan.id === "free"}
             <Button href="/" variant="secondary">Start sending</Button>
-          {:else if current === plan.id || onPaidPlan}
-            <Button variant="secondary" onclick={onManage} disabled={busy !== null}>
+          {:else if granted && current === plan.id}
+            <p class="flex min-h-10 items-center text-sm text-muted-foreground">
+              Given to your account. Nothing is billed.
+            </p>
+          {:else if onPaidPlan && !granted}
+            <Button variant="secondary" onclick={onManage} disabled={busy !== null || billed === null}>
               {current === plan.id ? "Manage your plan" : "Change plan"}
             </Button>
           {:else}
