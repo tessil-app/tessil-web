@@ -132,26 +132,26 @@ describe("what a delivery covers", () => {
   });
 });
 
-describe("the sender's name in a note", () => {
-  it("round-trips a name with and without a note", () => {
-    expect(decodeDepositNote(encodeDepositNote("Tax 2025", "A. Jansen"))).toEqual({
-      note: "Tax 2025",
-      sender: "A. Jansen",
-    });
-    expect(decodeDepositNote(encodeDepositNote("", "A. Jansen"))).toEqual({
-      note: null,
-      sender: "A. Jansen",
-    });
+describe("the extra field's answer in a note", () => {
+  const answer = { label: "Client number", value: "2024-118" };
+
+  it("round-trips an answer with and without a note", () => {
+    expect(decodeDepositNote(encodeDepositNote("Tax 2025", answer))).toEqual({ note: "Tax 2025", answer });
+    expect(decodeDepositNote(encodeDepositNote("", answer))).toEqual({ note: null, answer });
   });
 
-  it("reads a note from before names existed", () => {
-    expect(decodeDepositNote("Just a note")).toEqual({ note: "Just a note", sender: null });
-    expect(decodeDepositNote("")).toEqual({ note: null, sender: null });
+  it("reads a note from before the field existed", () => {
+    expect(decodeDepositNote("Just a note")).toEqual({ note: "Just a note", answer: null });
+    expect(decodeDepositNote("")).toEqual({ note: null, answer: null });
+    expect(encodeDepositNote("Just a note")).toBe("Just a note");
   });
 
   it("stays inside what the server stores, whatever the script", () => {
-    const stored = encodeDepositNote("\u{1F4C4}".repeat(200), "\u{1F464}".repeat(60));
+    const stored = encodeDepositNote("\u6587".repeat(200), {
+      label: "\u6587".repeat(40),
+      value: "\u6587".repeat(60),
+    });
     expect(new TextEncoder().encode(stored).length).toBeLessThanOrEqual(720);
-    expect(decodeDepositNote(stored).sender).not.toBeNull();
+    expect(decodeDepositNote(stored).answer?.value).toHaveLength(60);
   });
 });

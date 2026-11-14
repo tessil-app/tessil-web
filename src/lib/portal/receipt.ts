@@ -26,8 +26,8 @@ export interface ReceiptInput {
   reference: string;
   at: Date;
   note: string | null;
-  /** The sender's name, when the portal asked for it. */
-  sender?: string | null;
+  /** The portal's extra field and what was filled in. */
+  answer?: { label: string; value: string } | null;
   files: { name: string; size: string }[];
   /** When the deposit is deleted automatically, if known. */
   deletedOn?: Date;
@@ -85,7 +85,7 @@ export function buildReceiptText(input: ReceiptInput): string {
     `${sent ? l.sentAt : l.receivedAt}: ${when.format(input.at)}`,
     `${l.reference}: ${input.reference}`,
   ];
-  if (input.sender) lines.push(`${l.from}: ${input.sender}`);
+  if (input.answer) lines.push(`${input.answer.label || l.from}: ${input.answer.value}`);
   if (input.note) lines.push(`${l.note}: ${input.note}`);
   if (input.deletedOn) lines.push(`${l.deletedOn}: ${day.format(input.deletedOn)}`);
   lines.push("", `${l.files} (${input.files.length}):`);

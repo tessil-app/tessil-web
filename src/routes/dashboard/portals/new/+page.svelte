@@ -36,7 +36,7 @@
     checklist: [],
     message: "",
     thanks: "",
-    askSender: false,
+    fieldLabel: "",
   };
 
   async function load() {

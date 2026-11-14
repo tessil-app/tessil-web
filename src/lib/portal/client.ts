@@ -130,7 +130,7 @@ export async function createMyPortal(
     checklist: settings.checklist,
     message: settings.message,
     thanks: settings.thanks,
-    askSender: settings.askSender,
+    fieldLabel: settings.fieldLabel,
   });
   const created = await api.createPortal({
     id: made.id,

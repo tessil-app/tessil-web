@@ -28,6 +28,7 @@ const ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
 export const PORTAL_TITLE_MAX = 80;
 export const PORTAL_MESSAGE_MAX = 600;
 export const PORTAL_THANKS_MAX = 300;
+export const PORTAL_FIELD_LABEL_MAX = 40;
 // The server refuses a larger bundle.
 const BUNDLE_MAX_BYTES = 8192;
 
@@ -84,8 +85,8 @@ export interface PortalPublicInfo {
   message?: string;
   /** Shown after sending, in place of nothing. */
   thanks?: string;
-  /** Ask the visitor for their name before they can send. */
-  askSender?: boolean;
+  /** One thing the visitor must fill in, named by the owner, e.g. "Your name". */
+  fieldLabel?: string;
 }
 
 /** What an owner can set on a portal. All of it lives in the public bundle. */
@@ -95,7 +96,8 @@ export interface PortalSettings {
   checklist: ChecklistItem[];
   message: string;
   thanks: string;
-  askSender: boolean;
+  /** Empty: no extra field. */
+  fieldLabel: string;
 }
 
 export function settingsOf(info: PortalPublicInfo): PortalSettings {
@@ -105,7 +107,7 @@ export function settingsOf(info: PortalPublicInfo): PortalSettings {
     checklist: info.checklist ?? [],
     message: info.message ?? "",
     thanks: info.thanks ?? "",
-    askSender: info.askSender === true,
+    fieldLabel: info.fieldLabel ?? "",
   };
 }
 
@@ -183,7 +185,9 @@ export async function sealPortalBundle(
     ...(info.checklist && info.checklist.length > 0 ? { checklist: cleanChecklist(info.checklist) } : {}),
     ...(cleanText(info.message, PORTAL_MESSAGE_MAX) ? { message: cleanText(info.message, PORTAL_MESSAGE_MAX) } : {}),
     ...(cleanText(info.thanks, PORTAL_THANKS_MAX) ? { thanks: cleanText(info.thanks, PORTAL_THANKS_MAX) } : {}),
-    ...(info.askSender ? { askSender: true } : {}),
+    ...(cleanText(info.fieldLabel, PORTAL_FIELD_LABEL_MAX)
+      ? { fieldLabel: cleanText(info.fieldLabel, PORTAL_FIELD_LABEL_MAX) }
+      : {}),
   });
   // Padded with spaces so the stored size does not give away the title's length.
   const raw = encoder.encode(json);
@@ -234,7 +238,7 @@ export async function openPortalBundle(
       checklist?: unknown;
       message?: unknown;
       thanks?: unknown;
-      askSender?: unknown;
+      fieldLabel?: unknown;
     };
     if (
       typeof parsed.publicKey !== "string" ||
@@ -250,6 +254,7 @@ export async function openPortalBundle(
     const checklist = cleanChecklist(parsed.checklist);
     const message = cleanText(parsed.message, PORTAL_MESSAGE_MAX);
     const thanks = cleanText(parsed.thanks, PORTAL_THANKS_MAX);
+    const fieldLabel = cleanText(parsed.fieldLabel, PORTAL_FIELD_LABEL_MAX);
     return {
       publicKey,
       title: parsed.title,
@@ -258,7 +263,7 @@ export async function openPortalBundle(
       ...(checklist.length > 0 ? { checklist } : {}),
       ...(message ? { message } : {}),
       ...(thanks ? { thanks } : {}),
-      ...(parsed.askSender === true ? { askSender: true } : {}),
+      ...(fieldLabel ? { fieldLabel } : {}),
     };
   } catch {
     return null;
@@ -458,7 +463,7 @@ export async function createPortalKeys(
   title: string,
   owner: MemberVault,
   lang?: Locale,
-  extras: Pick<PortalPublicInfo, "checklist" | "message" | "thanks" | "askSender"> = {},
+  extras: Pick<PortalPublicInfo, "checklist" | "message" | "thanks" | "fieldLabel"> = {},
 ): Promise<NewPortal> {
   const id = newPortalId();
   const keyVersion = 1;

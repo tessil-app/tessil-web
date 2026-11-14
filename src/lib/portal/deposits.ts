@@ -9,7 +9,12 @@ import { decryptFilename, decryptString } from "$lib/crypto/decrypt";
 import { openSealed, type RecipientKeypair } from "$lib/crypto/seal";
 import { plaintextSize } from "$lib/crypto/streaming";
 import { readVaultDerivationKey } from "$lib/vault/session";
-import { decodeDepositFileName, decodeDepositNote, depositKeyContext } from "./deposit";
+import {
+  decodeDepositFileName,
+  decodeDepositNote,
+  depositKeyContext,
+  type DepositAnswer,
+} from "./deposit";
 import {
   openPortalBundle,
   openPortalKeys,
@@ -37,7 +42,7 @@ export interface OpenedMemberPortal {
   lang: Locale | null;
   message: string;
   thanks: string;
-  askSender: boolean;
+  fieldLabel: string;
 }
 
 export type OpenMemberPortalResult =
@@ -121,7 +126,7 @@ export async function savePortalSettings(
     checklist: settings.checklist,
     message: settings.message,
     thanks: settings.thanks,
-    askSender: settings.askSender,
+    fieldLabel: settings.fieldLabel,
   });
   await api.updatePortal(portal.id, { publicBundle: bytesToBase64Url(bundle) });
 }
@@ -134,8 +139,8 @@ export interface OpenedDeposit {
   expiresAt: string;
   /** The depositor's note, if they left one. */
   note: string | null;
-  /** The depositor's name, when the portal asks for it. */
-  sender: string | null;
+  /** What the depositor filled in, when the portal has an extra field. */
+  answer: DepositAnswer | null;
   files: DepositFile[];
   totalBytes: number;
   key: CryptoKey;
@@ -181,14 +186,14 @@ async function openDeposit(
     if (row.encryptedTitle && row.encryptedTitleIv) {
       stored = await decryptString(row.encryptedTitle, row.encryptedTitleIv, key).catch(() => null);
     }
-    const { note, sender } = decodeDepositNote(stored ?? "");
+    const { note, answer } = decodeDepositNote(stored ?? "");
     return {
       id: row.id,
       reference: await depositReference(row.id),
       createdAt: row.createdAt,
       expiresAt: row.expiresAt,
       note,
-      sender,
+      answer,
       files,
       totalBytes: files.reduce((sum, f) => sum + f.plainSize, 0),
       key,

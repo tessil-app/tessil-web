@@ -7,6 +7,7 @@
   import Button from "$lib/components/Button.svelte";
   import DepositView from "$lib/components/portal/DepositView.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
+  import Reveal from "$lib/components/Reveal.svelte";
   import Switch from "$lib/components/Switch.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
@@ -17,6 +18,7 @@
   import {
     CHECKLIST_LABEL_MAX,
     CHECKLIST_MAX_ITEMS,
+    PORTAL_FIELD_LABEL_MAX,
     PORTAL_MESSAGE_MAX,
     PORTAL_THANKS_MAX,
     PORTAL_TITLE_MAX,
@@ -47,7 +49,8 @@
   let message = $state(start.message);
   let thanksOn = $state(start.thanks.length > 0);
   let thanks = $state(start.thanks);
-  let askSender = $state(start.askSender);
+  let fieldOn = $state(start.fieldLabel.length > 0);
+  let fieldLabel = $state(start.fieldLabel);
 
   let newLabel = $state("");
   let isSaving = $state(false);
@@ -61,7 +64,7 @@
     checklist,
     message: messageOn ? message.trim() : "",
     thanks: thanksOn ? thanks.trim() : "",
-    askSender,
+    fieldLabel: fieldOn ? fieldLabel.trim() || depositStrings[lang].fieldDefault : "",
   });
 
   // What was last saved; in create mode, what the form opened with.
@@ -118,7 +121,7 @@
     checklist,
     message: settings.message,
     thanks: settings.thanks,
-    askSender,
+    fieldLabel: settings.fieldLabel,
   });
 
   const card = "rounded-lg bg-card p-4 sm:p-5";
@@ -232,18 +235,21 @@
       {/if}
     </section>
 
-    <section class={cn(card, "space-y-5")} aria-labelledby="options-heading">
+    <section class={cn(card, "space-y-4")} aria-labelledby="options-heading">
       <h2 id="options-heading" class="text-sm font-medium text-foreground">Options</h2>
 
-      <div class="space-y-3">
+      <div>
         {@render option(
           "opt-message",
           "Welcome message",
           "A few lines under the name: what to send, and by when.",
           messageOn,
-          (v) => (messageOn = v),
+          (v) => {
+            messageOn = v;
+            if (v) view = "form";
+          },
         )}
-        {#if messageOn}
+        <Reveal open={messageOn}>
           <Textarea
             id="portal-message"
             aria-labelledby="opt-message-name"
@@ -251,22 +257,40 @@
             rows={3}
             maxlength={PORTAL_MESSAGE_MAX}
             bind:value={message}
+            onfocus={() => (view = "form")}
             disabled={isSaving}
           />
-        {/if}
+        </Reveal>
       </div>
 
       <div class="border-t border-border pt-5">
         {@render option(
-          "opt-sender",
-          "Ask for their name",
-          "They fill in their name before sending, and you see it with each delivery.",
-          askSender,
-          (v) => (askSender = v),
+          "opt-field",
+          "Extra field",
+          "One thing they fill in before sending, such as their name or client number. You see it with each delivery.",
+          fieldOn,
+          (v) => {
+            fieldOn = v;
+            if (v) {
+              view = "form";
+              if (!fieldLabel.trim()) fieldLabel = depositStrings[lang].fieldDefault;
+            }
+          },
         )}
+        <Reveal open={fieldOn}>
+          <TextInput
+            id="portal-field"
+            label="What the field is called"
+            placeholder={depositStrings[lang].fieldDefault}
+            maxlength={PORTAL_FIELD_LABEL_MAX}
+            bind:value={fieldLabel}
+            onfocus={() => (view = "form")}
+            disabled={isSaving}
+          />
+        </Reveal>
       </div>
 
-      <div class="space-y-3 border-t border-border pt-5">
+      <div class="border-t border-border pt-5">
         {@render option(
           "opt-thanks",
           "Thank-you note",
@@ -277,7 +301,7 @@
             if (v) view = "sent";
           },
         )}
-        {#if thanksOn}
+        <Reveal open={thanksOn}>
           <Textarea
             id="portal-thanks"
             aria-labelledby="opt-thanks-name"
@@ -288,7 +312,7 @@
             onfocus={() => (view = "sent")}
             disabled={isSaving}
           />
-        {/if}
+        </Reveal>
       </div>
     </section>
 
@@ -336,7 +360,7 @@
       </div>
     </div>
     <!-- Looked at, not used: nothing in here can be clicked or tabbed to. -->
-    <div class="overflow-hidden rounded-xl border border-border bg-background" inert>
+    <div class="min-h-[36rem] overflow-hidden rounded-xl border border-border bg-background" inert>
       <div class="px-6 py-8" style="zoom: 0.85">
         <DepositView portal={previewPortal} locale={lang} preview={view} />
       </div>

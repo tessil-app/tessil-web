@@ -112,7 +112,7 @@
         checklist: portal.checklist,
         message: portal.message,
         thanks: portal.thanks,
-        askSender: portal.askSender,
+        fieldLabel: portal.fieldLabel,
       }}
       mode="edit"
       onSave={save}

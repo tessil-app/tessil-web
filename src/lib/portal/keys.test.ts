@@ -259,17 +259,17 @@ describe("the portal link", () => {
 });
 
 describe("portal options", () => {
-  it("round-trips the message, thank-you note and name switch", async () => {
+  it("round-trips the message, thank-you note and extra field", async () => {
     const owner = await member("owner-1");
     const portal = await createPortalKeys("T", owner, "nl", {
       message: "  Send before 1 April.\nThanks  ",
       thanks: "You will hear from us.",
-      askSender: true,
+      fieldLabel: "Client number",
     });
     const info = await openPortalBundle(portal.id, portal.linkKey, portal.publicBundle);
     expect(info?.message).toBe("Send before 1 April.\nThanks");
     expect(info?.thanks).toBe("You will hear from us.");
-    expect(info?.askSender).toBe(true);
+    expect(info?.fieldLabel).toBe("Client number");
     expect(info?.lang).toBe("nl");
   });
 
@@ -279,7 +279,7 @@ describe("portal options", () => {
     const info = await openPortalBundle(portal.id, portal.linkKey, portal.publicBundle);
     expect(info).not.toHaveProperty("message");
     expect(info).not.toHaveProperty("thanks");
-    expect(info).not.toHaveProperty("askSender");
+    expect(info).not.toHaveProperty("fieldLabel");
   });
 
   it("refuses more text than the server stores", async () => {

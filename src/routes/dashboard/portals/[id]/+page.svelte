@@ -86,7 +86,7 @@
         complete: coverage.missing.length === 0,
         soon: daysUntil(deposit.expiresAt) <= SOON_DAYS,
         isNew: seenBefore !== null && deposit.createdAt > seenBefore,
-        haystack: [deposit.sender ?? "", deposit.note ?? "", deposit.reference, ...deposit.files.map((f) => f.name)]
+        haystack: [deposit.answer?.value ?? "", deposit.note ?? "", deposit.reference, ...deposit.files.map((f) => f.name)]
           .join("\n")
           .toLowerCase(),
       };
@@ -289,7 +289,7 @@
         reference: deposit.reference,
         at: new Date(deposit.createdAt),
         note: deposit.note,
-        sender: deposit.sender,
+        answer: deposit.answer,
         files: deposit.files.map((f) => ({ name: f.name, size: formatSize(f.plainSize) })),
         deletedOn: new Date(deposit.expiresAt),
       }),
@@ -457,7 +457,7 @@
           <SearchField
             bind:value={query}
             label="Search deliveries"
-            placeholder="Search name, note, reference or file"
+            placeholder="Search note, reference or file name"
             class="sm:w-80"
           />
           <FilterChips
@@ -486,27 +486,27 @@
 
         {#if visible.length === 0}
           <div class="rounded-lg bg-card px-4 py-10 text-center text-sm text-muted-foreground">
-            Nothing matches. Search looks at names, notes, references and file names.
+            Nothing matches. Search looks at notes, references, file names and what senders filled in.
           </div>
         {:else}
-          <!-- The sender's name leads when the portal asks for it; the reference otherwise. -->
+          <!-- What the sender filled in leads when the portal has an extra field; the reference otherwise. -->
           {#snippet who(deposit: OpenedDeposit, isNew: boolean)}
             <div
-              class="flex min-w-0 items-center gap-2 font-medium text-foreground {deposit.sender
+              class="flex min-w-0 items-center gap-2 font-medium text-foreground {deposit.answer
                 ? ''
                 : 'font-mono'}"
             >
-              <span class="truncate">{deposit.sender ?? deposit.reference}</span>
+              <span class="truncate">{deposit.answer?.value ?? deposit.reference}</span>
               {#if isNew}
                 <Badge tone="info" class="font-sans">New</Badge>
               {/if}
             </div>
           {/snippet}
           {#snippet about(deposit: OpenedDeposit)}
-            {#if deposit.sender || deposit.note}
+            {#if deposit.answer || deposit.note}
               <div class="truncate text-xs text-muted-foreground" title={deposit.note ?? undefined}>
-                {#if deposit.sender}<span class="font-mono">{deposit.reference}</span>{/if}
-                {#if deposit.sender && deposit.note}<span aria-hidden="true"> · </span>{/if}
+                {#if deposit.answer}<span class="font-mono">{deposit.reference}</span>{/if}
+                {#if deposit.answer && deposit.note}<span aria-hidden="true"> · </span>{/if}
                 {deposit.note ?? ""}
               </div>
             {/if}

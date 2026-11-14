@@ -14,9 +14,10 @@
   import TextInput from "$lib/components/TextInput.svelte";
   import {
     DEPOSIT_NOTE_MAX,
-    DEPOSIT_SENDER_MAX,
+    DEPOSIT_ANSWER_MAX,
     DepositError,
     sendDeposit,
+    type DepositAnswer,
     type OpenedPortal,
   } from "$lib/portal/deposit";
   import type { Locale } from "$lib/i18n/locale";
@@ -55,8 +56,8 @@
 
   let rows = $state<Row[]>([]);
   let note = $state("");
-  let sender = $state("");
-  let senderMissing = $state(false);
+  let answer = $state("");
+  let answerMissing = $state(false);
   let stalled = $state(false);
 
   // A locked phone or a closed tab ends the upload; prevent the first, ask before the second.
@@ -70,7 +71,7 @@
     reference: string;
     at: Date;
     note: string | null;
-    sender: string | null;
+    answer: DepositAnswer | null;
     files: { name: string; size: string }[];
   } | null>(null);
   let cameraInput = $state<HTMLInputElement | null>(null);
@@ -145,9 +146,9 @@
 
   async function send() {
     if (preview || rows.length === 0 || live !== "ready") return;
-    if (portal.askSender && sender.trim().length === 0) {
-      senderMissing = true;
-      document.getElementById("deposit-sender")?.focus();
+    if (portal.fieldLabel && answer.trim().length === 0) {
+      answerMissing = true;
+      document.getElementById("deposit-answer")?.focus();
       return;
     }
     failure = null;
@@ -155,14 +156,15 @@
     live = "sending";
     controller = new AbortController();
     stalled = false;
-    const from = portal.askSender ? sender.trim() : "";
+    const given =
+      portal.fieldLabel && answer.trim() ? { label: portal.fieldLabel, value: answer.trim() } : null;
     try {
       const result = await sendDeposit(
         portal,
         rows.map((r) => ({ file: r.file, itemId: r.itemId })),
         note,
         {
-          sender: from,
+          answer: given,
           signal: controller.signal,
           onProgress: (index, status, percent, isStalled) => {
             rows[index].status = status;
@@ -175,7 +177,7 @@
         reference: await depositReference(result.transferId),
         at: result.sentAt,
         note: note.trim() || null,
-        sender: from || null,
+        answer: given,
         files: rows.map((row) => ({ name: row.file.name, size: formatSize(row.file.size) })),
       };
       live = "done";
@@ -205,13 +207,13 @@
         reference: sent.reference,
         at: sent.at,
         note: sent.note,
-        sender: sent.sender,
+        answer: sent.answer,
         files: sent.files,
       }),
     );
   }
 
-  // The name stays: someone sending twice is still the same person.
+  // The answer stays: someone sending twice is still the same person.
   function sendMore() {
     sent = null;
     rows = [];
@@ -278,17 +280,15 @@
           />
         {/snippet}
 
-        {#if portal.askSender}
+        {#if portal.fieldLabel}
           <TextInput
-            id="deposit-sender"
-            label={t.senderLabel}
-            placeholder={t.senderPlaceholder}
-            autocomplete="name"
-            maxlength={DEPOSIT_SENDER_MAX}
+            id="deposit-answer"
+            label={portal.fieldLabel}
+            maxlength={DEPOSIT_ANSWER_MAX}
             required
-            bind:value={sender}
-            oninput={() => (senderMissing = false)}
-            error={senderMissing ? t.senderMissing : undefined}
+            bind:value={answer}
+            oninput={() => (answerMissing = false)}
+            error={answerMissing ? t.fieldMissing(portal.fieldLabel) : undefined}
             disabled={phase === "sending"}
           />
         {/if}
@@ -399,7 +399,7 @@
           <Textarea
             id="deposit-note"
             label={t.noteLabel}
-            placeholder={portal.askSender ? t.notePlaceholderNamed : t.notePlaceholder}
+            placeholder={portal.fieldLabel ? t.notePlaceholderNamed : t.notePlaceholder}
             rows={2}
             maxlength={DEPOSIT_NOTE_MAX}
             bind:value={note}

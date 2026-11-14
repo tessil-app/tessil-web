@@ -19,7 +19,7 @@ import {
 } from "./keys";
 
 export const DEPOSIT_NOTE_MAX = 200;
-export const DEPOSIT_SENDER_MAX = 60;
+export const DEPOSIT_ANSWER_MAX = 60;
 // The note travels encrypted in a field the server caps; this keeps it inside.
 const NOTE_FIELD_MAX_BYTES = 720;
 // Shown until the API reports the owner's real limit.
@@ -41,8 +41,8 @@ export interface OpenedPortal {
   message: string;
   /** The owner's words after sending, or empty. */
   thanks: string;
-  /** The visitor must give their name. */
-  askSender: boolean;
+  /** The name of one thing the visitor must fill in, or empty. */
+  fieldLabel: string;
 }
 
 export type OpenPortalResult =
@@ -85,7 +85,7 @@ export async function openPortalFromLink(
       checklist: info.checklist ?? [],
       message: info.message ?? "",
       thanks: info.thanks ?? "",
-      askSender: info.askSender === true,
+      fieldLabel: info.fieldLabel ?? "",
     },
   };
 }
@@ -106,23 +106,36 @@ export function decodeDepositFileName(stored: string): { name: string; itemId: s
   return match ? { name: match[2], itemId: match[1] } : { name: stored, itemId: null };
 }
 
-// The sender's name rides in the encrypted note, ahead of the same separator.
-export function encodeDepositNote(note: string, sender: string): string {
-  const name = sender.replaceAll(ITEM_SEPARATOR, "").trim().slice(0, DEPOSIT_SENDER_MAX);
-  let text = note.replaceAll(ITEM_SEPARATOR, "").trim().slice(0, DEPOSIT_NOTE_MAX);
-  const encoder = new TextEncoder();
-  const full = () => (name ? `${name}${ITEM_SEPARATOR}${text}` : text);
-  while (text.length > 0 && encoder.encode(full()).length > NOTE_FIELD_MAX_BYTES) {
-    text = text.slice(0, -1);
-  }
-  return full();
+/** What the visitor filled in for the portal's extra field, with the field's name at the time. */
+export interface DepositAnswer {
+  label: string;
+  value: string;
 }
 
-export function decodeDepositNote(stored: string): { note: string | null; sender: string | null } {
+const LABEL_SEPARATOR = "\u001e";
+
+// The answer rides in the encrypted note, ahead of the same separator.
+export function encodeDepositNote(note: string, answer: DepositAnswer | null = null): string {
+  const strip = (text: string) => text.replaceAll(ITEM_SEPARATOR, "").replaceAll(LABEL_SEPARATOR, "").trim();
+  const value = answer ? strip(answer.value).slice(0, DEPOSIT_ANSWER_MAX) : "";
+  const head = value ? `${strip(answer!.label)}${LABEL_SEPARATOR}${value}${ITEM_SEPARATOR}` : "";
+  let text = strip(note).slice(0, DEPOSIT_NOTE_MAX);
+  const encoder = new TextEncoder();
+  while (text.length > 0 && encoder.encode(head + text).length > NOTE_FIELD_MAX_BYTES) {
+    text = text.slice(0, -1);
+  }
+  return head + text;
+}
+
+export function decodeDepositNote(stored: string): { note: string | null; answer: DepositAnswer | null } {
   const at = stored.indexOf(ITEM_SEPARATOR);
-  const sender = at === -1 ? "" : stored.slice(0, at).trim();
-  const note = (at === -1 ? stored : stored.slice(at + 1)).trim();
-  return { note: note || null, sender: sender || null };
+  const note = (at === -1 ? stored : stored.slice(at + 1)).trim() || null;
+  if (at === -1) return { note, answer: null };
+  const head = stored.slice(0, at);
+  const split = head.indexOf(LABEL_SEPARATOR);
+  const value = (split === -1 ? head : head.slice(split + 1)).trim();
+  const label = split === -1 ? "" : head.slice(0, split).trim();
+  return { note, answer: value ? { label, value } : null };
 }
 
 export interface DepositFileInput {
@@ -193,7 +206,7 @@ export async function sendDeposit(
   portal: OpenedPortal,
   entries: DepositFileInput[],
   note: string,
-  options: { signal?: AbortSignal; onProgress?: FileProgress; sender?: string } = {},
+  options: { signal?: AbortSignal; onProgress?: FileProgress; answer?: DepositAnswer | null } = {},
 ): Promise<{ transferId: string; sentAt: Date }> {
   const { signal, onProgress } = options;
   const files = entries.map((e) => e.file);
@@ -206,7 +219,7 @@ export async function sendDeposit(
   }
 
   const key = await generateKey();
-  const trimmedNote = encodeDepositNote(note, options.sender ?? "");
+  const trimmedNote = encodeDepositNote(note, options.answer ?? null);
   const encryptedNote = trimmedNote ? await encryptString(trimmedNote, key) : null;
 
   let transferId: string;
