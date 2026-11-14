@@ -188,6 +188,29 @@ export interface OwnedTransferSummary {
   wrappedKey: string | null;
   encryptedTitle: string | null;
   encryptedTitleIv: string | null;
+  /** The access key that sent it, if one did. Absent from an older server. */
+  deviceId?: string | null;
+}
+
+/** An access key: a program that may act for the account. */
+export interface AccessKey {
+  id: string;
+  name: string;
+  publicKey: string;
+  permissions: string[];
+  approvedAt: string | null;
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  /** Approved, not revoked and not past its date. */
+  active: boolean;
+}
+
+export interface ListAccessKeysResponse {
+  maxDevices: number;
+  portalsAllowed: boolean;
+  devices: AccessKey[];
 }
 
 export interface ListMyTransfersResponse {
@@ -578,7 +601,46 @@ export class ApiClient {
     if (cursor) params.set("cursor", cursor);
     if (limit) params.set("limit", String(limit));
     const qs = params.toString();
-    return this.request(`/api/me/transfers${qs ? `?${qs}` : ""}`);
+    const res = await this.request<ListMyTransfersResponse>(`/api/me/transfers${qs ? `?${qs}` : ""}`);
+    // A transfer sent by an access key carries that key's wrap, which the
+    // vault cannot open. Without it the dashboard shows the row unnamed.
+    return {
+      ...res,
+      transfers: res.transfers.map((t) => (t.deviceId ? { ...t, wrappedKey: null } : t)),
+    };
+  }
+
+  // ─── access keys ──────────────────────────────────────────────────
+
+  async listAccessKeys(): Promise<ListAccessKeysResponse> {
+    return this.request("/api/devices");
+  }
+
+  /** The program waiting under a pairing code: its name and public key. */
+  async getPendingAccessKey(code: string): Promise<{ name: string; publicKey: string; createdAt: string }> {
+    return this.request(`/api/devices/pending/${encodeURIComponent(code)}`);
+  }
+
+  async approveAccessKey(body: { code: string; name?: string; permissions: string[] }): Promise<AccessKey> {
+    return this.request("/api/devices/approve", { method: "POST", body: JSON.stringify(body) });
+  }
+
+  async updateAccessKey(
+    id: string,
+    changes: { name?: string; permissions?: string[]; renew?: boolean },
+  ): Promise<AccessKey> {
+    return this.request(`/api/devices/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(changes),
+    });
+  }
+
+  async revokeAccessKey(id: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/devices/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error(response.status === 404 ? "Access key not found." : `Request failed: ${response.status}`);
   }
 
   async getMyTransferFiles(

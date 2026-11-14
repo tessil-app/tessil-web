@@ -351,6 +351,18 @@
     return `${names[0]} + ${names.length - 1} more`;
   }
 
+  // Names of the access keys behind transfers a program sent.
+  let keyNames = $state<Record<string, string>>({});
+  let keyNamesAsked = false;
+  $effect(() => {
+    if (keyNamesAsked || !transfers.some((t) => t.deviceId)) return;
+    keyNamesAsked = true;
+    void api
+      .listAccessKeys()
+      .then((res) => (keyNames = Object.fromEntries(res.devices.map((d) => [d.id, d.name]))))
+      .catch(() => {});
+  });
+
   const lockedVaultedCount = $derived(
     transfers.filter((t) => t.wrappedKey && vaultStates[t.id]?.status === "locked")
       .length,
@@ -543,7 +555,9 @@
                     {#if t.hasPassword}
                       · password-protected
                     {/if}
-                    {#if !isVaulted}
+                    {#if t.deviceId}
+                      · sent by {keyNames[t.deviceId] ?? "an access key"}
+                    {:else if !isVaulted}
                       · name not kept
                     {:else if vs?.status === "locked"}
                       · vault locked
