@@ -22,6 +22,7 @@
   import * as Table from "$lib/components/table";
   import { api } from "$lib/api/client";
   import { loadMyPortals, type MyPortal } from "$lib/portal/client";
+  import { hasClosed } from "$lib/portal/keys";
   import { acceptShare, myFingerprint } from "$lib/portal/sharing";
   import { auth } from "$lib/stores/auth.svelte";
   import { formatSize } from "$lib/utils";
@@ -306,12 +307,17 @@
           </div>
         {/snippet}
         {#snippet statusBadge(portal: MyPortal)}
-          <Badge tone={portal.state === "invited" ? "info" : portal.isDisabled ? "muted" : "success"}>
+          {@const closed = hasClosed(portal.closesAt)}
+          <Badge
+            tone={portal.state === "invited" ? "info" : portal.isDisabled || closed ? "muted" : "success"}
+          >
             {portal.state === "invited"
               ? "Waiting for you"
               : portal.isDisabled
                 ? "Switched off"
-                : "Accepting files"}
+                : closed
+                  ? "Closed"
+                  : "Accepting files"}
           </Badge>
         {/snippet}
 

@@ -30,6 +30,7 @@
     type OpenedDeposit,
     type OpenedMemberPortal,
   } from "$lib/portal/deposits";
+  import { hasClosed } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
   import { buildReceiptText, saveTextFile } from "$lib/portal/receipt";
   import { loadSharing, type PortalSharing } from "$lib/portal/sharing";
@@ -393,8 +394,12 @@
       align="left"
     >
       {#snippet badge()}
-        <Badge tone={portal?.isDisabled ? "muted" : "success"}>
-          {portal?.isDisabled ? "Switched off" : "Accepting files"}
+        <Badge tone={portal?.isDisabled || hasClosed(portal?.closesAt) ? "muted" : "success"}>
+          {portal?.isDisabled
+            ? "Switched off"
+            : hasClosed(portal?.closesAt)
+              ? "Closed"
+              : "Accepting files"}
         </Badge>
       {/snippet}
       {#snippet actions()}

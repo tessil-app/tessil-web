@@ -89,7 +89,10 @@ export interface PortalPublicInfo {
   fieldLabel?: string;
 }
 
-/** What an owner can set on a portal. All of it lives in the public bundle. */
+/**
+ * What an owner can set on a portal. Everything lives in the public bundle
+ * except the last two, which the server has to act on and so can see.
+ */
 export interface PortalSettings {
   title: string;
   lang: Locale | null;
@@ -98,9 +101,20 @@ export interface PortalSettings {
   thanks: string;
   /** Empty: no extra field. */
   fieldLabel: string;
+  /** When new deliveries stop, as an ISO moment. Null: no closing date. */
+  closesAt: string | null;
+  /** Email the members when files arrive. */
+  notifyOnDelivery: boolean;
 }
 
-export function settingsOf(info: PortalPublicInfo): PortalSettings {
+/** True once a closing moment has passed. */
+export function hasClosed(closesAt: string | null | undefined, now = Date.now()): boolean {
+  return !!closesAt && new Date(closesAt).getTime() <= now;
+}
+
+export function settingsOf(
+  info: PortalPublicInfo,
+): Omit<PortalSettings, "closesAt" | "notifyOnDelivery"> {
   return {
     title: info.title,
     lang: info.lang ?? null,

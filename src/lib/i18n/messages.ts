@@ -140,6 +140,9 @@ export interface DepositStrings {
   confirmationFilename: (reference: string) => string;
   closedTitle: string;
   closedBody: (title: string) => string;
+  openUntil: (date: string) => string;
+  closedOnTitle: string;
+  closedOnBody: (title: string, date: string) => string;
   footnote: (title: string) => string;
   howItWorks: string;
   invalid: Record<"bad_link" | "not_found" | "untrusted" | "offline", { title: string; body: string }>;
@@ -147,6 +150,7 @@ export interface DepositStrings {
     blockedScript: (name: string) => string;
     blockedExecutable: (name: string) => string;
     notAccepting: string;
+    closed: string;
     portalFull: string;
     fileTooLarge: (name: string) => string;
     transferTooLarge: string;
@@ -195,6 +199,10 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     closedTitle: "Not accepting files right now",
     closedBody: (title) =>
       `This portal has been switched off. Let ${title} know, and they can switch it back on.`,
+    openUntil: (date) => `You can send files until ${date}.`,
+    closedOnTitle: "This portal has closed",
+    closedOnBody: (title, date) =>
+      `It took files until ${date}. If you still need to send something, ask ${title} to open it again.`,
     footnote: (title) =>
       `Your files are encrypted in this browser before they are uploaded. Only ${title} can open them. Tessil cannot, and neither can anyone else who sends files here.`,
     howItWorks: "How this works",
@@ -220,6 +228,7 @@ export const depositStrings: Record<Locale, DepositStrings> = {
       blockedScript: (name) => `"${name}": scripts can't be sent here.`,
       blockedExecutable: (name) => `"${name}": programs can't be sent here.`,
       notAccepting: "This portal is not accepting files right now.",
+      closed: "This portal has closed and takes no more files.",
       portalFull: "This portal is full. Let the person you are sending to know.",
       fileTooLarge: (name) => `"${name}" is too large for this portal.`,
       transferTooLarge: "These files are too large to send in one go. Try sending fewer at a time.",
@@ -266,6 +275,10 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     closedTitle: "Neemt nu geen bestanden aan",
     closedBody: (title) =>
       `Dit portaal is uitgezet. Laat het ${title} weten, dan kan het weer worden aangezet.`,
+    openUntil: (date) => `Je kunt bestanden versturen tot en met ${date}.`,
+    closedOnTitle: "Dit portaal is gesloten",
+    closedOnBody: (title, date) =>
+      `Het nam bestanden aan tot en met ${date}. Moet je toch nog iets versturen, vraag ${title} dan om het weer open te zetten.`,
     footnote: (title) =>
       `Je bestanden worden in deze browser versleuteld voordat ze worden verstuurd. Alleen ${title} kan ze openen. Tessil niet, en ook niemand anders die hier bestanden instuurt.`,
     howItWorks: "Hoe dit werkt",
@@ -291,6 +304,7 @@ export const depositStrings: Record<Locale, DepositStrings> = {
       blockedScript: (name) => `"${name}": scripts kunnen hier niet worden verstuurd.`,
       blockedExecutable: (name) => `"${name}": programma's kunnen hier niet worden verstuurd.`,
       notAccepting: "Dit portaal neemt nu geen bestanden aan.",
+      closed: "Dit portaal is gesloten en neemt geen bestanden meer aan.",
       portalFull: "Dit portaal is vol. Laat het de ontvanger weten.",
       fileTooLarge: (name) => `"${name}" is te groot voor dit portaal.`,
       transferTooLarge: "Deze bestanden zijn samen te groot. Verstuur er minder tegelijk.",

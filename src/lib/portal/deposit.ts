@@ -43,6 +43,8 @@ export interface OpenedPortal {
   thanks: string;
   /** The name of one thing the visitor must fill in, or empty. */
   fieldLabel: string;
+  /** The owner's closing date, passed or not. */
+  closesAt: string | null;
 }
 
 export type OpenPortalResult =
@@ -86,6 +88,7 @@ export async function openPortalFromLink(
       message: info.message ?? "",
       thanks: info.thanks ?? "",
       fieldLabel: info.fieldLabel ?? "",
+      closesAt: res.closesAt ?? null,
     },
   };
 }
@@ -161,6 +164,7 @@ export type DepositErrorCode =
   | "blocked_script"
   | "blocked_executable"
   | "not_accepting"
+  | "closed"
   | "portal_full"
   | "file_too_large"
   | "transfer_too_large"
@@ -185,6 +189,8 @@ function codeFor(err: unknown): DepositErrorCode {
     switch (err.code) {
       case "portal_not_accepting":
         return "not_accepting";
+      case "portal_closed":
+        return "closed";
       case "portal_full":
         return "portal_full";
       case "file_too_large":

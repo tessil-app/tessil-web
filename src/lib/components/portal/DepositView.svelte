@@ -20,7 +20,8 @@
     type DepositAnswer,
     type OpenedPortal,
   } from "$lib/portal/deposit";
-  import type { Locale } from "$lib/i18n/locale";
+  import { HTML_LANG, type Locale } from "$lib/i18n/locale";
+  import { hasClosed } from "$lib/portal/keys";
   import { depositStrings } from "$lib/i18n/messages";
   import { buildReceiptText, depositReference, saveTextFile } from "$lib/portal/receipt";
   import { holdWhileUploading } from "$lib/upload/keepAwake";
@@ -50,6 +51,13 @@
   let { portal, locale, preview }: Props = $props();
 
   const t = $derived(depositStrings[locale]);
+
+  const closingDay = $derived(
+    portal.closesAt
+      ? new Intl.DateTimeFormat(HTML_LANG[locale], { dateStyle: "long" }).format(new Date(portal.closesAt))
+      : null,
+  );
+  const closedByDate = $derived(hasClosed(portal.closesAt));
 
   let live = $state<Phase>("ready");
   const phase = $derived<Phase>(preview === "sent" ? "done" : preview === "form" ? "ready" : live);
@@ -92,6 +100,8 @@
         return t.errors.blockedExecutable(name);
       case "not_accepting":
         return t.errors.notAccepting;
+      case "closed":
+        return t.errors.closed;
       case "portal_full":
         return t.errors.portalFull;
       case "file_too_large":
@@ -231,6 +241,9 @@
   {#if portal.message && phase !== "done"}
     <p class="pt-1 text-foreground whitespace-pre-line break-words">{portal.message}</p>
   {/if}
+  {#if closingDay && !closedByDate && portal.accepting && phase !== "done"}
+    <p class="text-sm text-muted-foreground">{t.openUntil(closingDay)}</p>
+  {/if}
 </header>
 
 {#if phase === "done"}
@@ -259,6 +272,10 @@
       {/if}
       <Button variant="secondary" fullWidth={false} onclick={sendMore}>{t.sendMore}</Button>
     {/snippet}
+  </EmptyState>
+{:else if closedByDate && closingDay}
+  <EmptyState title={t.closedOnTitle}>
+    <p>{t.closedOnBody(portal.title, closingDay)}</p>
   </EmptyState>
 {:else if !portal.accepting}
   <EmptyState title={t.closedTitle}>
