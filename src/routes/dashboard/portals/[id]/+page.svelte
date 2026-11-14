@@ -33,7 +33,8 @@
   } from "$lib/portal/deposits";
   import { hasClosed } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
-  import { buildReceiptText, saveTextFile } from "$lib/portal/receipt";
+  import { buildReceiptText } from "$lib/portal/receipt";
+  import { saveTextFile } from "$lib/download/saveTextFile";
   import { loadSharing, type PortalSharing } from "$lib/portal/sharing";
   import { formatSize } from "$lib/utils";
   import { subscribeToVaultState } from "$lib/vault/client";

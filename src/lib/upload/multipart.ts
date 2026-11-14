@@ -11,13 +11,16 @@
 // part completions. With per-byte progress we report a smooth byte count plus
 // a live speed (EMA) and ETA.
 //
+// Outside a browser there is no XMLHttpRequest. Parts then go out with fetch,
+// which reports a part only when it is done.
+//
 // A dropped connection does not fail the file. A part that keeps failing for
 // network reasons is retried, with the parts already stored left alone, until
 // the connection is back or GIVE_UP_AFTER_MS passes. Only this tab can
 // continue: a reload starts the file again.
 
 import {
-  api,
+  api as defaultApi,
   ApiError,
   type CompleteMultipartUploadPart,
   type InitMultipartUploadPart,
@@ -73,6 +76,8 @@ interface MultipartUploadInput {
   onProgress?: (progress: MultipartProgress) => void;
   /** AbortSignal for user-initiated cancel; rejects all in-flight Parts. */
   signal?: AbortSignal;
+  /** The API to finish or abort through. The website's own by default. */
+  api?: Pick<typeof defaultApi, "completeMultipartUpload" | "abortMultipartUpload">;
 }
 
 interface MultipartUploadResult {
@@ -201,6 +206,52 @@ function uploadSinglePart(
   });
 }
 
+// The slowest connection a part is still given time to finish on.
+const SLOWEST_BYTES_PER_SECOND = 32 * 1024;
+
+/**
+ * PUT one part with fetch, for where there is no XMLHttpRequest. No progress
+ * while it runs, so a stall is caught by a deadline sized to the part.
+ */
+async function uploadSinglePartWithFetch(
+  task: PartTask,
+  onLoaded: (loaded: number) => void,
+  signal?: AbortSignal,
+): Promise<PartUploadResult> {
+  if (signal?.aborted) throw new DOMException("aborted", "AbortError");
+  const attempt = new AbortController();
+  const onAbort = () => attempt.abort();
+  signal?.addEventListener("abort", onAbort, { once: true });
+  let timedOut = false;
+  const deadline = setTimeout(
+    () => {
+      timedOut = true;
+      attempt.abort();
+    },
+    timing.idleTimeoutMs + (task.contentLength / SLOWEST_BYTES_PER_SECOND) * 1000,
+  );
+  const failed = (message: string, status: number) =>
+    Object.assign(new Error(message), { status });
+  try {
+    let response: Response;
+    try {
+      response = await fetch(task.url, { method: "PUT", body: task.body, signal: attempt.signal });
+    } catch {
+      if (signal?.aborted) throw new DOMException("aborted", "AbortError");
+      // Status 0 marks network errors, and a part that ran out of time, as retryable.
+      throw failed(timedOut ? "Part upload stalled" : "Part upload failed (network)", 0);
+    }
+    if (!response.ok) throw failed(`Part upload failed: ${response.status}`, response.status);
+    const etag = response.headers.get("ETag");
+    if (!etag) throw new Error("Part response missing ETag header");
+    onLoaded(task.contentLength);
+    return { etag };
+  } finally {
+    clearTimeout(deadline);
+    signal?.removeEventListener("abort", onAbort);
+  }
+}
+
 /** Waits `ms`, or less if the browser reports the connection is back. */
 function waitForConnection(ms: number, signal?: AbortSignal): Promise<void> {
   if (typeof window === "undefined") return sleep(ms, signal);
@@ -270,7 +321,9 @@ function uploadPartWithRetry(
   return untilConnected(
     () => {
       onLoaded(0); // reset this part's contribution at the start of the attempt
-      return uploadSinglePart(task, onLoaded, signal);
+      return typeof XMLHttpRequest === "undefined"
+        ? uploadSinglePartWithFetch(task, onLoaded, signal)
+        : uploadSinglePart(task, onLoaded, signal);
     },
     (err) => isRetryableStatus((err as { status?: number }).status ?? 0),
     onStall,
@@ -287,6 +340,7 @@ export async function uploadEncryptedStreamMultipart(
   input: MultipartUploadInput,
 ): Promise<MultipartUploadResult> {
   const { uploadId, fileId, transferId, source, partUrls, onProgress, signal } = input;
+  const api = input.api ?? defaultApi;
 
   // Linked to caller signal so a user cancel propagates to in-flight Parts and
   // the source reader.

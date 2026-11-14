@@ -1,0 +1,191 @@
+{
+ "stream": [
+  {
+   "chunkSize": 64,
+   "key": "ZASQZ4_m52eF1xuvUvJSND17lNJuAp535LQLW9zScvw",
+   "plaintext": "",
+   "ciphertext": "VFNMMQEAAADCiUAiff-cMkAAAAAPbQ-eFHIXMJzAiFkl-uKl"
+  },
+  {
+   "chunkSize": 64,
+   "key": "41ZMinQNtPVN659-Eeg9PsFzWOcwHwNYSLblAn5jM7g",
+   "plaintext": "9A",
+   "ciphertext": "VFNMMQEAAAB0GV6h9wg1EEAAAABRMqee2QkvVQg87ZdigokLTw"
+  },
+  {
+   "chunkSize": 64,
+   "key": "fES7AvLZ_6RKDD_Fvo1vwLLJ6ifVtZiTNmqLEh1ObvU",
+   "plaintext": "zJOcZcY9o47QvyRmz2ao_Urdt0VjJzX-VR6qAd_BZpx_igUiuZ9v69l6K5PHVmRFJt8S89y_JGWdMoi7HgoKQg",
+   "ciphertext": "VFNMMQEAAADmOgjn0e3cGUAAAADld4ZOeEBqj09G3_LLyPMJrGEoFVue-E8209WLD72Kcqs_WY-JKkaG1GUsyjFKgv8y75AC_SLvcY9mpujH5M-Koe_F8OBipMCyFqLFPwzPAA"
+  },
+  {
+   "chunkSize": 64,
+   "key": "UndT1rV7oeKouHIFtUocRf9kZvSlhODPpr5ACkfsPuw",
+   "plaintext": "Tda4xot4HrWLZZLgH7q6mVNtFzcTr58PcOmfh3Qdr2gURHl2RG6tpKFBXBpI_aA08xAazdt6c5KemCkAFF2bmUw",
+   "ciphertext": "VFNMMQEAAAAXHh68tls-M0AAAAC6aZoNTuKO0lDOQ3reW9ITlsA-WFu30pAL0FE5RahPmKOc42LluYT7goRSdVV13Hl9VJGgno8NCjkhMAdSwm9xNRBxkyCNkW3VjUwPk-LiBeYwHAudiRqf6akeDIV3m8B4"
+  },
+  {
+   "chunkSize": 64,
+   "key": "ttOODgQbdselv__oIg9E498ID1iegOnqOnz50Cl0SIQ",
+   "plaintext": "aNempFcBSYzJLf27jky1RjWHTIPAaPIxjBoLXXZRRl4p4CJ-ZCdW1NIxLtcjou_MYUrGyRkcIlWOPV7NohoWrtv1enpX840YQ_ftIerVRwyiIGRLejfP1sAfPsGmi2IA_NEkvwphXkDClSejDHEh6MNwKAA7LP32bwRoDhpnjqbgGyjSopC4loaPmulc9QYYob4Rd6p4rUxffvXV3q2zYK5X9owzlsrwkOHIrSa0ViNc6mSiFvvuDbBkKvodf5ej4Xy_9Qpx2Rs",
+   "ciphertext": "VFNMMQEAAAC3h9R4wGVIzEAAAAC-Sv88ZtiS4eCIsrVTqPkEkJgZg03JVQvqrVKOmMH6XQjYOh7AaJ1h0IrZrxtvQR5QpQPQ7JHm-cgox2nPTTA3Pizl8M7-CZUlbe59NlQra9uujthsKa0U1JypOYQS-NWCT74N75bVMDgQq76ZOTRntwNm5PJVIeIE8AUIpLEWQ5TyXbuCyMaVdCyBw8B5Ua5HHyKIMbtARicPXbcfxFyhzf6S-S6dBqL7oGUVM6JfvJS7sLTyvCGmO9ziWTL6zcVZp2jbbmJ04dlP7nxJf8PqgHXIzUK9lsk_29hQBArJntITQgw0mtcsl6peDzaCjJmV_0I9OlEoqFXIUa2VDf-OJIr5wnanmvo"
+  },
+  {
+   "chunkSize": 1048576,
+   "key": "0YiXhV0UmyrFquHBn8eFePJ6iMjERST6dbxQOSA3VWs",
+   "plaintext": "7b9AtWilIjXMhVze0KcoZl4ZJg2gEyjhYXvuySKeaYVZPYCqDxb3r9qPeyEbCSRWTpRKqf_kzYH9I_jR1kRAOs_0eov11egG7_b9QfW4uqc8QOtCVwtFtheT8nOyjT4agCepnA",
+   "ciphertext": "VFNMMQEAAABFLkwYbHGXJQAAEACqF_Fd2OcwVNIGVRNqVl8MU744GV8lBDmB7FM4O-DbcklcAV_uvzD4hUamBvWHuVvj3om4IJ0X4vEZ-Y3tucOCO5XQg2FykqmNr9u0i2mwbSaqhTa0Eu2bu6MuI733AIP7GH5Xt-CxXAXJACrZbsUbgcYxqQ"
+  }
+ ],
+ "strings": [
+  {
+   "key": "MLoE0Bbpsv2QDhtzLCKdNhJI3Q6JLyrI1R0seaRbdwM",
+   "plaintext": "Tax return 2025",
+   "ciphertext": "eCyNn8NVT4EbQsBZqWuAFM23T+JH+WGi4052YNveRj7GgYqWZZJrfECkXsQayJmQ",
+   "iv": "QZcSXwH8k+y2qOq/"
+  },
+  {
+   "key": "_6d5c1YoSSddzsTsMDrqZgL5Avy26UTUm-JqBvlkoWQ",
+   "plaintext": "",
+   "ciphertext": "aubx6OIoSO8M8iH33Lcq1DbqsX6ffA53nq8jBU89ICYCqUoIZuWDYyS14renBjn0",
+   "iv": "1tcbcMrR3vYk7Aiy"
+  },
+  {
+   "key": "hZqx6TgUTDH-7KTwLGQhROFjDpzPPBqxX1v6biQCjlI",
+   "plaintext": "Jaaropgave één 文 📄",
+   "ciphertext": "gcrdJmUOJ8xWu7S5cFujFzLLH+n7/unKpsq88QQB/lzsxF6dwmlZqq2MXTZ+ViWQ",
+   "iv": "LVlPSdh0FIDOgKHj"
+  },
+  {
+   "key": "Q2r8oHhx6VsxK7icUxSwHsrkR2rn4RyGFaDtVSxYAZw",
+   "plaintext": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "ciphertext": "Wa93qdVGKpXAQQDUs+kdyX9oNR+7XwRhhXha8oeWqKeiFu+xmhqZMAEUROmnb2xH9E/QOi9BnaDlByYD0KMpYIlc54hoUJwCaBmmXf3LHOXycUKVoUKOm85Odii5n0YiOjggFdl1O/0E7tvHPzb7mobUiNV4R8wZVlcBE1HAe9OKlvCXxWLD0euJXroorLbiJT2ERtIVzC2w9UhHdrkdAe/9i9lbiqy0GVORxJf9786AG7AzrbMyI12lFr5iSYneyV5n0cM/xVyy/fCE0eMi2TOwBk3Au/+SQ5iHIQgShyEY2l3LZxjjcCqb93Ac5uq+IMV+x6JjkfiIF87i4J3iSvuqV0nZY6x8diZ87THEfh1xfEabnEkn8LKoip+0SK2AnOgtjeMAAIoP3/pAWO+3COX8iNNbfP6vE1gcGoquukHiUOGLDBzaipVCqHzozMcG",
+   "iv": "jop+o9TbgBsWOo2H"
+  }
+ ],
+ "filenames": [
+  {
+   "key": "vR9Uz8W3zE7jm_hmKL_80-OgeNIkSGMeCDU676Ik7YM",
+   "plaintext": "contract-signed.pdf",
+   "encryptedName": "D5umD2zNn6uW+PlqsjTMxEDBmnP36bUfmK3Q9rH/8P/nzIYHqepCPfhLhUNm4eET",
+   "iv": "K28B+BNH9bqH4VYm"
+  },
+  {
+   "key": "8k1WujvJQMcRG0k7R4ZT648zvMpfcefMGZeT77J9l2g",
+   "plaintext": "foto van paspoort (1).jpeg",
+   "encryptedName": "h1qpD4OI4HqeTD3+9cDw+qi6hjh+c60AIZI0Fgj80teM+zPGLZ0eaKfykVGL+1hd",
+   "iv": "R/Sz6RHVeZNG6YtP"
+  },
+  {
+   "key": "t2ka4bldIsnSZe5lb6khHOsnT4Cbh7y7GWz9M7QNvPg",
+   "plaintext": "ab12cd\u001fid.jpg",
+   "encryptedName": "+QZlJA3T4Y3tA3dw6VXGCr8ukeZNZN5EoCuxjrP1BHo5Ic9LkJon51WQhaIIp+rE",
+   "iv": "lsOhSHNurRNbhsDt"
+  }
+ ],
+ "transferPassword": {
+  "key": "VDQYoG16Ul5_sh_y2sylHNlRLqgBM_Pu4GL-Nogjg_k",
+  "password": "correct horse battery staple",
+  "fragment": "w2.zJNCgg_eGI4l4fO-X5wugg.IxFb2XDJRae96-VM8aMXVo-rLqRDl0bEIaiKyNAlhXhhAhAT1LBTrQ",
+  "salt": "zJNCgg_eGI4l4fO-X5wugg",
+  "verifier": "Ia4UOKLdg5Xwf2-8E-HWbI24DU1za424K-bZxRob6Bo"
+ },
+ "derived": {
+  "linkKey": "mSE8CX-RWiPjs8FCaNu8hD8xYWZmFweN3UTubeMMYB8",
+  "portalId": "V1StGXR8_Z5jdHi6B-myT",
+  "transferId": "Uakgb_J5m9g-0JDMbcJqL",
+  "password": "tulips-2025",
+  "depositToken": "aaKGWYun9fxo5Ajux8UZCF12gqbANQsWiIvdflN7bqM",
+  "accessToken": "i3wQ6b9B_KmPXcHwBCQtup8sqSCdRX3c8huZDiDriS4",
+  "reference": "8747-7E80",
+  "depositKeyContext": "deposit-key|V1StGXR8_Z5jdHi6B-myT|Uakgb_J5m9g-0JDMbcJqL",
+  "publicKey": "BJeijY3JLIHUIt1PXVsqFVjIYaKZlgrOhfMjDpsWdXdw0AmZeTbsTYKU1SV4FoNP5rchChVstOFkpCXELOSXRuE",
+  "fingerprint": "0953 b364 5293 9e43 0582 c0ff 553b d870",
+  "fileName": {
+   "name": "id.jpg",
+   "itemId": "ab12cd",
+   "stored": "ab12cd\u001fid.jpg"
+  },
+  "note": {
+   "note": "Tax 2025",
+   "answer": {
+    "label": "Client number",
+    "value": "2024-118"
+   },
+   "stored": "Client number\u001e2024-118\u001fTax 2025"
+  }
+ },
+ "portal": {
+  "owner": {
+   "userId": "owner-user-id-0000001",
+   "vaultKey": "arC3jdaVjrm0sKGCWFrcTDQP1o_Mht_pgBcmKvJJrVw",
+   "privateKeyPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgu0yw9FRp_6-R5ZVsf4VmRBg39mJf6WnKYIYAoY5sUPWhRANCAAQ_5BfOWQPqH_A-tQevkbtwNrOz6kCPojX6kpZ4siXUMgTrVsq7mt1s_ketQkyByNe7vsQD0-r13isBAiHH1ikE",
+   "publicKey": "BD_kF85ZA-of8D61B6-Ru3A2s7PqQI-iNfqSlniyJdQyBOtWyrua3Wz-R61CTIHI17u-xAPT6vXeKwECIcfWKQQ"
+  },
+  "guest": {
+   "userId": "guest-user-id-0000002",
+   "vaultKey": "D0ESU6S1flRFHxHht8SuW1gZuNRWbNxG82ujmMlynWo",
+   "privateKeyPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgNc8LV9AQqZ4NayNgVNqhjJfzZwomRLJt9UYqwl0_D0ihRANCAASsWZJyiOEmtCSAPWZIyZ31AeXoXoJhLBnzH45-fZ0IPEbuIP73W65M-pcts-usnogji6KdHWoMP_aAqAXGsAHH",
+   "publicKey": "BKxZknKI4Sa0JIA9ZkjJnfUB5ehegmEsGfMfjn59nQg8Ru4g_vdbrkz6ly2z66yeiCOLop0dagw_9oCoBcawAcc"
+  },
+  "portalId": "zXs24tTWrEf7DYmx7y_wx",
+  "keyVersion": 1,
+  "linkKey": "kNSsJKGdcNse20c7j6udv9X3q5nwr1bSywlEPhFrEqg",
+  "firstBundle": "Abb36Rxkc_hpotiFkwaxKWWI03LXrQH4FQHPe0KcUgIHKdjqn-58zv5u_XQP-FOWcGq6h7jE7TLYgSqMRlP0bVXjS1hv0QrUGQXJ-9bPi7_lBpf9YnLi7uInVdvxsW6iJlCkTequrREWpX9Ey1pbXYXRiSZJK28y0lSeTsGnC5p3Twwp_0BkwRgkXmEIXRtIAYj6x2ABWotpCqSlSyZ38CrSCacCsX2ZoMooa1sZV-QdO1HGJxhuZkOXTsXsRouezvxy4YgtpU-18uXxtNXNXAAgs00ukgv4Kp-hRScp_C6IONQ7TNWekMA8UyENjjVTCwyzhQiD76nhAIhNmtlSUwdijOAFNpnTIV5QlhooA08_1IDfwlcCEhubu2Xr",
+  "fullBundle": "AZo8ojBBPAYDzQ6_mN-GsEiW_dOh-kryuvGKORpvhknBImrV4i9WfO-1FtOSvfjcMRQS5gNaMPzjGR4CSk3H1-uTKVB6rVdLEEywxf6lQSpxNCi-ie09dB2VWRusb7-5Hn060JjdonAL1tktmqt2mdVzvQXvqQKOE3659qHHzL0fJOiCUjn5JqC2yI4VDKleaUsujXSrcIWPPB_jZWz_hF8UVzQPxF0gjBVhQbttgr7-p3YxmdMD4G0HzKG81WVLlnf4VOHNil6dIghjkoDGfLdjhlzgTk-t52BPBrjYbkYGhgyDP49kvFjdmkdk7lW7DrCVbjoK87aB4s3U62Dtxi2Y-avs7zGAHPEt_UmUEv33wAmGTgfaqL-X3fEqqo7Ky6t_yJu5FvV9nYCsNu7nPtZ8UfjV-TIPlIEfhKJTP-4oR53ANqyJiJedlBTxL_OpK4UQYcYG12Mv7vVJAzPWcM7WFz0getx4YHFQ7Ivik0-VCvIgF32tSqV76JydWWwAp0lEvlyYexbYWwm1haiWXE5prHG0H_5EZ6NPFF-iCTh90G52AS9-tlRCaCKwZ0S8967PtyqpjDEaqOR7s9uPPEb0uEgFEGSb4bRswS2kYXW_I3aYTrgru4NUwZ7uQzWUJasz450GwX762N_6_kTzQputWlua3TqKkZ4lp6K57S6AX71KrU1RF1JeH3LEDpC7idNx0GCuRzTQNR1SkjkwtOlXPF5SQzIVPOe-UKUf8L3xG4duVRiJwljyKCkJ54_gh3hfn0Dpz9Fjxl3v1Biof-ythbnMsSTcZguzRiGfiEZHF4Z52Mx7nCH3KggytpuYObBUMpoyUs8nNi6JceUZyuvzUZyzTHHsozgjKawJ7uio4tb6OAnth0Bmrxmk",
+  "full": {
+   "title": "Jansen Administratie",
+   "lang": "nl",
+   "checklist": [
+    {
+     "id": "ab12cd",
+     "label": "Kopie van je ID"
+    },
+    {
+     "id": "ef34gh",
+     "label": "Jaaropgave 2025"
+    }
+   ],
+   "message": "Stuur alles voor 1 april.\nFoto's zijn prima.",
+   "thanks": "Dank je. Je hoort binnen vijf werkdagen van ons.",
+   "fieldLabel": "Klantnummer",
+   "logo": {
+    "type": "image/png",
+    "data": "bm90IHJlYWxseSBhIHBuZw=="
+   },
+   "twoWay": true,
+   "returns": [
+    {
+     "id": "Uakgb_J5m9g-0JDMbcJqL",
+     "key": "pZkMjAM7TEsRBBkv7YNqfDh29-yu5kDg5pSofdEdZhQ"
+    }
+   ]
+  },
+  "publicKey": "BADYtIyanfocsfSWmXIS2dyHLB0E-R6r2fHApluUeKJNpd5X73twWGS_ZbQpMqhNe6T_849not93kzkf1WPym5c",
+  "keptKeys": "SwHIm7s5YoJWMoEzNBDltvf5RaVc6komNKmSZ-_zYaMdvTljJujjlPjBjvh1dUFKIQ0WmEgByVRWhqyROzGmltH2n0vkLKm-NVjMAqT3UXldKXXCHvAn1WqnFLqDT0U41tUdvAHVIOZ1dxglhAscpWqD8Ojc5yXdlQK0jkMS7QuT-U4R6f9nPTvCpNQkdwRgoo-zfwjPX3CgoYfAbJvw4aOEe1NX5VNK9MOugVrqgJMVoqXxDEZTjjbh04TyqIG95GbjpmsS_HI",
+  "handedKeys": "SAIEqVkUPggCd8EFSXxnZWwwxOYq2ztDVArsPllEHQqAfbtEtULBkAomDBVaWOKL1kjtPOu_mToY89muOI2QcyNuuOEXzqOKmjdFvl-vCWmZfdUGl6udF3qEj0MKfVpBN-ukGiK_a2sLZGOCZit0N30NdY38RYP-bmddbMc9yyze2bL3qZp6KeNsGxvs9D6rIb-lKvz8jCCs0PSl0CSTwia3lB_0ebpD5qeGFKef-0Ia3VRS37Cbv9SWmbib8MDATg195D5HjKGCW_qCapQsQjX6_i3NssI2dE4SlTG-QnS6MP7fc2Bz1arqv8hFRHt55ZS809Y1LbBAoYEsqg",
+  "deposit": {
+   "transferId": "Uakgb_J5m9g-0JDMbcJqL",
+   "key": "EgxWVZc_z9Lip0ScAQJtOU2Plt3BfBODAhnQWve0ASk",
+   "sealedKey": "AQQM4YIkYSrU3tTOu0Y_QEzuoSYIMl_oXRjSz5SIYt5968wPHHc9VIM-cNqWZO04JvoiMRu2TL98rqtu8-4Zc9Btt-pBy1LR2aOmTERM1guW3gbgFPyqleuNe7xw0gjfSeI7z3s9OGyBd8bS7SCSNdbW"
+  }
+ },
+ "sealed": {
+  "recipient": {
+   "userId": "recipient",
+   "vaultKey": "eZnWOTD0ABAHqfXl0C4jcRiWMNCVMfeT_gF6eYqc9Eo",
+   "privateKeyPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgVvsSzDMRI1KGqZxKD28XqglQXxVYJ33VkKN294xN6V2hRANCAASSPJ4t35PLpdsIUKrB9SS4G0T_Eh9_-Lquqzhpm5aqaQ9JvdrLCnN2EeDu7Rmsz2-ApR6Jd4HbzGHj7UYTXSJ3",
+   "publicKey": "BJI8ni3fk8ul2whQqsH1JLgbRP8SH3_4uq6rOGmblqppD0m92ssKc3YR4O7tGazPb4ClHol3gdvMYePtRhNdInc"
+  },
+  "sender": {
+   "userId": "sender",
+   "vaultKey": "BP9a-5VXjFc022TwfQFH4o5wpKqHtFp6Bw8NrOVBgLc",
+   "privateKeyPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgjG9VCrajzr86Kv6Ijhk3e1s_6-FpDluSQSDgQbiAYSmhRANCAAR90hpiZqebwpOPpRScQASXyivnNOnIOwu_DJ_ySNKabv1h50ng-fwkrSXZgR-0Im7qyWba-suOf6SkoAFY_nyZ",
+   "publicKey": "BH3SGmJmp5vCk4-lFJxABJfKK-c06cg7C78Mn_JI0ppu_WHnSeD5_CStJdmBH7QiburJZtr6y45_pKSgAVj-fJk"
+  },
+  "context": "test|context",
+  "plaintext": "YSBzbWFsbCBzZWNyZXQ",
+  "anonymous": "AQTknbjGLVxfbNkkZ5Mlx6CyeLNmSDIUOc7s-uL2zmCfUvPHIRdM8BWjYiD_AzwqQYqTb4_8qq4cbIRFKeGt8WAnEg4ObZhJ3bLKAlJxK2-rwyA35fNa20b7KfZO5Fl_",
+  "authenticated": "AgRP2XyC3j0GYHe2SRCim5JZBaNpErFF-5Ad-UrNr4b9_Fy-O0eqNvdeWZTliKlOktyX1ZUiS48-cSyyxnyQFRqSxSP-dBBffpmzuMwrZr3rmrNRRoQn4K9z2OHWLUjA"
+ }
+}
