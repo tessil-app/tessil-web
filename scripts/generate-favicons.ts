@@ -3,10 +3,10 @@
 //
 // Reads, from static/brand: favicon.svg (follows light and dark), tile.svg
 //         (the mark on a rounded paper square), icon.svg (the mark with room
-//         around it for app icons), og-image.svg, profile.svg, profile-dark.svg
+//         around it for app icons), og-image.svg, og-portals.svg, profile.svg, profile-dark.svg
 // Writes: static/favicon.svg, favicon-32x32.png, apple-touch-icon.png,
 //         icon-192.png, icon-512.png, icon-512-maskable.png,
-//         site.webmanifest, og-image.png, and brand/profile*.png for
+//         site.webmanifest, og-image.png, og-portals.png, and brand/profile*.png for
 //         account avatars elsewhere
 //
 // favicon.ico is intentionally skipped — modern browsers prefer
@@ -24,7 +24,6 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const staticDir = join(root, "static");
 const brand = (name: string) => join(staticDir, "brand", name);
-const ogSrc = join(staticDir, "brand/og-image.svg");
 // The rasterizer reads neither woff2 nor a variable weight axis, so these
 // are the two weights the social image uses, cut from the same font.
 const switzerFonts = ["Regular", "Semibold"].map((w) =>
@@ -37,7 +36,16 @@ async function renderMarkPng(svg: Buffer, size: number, outName: string) {
   await writeFile(join(staticDir, outName), png);
 }
 
-async function renderOgPng(svg: Buffer) {
+// The homepage painting, inlined so the rasterizer needs no file access. It
+// reads no webp, so scripts/og/painting.jpg is a JPEG copy of the featured
+// image: replace it when the featured painting changes.
+async function paintingDataUri(): Promise<string> {
+  const file = await readFile(join(root, "scripts/og/painting.jpg"));
+  return `data:image/jpeg;base64,${file.toString("base64")}`;
+}
+
+async function renderSocialPng(from: string, outName: string) {
+  const svg = (await readFile(brand(from), "utf8")).replace("%PAINTING%", await paintingDataUri());
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: 1200 },
     font: {
@@ -46,8 +54,7 @@ async function renderOgPng(svg: Buffer) {
       defaultFontFamily: "Switzer",
     },
   });
-  const png = resvg.render().asPng();
-  await writeFile(join(staticDir, "og-image.png"), png);
+  await writeFile(join(staticDir, outName), resvg.render().asPng());
 }
 
 async function main() {
@@ -70,8 +77,8 @@ async function main() {
     ),
   );
 
-  const og = await readFile(ogSrc);
-  await renderOgPng(og);
+  await renderSocialPng("og-image.svg", "og-image.png");
+  await renderSocialPng("og-portals.svg", "og-portals.png");
 
   const manifest = {
     name: "Tessil",
@@ -102,6 +109,7 @@ async function main() {
   console.log("  static/favicon.svg");
   for (const { name } of variants) console.log(`  static/${name}`);
   console.log("  static/og-image.png");
+  console.log("  static/og-portals.png");
   console.log("  static/site.webmanifest");
 }
 
