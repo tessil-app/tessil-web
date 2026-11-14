@@ -136,7 +136,7 @@
       <TextLink href="#compare">Compare everything</TextLink>
     </p>
 
-    <section id="compare" class="mt-20 border-t border-border pt-16 sm:mt-24 sm:pt-24 scroll-mt-20">
+    <section id="compare" class="mt-16 scroll-mt-20 sm:mt-24">
       <div class="max-w-2xl space-y-3">
         <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
           Every limit, side by side
@@ -146,7 +146,7 @@
           transfer, 500 MB a month, 5 transfers a day and links that last up to a day.
         </p>
       </div>
-      <PlanComparison current={auth.user?.tier ?? null} class="mt-6" />
+      <PlanComparison current={auth.user?.tier ?? null} class="mt-8" />
     </section>
 
     <section class="mt-20 border-t border-border pt-16 sm:mt-24 sm:pt-24 grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
