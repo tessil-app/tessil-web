@@ -13,7 +13,7 @@
 <ProsePage
   title="Privacy Policy"
   tagline="End-to-end encrypted file transfer."
-  updated="November 13, 2026"
+  updated="November 14, 2026"
   current="privacy"
 >
           <section class="space-y-3">
@@ -95,14 +95,28 @@
               <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
                 <li>
                   <strong>If you own a portal.</strong> We store that it exists and belongs to your
-                  account, whether it is switched on, and when you last opened it. Its name, its
-                  language and the list of documents you ask for are stored only in encrypted form
-                  that we cannot read.
+                  account, whether it is switched on, and when you last opened it. If you use
+                  them, we also store its closing date, whether you want an email when files
+                  arrive and when we last sent one, and a scrambled value that lets us check a
+                  visitor knows the portal's password without our knowing the password. Its name,
+                  its language, your texts, your logo, the list of documents you ask for and which
+                  files you sent back through it are stored only in encrypted form that we cannot
+                  read.
+                </li>
+                <li>
+                  <strong>If you send files back through a portal.</strong> They are stored as a
+                  transfer on your account, like any other you send.
+                </li>
+                <li>
+                  <strong>If you switch on arrival emails.</strong> We email you, and anyone you
+                  share the portal with, when files arrive. The email does not name the portal or
+                  the files.
                 </li>
                 <li>
                   <strong>If you send files through a portal.</strong> You need no account and we do
                   not ask who you are. We store the encrypted files, their encrypted names, your
-                  encrypted note if you add one, their sizes and when they arrived. Only the
+                  encrypted note and anything else the page asked you to fill in, also encrypted,
+                  their sizes and when they arrived. Only the
                   portal's owner, and one person they may share it with, can decrypt them.
                 </li>
                 <li>

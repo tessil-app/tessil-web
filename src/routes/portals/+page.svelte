@@ -58,6 +58,45 @@
     observer.observe(node);
     return { destroy: () => observer.disconnect() };
   }
+
+  // What a portal's owner can switch on. `max` marks what only that plan has.
+  const options: { name: string; about: string; max?: boolean }[] = [
+    {
+      name: "A welcome and a thank-you",
+      about: "A few lines above the upload box, and a note after sending that says what happens next.",
+    },
+    {
+      name: "A field of your own",
+      about: "Ask for a name, a client number or an order reference. It leads each delivery in your list.",
+    },
+    {
+      name: "A closing date",
+      about: "The page says until when, and the portal closes by itself when the day ends.",
+    },
+    {
+      name: "An email when files arrive",
+      about: "One per portal per hour at most. It can't say what came in, because we can't read that.",
+    },
+    {
+      name: "Your logo",
+      about: "Above the name, so the page looks like yours and not like ours.",
+      max: true,
+    },
+    {
+      name: "Files going back",
+      about: "Put a form, a quote or a finished report on the portal for the other side to download.",
+      max: true,
+    },
+    {
+      name: "A password",
+      about: "The page shows nothing until it is entered. Change it whenever you like; the link stays.",
+      max: true,
+    },
+    {
+      name: "Duplicate",
+      about: "Set one up the way you like it, then make the next one from it with a new link.",
+    },
+  ];
 </script>
 
 <Seo
@@ -185,6 +224,37 @@
       <div class="rounded-md bg-primary py-2.5 text-center text-sm font-medium text-primary-foreground">
         Send 2 files
       </div>
+    </div>
+  </section>
+
+  <section class="border-t border-border">
+    <div class="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
+      <div use:reveal class="reveal max-w-2xl space-y-5">
+        <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+          Make it yours.
+        </h2>
+        <p class="text-lg leading-relaxed text-muted-foreground">
+          Every portal has its own switches. Turn on what this one needs, watch the page
+          change beside you as you do, and change your mind later. The link stays the same.
+        </p>
+      </div>
+      <ul use:reveal class="reveal mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+        {#each options as option (option.name)}
+          <li class="space-y-2 bg-card p-6">
+            <p class="flex items-center gap-2 font-medium text-foreground">
+              {option.name}
+              {#if option.max}
+                <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Max</span>
+              {/if}
+            </p>
+            <p class="text-sm leading-relaxed text-muted-foreground">{option.about}</p>
+          </li>
+        {/each}
+      </ul>
+      <p use:reveal class="reveal mt-6 text-sm text-muted-foreground">
+        Your texts, your logo and what you send back are encrypted like everything else. We
+        can't read them.
+      </p>
     </div>
   </section>
 

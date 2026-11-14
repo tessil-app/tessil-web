@@ -46,12 +46,14 @@ export const PLANS: Plan[] = [
       "Send up to 5 GB per file",
       "Links that last up to 30 days",
       "Share a portal with one person",
+      "Your own message, checklist and closing date",
+      "An email when files arrive",
     ],
   },
   {
     id: "max",
     name: "Max",
-    pitch: "For a lot of it.",
+    pitch: "More room, and a page that looks like yours.",
     price: { monthly: 19, annual: 190 },
     lead: "Everything in Pro, and:",
     features: [
@@ -59,6 +61,9 @@ export const PLANS: Plan[] = [
       "100 GB of storage",
       "Deliveries kept for 90 days",
       "Links that last up to 90 days",
+      "Your logo on the upload page",
+      "Send files back through a portal",
+      "A password on a portal",
     ],
   },
 ];
