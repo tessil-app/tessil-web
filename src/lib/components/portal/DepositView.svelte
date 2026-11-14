@@ -24,7 +24,8 @@
   import { HTML_LANG, type Locale } from "$lib/i18n/locale";
   import { hasClosed, logoSrc } from "$lib/portal/keys";
   import { depositStrings } from "$lib/i18n/messages";
-  import { buildReceiptText, depositReference, saveTextFile } from "$lib/portal/receipt";
+  import { buildReceiptText, depositReference } from "$lib/portal/receipt";
+  import { saveTextFile } from "$lib/download/saveTextFile";
   import { holdWhileUploading } from "$lib/upload/keepAwake";
   import { formatSize } from "$lib/utils";
   import IconCameraRegular from "phosphor-icons-svelte/IconCameraRegular.svelte";
