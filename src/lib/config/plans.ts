@@ -42,7 +42,7 @@ export const PLANS: Plan[] = [
     features: [
       "3 portals, each with its own checklist and texts",
       "20 GB of storage",
-      "Transfers and deliveries kept up to 30 days",
+      "Transfers and portal files kept up to 30 days",
       "Send up to 5 GB per file",
       "Share a portal with one person",
     ],
@@ -56,7 +56,7 @@ export const PLANS: Plan[] = [
     features: [
       "10 portals",
       "100 GB of storage",
-      "Transfers and deliveries kept up to 90 days",
+      "Transfers and portal files kept up to 90 days",
       "Your logo, a password and files going back",
     ],
   },
@@ -109,11 +109,11 @@ export const COMPARISON: ComparisonGroup[] = [
       { label: "Portals", values: { free: false, pro: "3", max: "10" } },
       {
         label: "Storage",
-        note: "Everything you hold at one time: deliveries and your own transfers.",
+        note: "Everything you hold at one time: files in your portals and your own transfers.",
         values: { free: false, pro: "20 GB", max: "100 GB" },
       },
-      { label: "How long a delivery is kept", values: { free: false, pro: "30 days", max: "90 days" } },
-      { label: "Size of one delivery", values: { free: false, pro: "10 GB", max: "10 GB" } },
+      { label: "How long files in a portal are kept", values: { free: false, pro: "30 days", max: "90 days" } },
+      { label: "What one person can send to a portal at once", values: { free: false, pro: "10 GB", max: "10 GB" } },
       { label: "Checklist of what you ask for", values: paid },
       { label: "Confirmation for the sender, record for you", values: paid },
       { label: "Share a portal with one person", values: paid },

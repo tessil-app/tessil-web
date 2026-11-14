@@ -67,7 +67,7 @@
     },
     {
       name: "A field of your own",
-      about: "Ask for a name, a client number or an order reference. It leads each delivery in your list.",
+      about: "Ask for a name, a client number or an order reference. You see it with everything that person sends.",
     },
     {
       name: "A closing date",
