@@ -83,6 +83,8 @@ export interface PortalRow {
   closesAt?: string | null;
   /** Members get an email when files arrive. */
   notifyOnDelivery?: boolean;
+  /** Visitors need a password to open the page. */
+  hasPassword?: boolean;
   createdAt: string;
   /** Live deliveries; absent from an older server. */
   deliveries?: number;
@@ -127,6 +129,8 @@ export interface ListDepositsResponse {
 
 export interface PortalPublic {
   id: string;
+  /** Set, with nothing else, when the portal needs its password first. */
+  locked?: true;
   publicBundle: string;
   keyVersion: number;
   /** False when the owner switched it off or left the paid plans. */
@@ -590,6 +594,11 @@ class ApiClient {
     }
   }
 
+  /** One file out of a finished transfer; the last one takes the transfer with it. */
+  async deleteMyTransferFile(transferId: string, fileId: string): Promise<{ remaining: number }> {
+    return this.request(`/api/me/transfers/${transferId}/files/${fileId}`, { method: "DELETE" });
+  }
+
   async deleteMyTransfer(id: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/me/transfers/${id}`, {
       method: "DELETE",
@@ -698,6 +707,7 @@ class ApiClient {
     depositToken: string;
     closesAt?: string | null;
     notifyOnDelivery?: boolean;
+    accessToken?: string | null;
   }): Promise<{ id: string; createdAt: string }> {
     return this.request("/api/portals", { method: "POST", body: JSON.stringify(body) });
   }
@@ -709,6 +719,7 @@ class ApiClient {
       publicBundle?: string;
       closesAt?: string | null;
       notifyOnDelivery?: boolean;
+      accessToken?: string | null;
     },
   ): Promise<{ ok: true }> {
     return this.request(`/api/portals/${encodeURIComponent(id)}`, {
@@ -722,9 +733,22 @@ class ApiClient {
     return this.request(`/api/portals/${encodeURIComponent(id)}/public`);
   }
 
+  /** The public read for a portal with a password. */
+  async unlockPortal(id: string, accessToken: string): Promise<PortalPublic> {
+    return this.request(`/api/portals/${encodeURIComponent(id)}/unlock`, {
+      method: "POST",
+      body: JSON.stringify({ accessToken }),
+    });
+  }
+
   async startDeposit(
     portalId: string,
-    body: { depositToken: string; encryptedTitle?: string; encryptedTitleIv?: string },
+    body: {
+      depositToken: string;
+      accessToken?: string;
+      encryptedTitle?: string;
+      encryptedTitleIv?: string;
+    },
   ): Promise<{ transferId: string; expiresAt: string; maxFileSize: number; maxTotalSize: number }> {
     return this.request(`/api/portals/${encodeURIComponent(portalId)}/deposits`, {
       method: "POST",

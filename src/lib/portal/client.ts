@@ -9,6 +9,7 @@ import { publicKeyFingerprint } from "$lib/vault/keypair";
 import { readVaultDerivationKey } from "$lib/vault/session";
 import {
   PORTAL_TITLE_MAX,
+  accessTokenFor,
   createPortalKeys,
   openPortalBundle,
   isHandedCopy,
@@ -129,6 +130,7 @@ export async function createMyPortal(
   // made at unlock; this covers a session unlocked before that existed.
   await ensureUserKeypair(userId);
 
+  const password = settings.hasPassword ? settings.newPassword : "";
   const made = await createPortalKeys(title.trim(), { userId, derivationKey }, settings.lang ?? undefined, {
     checklist: settings.checklist,
     message: settings.message,
@@ -144,6 +146,9 @@ export async function createMyPortal(
     depositToken: bytesToBase64Url(made.depositToken),
     ...(settings.closesAt ? { closesAt: settings.closesAt } : {}),
     ...(settings.notifyOnDelivery ? { notifyOnDelivery: true } : {}),
+    ...(password
+      ? { accessToken: bytesToBase64Url(await accessTokenFor(made.id, made.linkKey, password)) }
+      : {}),
   });
   return {
     ok: true,

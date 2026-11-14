@@ -12,6 +12,7 @@ import { runFiles } from "$lib/upload/pool";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
 import type { Locale } from "$lib/i18n/locale";
 import {
+  accessTokenFor,
   depositTokenFor,
   linkKeyFromFragment,
   openPortalBundle,
@@ -32,6 +33,8 @@ export interface OpenedPortal {
   title: string;
   publicKey: Uint8Array;
   linkKey: Uint8Array;
+  /** Proof of the portal's password, when it has one. */
+  accessToken: Uint8Array | null;
   accepting: boolean;
   /** Most that one deposit may hold, from the owner's plan. */
   maxTotalSize: number;
@@ -56,25 +59,46 @@ export interface OpenedPortal {
 export type OpenPortalResult =
   | { ok: true; portal: OpenedPortal }
   /**
-   * bad_link   the fragment is missing or is not a link key
-   * not_found  no such portal
-   * untrusted  the server's bundle did not open with this link. The public
-   *            key cannot be trusted, so nothing may be uploaded.
+   * bad_link           the fragment is missing or is not a link key
+   * not_found          no such portal
+   * untrusted          the server's bundle did not open with this link. The
+   *                    public key cannot be trusted, so nothing may be uploaded.
+   * password_required  the portal has a password and none was given
+   * password_wrong     the one given is not it
+   * password_wait      too many tries; wait before the next
    */
-  | { ok: false; reason: "bad_link" | "not_found" | "untrusted" };
+  | {
+      ok: false;
+      reason:
+        | "bad_link"
+        | "not_found"
+        | "untrusted"
+        | "password_required"
+        | "password_wrong"
+        | "password_wait";
+    };
 
 export async function openPortalFromLink(
   portalId: string,
   fragment: string,
+  password?: string,
 ): Promise<OpenPortalResult> {
   const linkKey = linkKeyFromFragment(fragment);
   if (!linkKey) return { ok: false, reason: "bad_link" };
 
   let res;
+  let accessToken: Uint8Array | null = null;
   try {
     res = await api.getPortalPublic(portalId);
+    if (res.locked) {
+      if (!password) return { ok: false, reason: "password_required" };
+      accessToken = await accessTokenFor(portalId, linkKey, password);
+      res = await api.unlockPortal(portalId, bytesToBase64Url(accessToken));
+    }
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return { ok: false, reason: "not_found" };
+    if (err instanceof ApiError && err.code === "password_wrong") return { ok: false, reason: "password_wrong" };
+    if (err instanceof ApiError && err.status === 429) return { ok: false, reason: "password_wait" };
     throw err;
   }
 
@@ -87,6 +111,7 @@ export async function openPortalFromLink(
       title: info.title,
       publicKey: info.publicKey,
       linkKey,
+      accessToken,
       accepting: res.accepting,
       maxTotalSize: res.maxTotalSize ?? DEFAULT_MAX_TOTAL_SIZE,
       lang: info.lang ?? null,
@@ -241,6 +266,7 @@ export async function sendDeposit(
   try {
     const started = await api.startDeposit(portal.id, {
       depositToken: bytesToBase64Url(await depositTokenFor(portal.linkKey)),
+      ...(portal.accessToken ? { accessToken: bytesToBase64Url(portal.accessToken) } : {}),
       ...(encryptedNote
         ? { encryptedTitle: encryptedNote.ciphertext, encryptedTitleIv: encryptedNote.iv }
         : {}),

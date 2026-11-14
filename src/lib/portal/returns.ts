@@ -76,6 +76,8 @@ function settingsFrom(portal: OpenedMemberPortal, returns: PortalReturn[]): Port
     returns,
     closesAt: portal.closesAt,
     notifyOnDelivery: portal.notifyOnDelivery,
+    hasPassword: portal.hasPassword,
+    newPassword: "",
   };
 }
 
@@ -190,6 +192,22 @@ export async function removeReturn(portal: OpenedMemberPortal, id: string): Prom
   // a deleted portal entry pointing at live files is not.
   await savePortalSettings(portal, settingsFrom(portal, returns));
   await api.deleteMyTransfer(id).catch(() => {});
+  return returns;
+}
+
+/**
+ * Deletes one file of a batch. Taking the last one takes the batch off the
+ * portal too. Returns the portal's list, changed or not.
+ */
+export async function removeReturnFile(
+  portal: OpenedMemberPortal,
+  batchId: string,
+  fileId: string,
+): Promise<PortalReturn[]> {
+  const { remaining } = await api.deleteMyTransferFile(batchId, fileId);
+  if (remaining > 0) return portal.returns;
+  const returns = portal.returns.filter((r) => r.id !== batchId);
+  await savePortalSettings(portal, settingsFrom(portal, returns));
   return returns;
 }
 

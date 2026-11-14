@@ -70,7 +70,8 @@
   async function save(settings: PortalSettings) {
     if (!portal) return;
     await savePortalSettings(portal, settings);
-    portal = { ...portal, ...settings };
+    const { newPassword: _typed, ...kept } = settings;
+    portal = { ...portal, ...kept };
   }
 </script>
 
@@ -122,6 +123,8 @@
         returns: portal.returns,
         closesAt: portal.closesAt,
         notifyOnDelivery: portal.notifyOnDelivery,
+        hasPassword: portal.hasPassword,
+        newPassword: "",
       }}
       mode="edit"
       onSave={save}

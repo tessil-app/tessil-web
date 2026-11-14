@@ -45,6 +45,8 @@
     returns: [],
     closesAt: null,
     notifyOnDelivery: false,
+    hasPassword: false,
+    newPassword: "",
   });
 
   // "Duplicate" on an existing portal lands here with its ID.
@@ -68,6 +70,9 @@
       returns: [],
       closesAt: null,
       notifyOnDelivery: from.notifyOnDelivery,
+      // A password cannot be read back, so the copy starts without one.
+      hasPassword: false,
+      newPassword: "",
     };
   }
 

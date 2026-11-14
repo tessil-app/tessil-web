@@ -149,6 +149,15 @@ export interface DepositStrings {
   closedOnBody: (title: string, date: string) => string;
   footnote: (title: string) => string;
   howItWorks: string;
+  password: {
+    title: string;
+    body: string;
+    label: string;
+    open: string;
+    opening: string;
+    wrong: string;
+    wait: string;
+  };
   invalid: Record<"bad_link" | "not_found" | "untrusted" | "offline", { title: string; body: string }>;
   errors: {
     blockedScript: (name: string) => string;
@@ -214,6 +223,15 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     footnote: (title) =>
       `Your files are encrypted in this browser before they are uploaded. Only ${title} can open them. Tessil cannot, and neither can anyone else who sends files here.`,
     howItWorks: "How this works",
+    password: {
+      title: "This portal has a password",
+      body: "Whoever sent you the link has the password. It is separate from the link on purpose.",
+      label: "Password",
+      open: "Open",
+      opening: "Opening…",
+      wrong: "That password is not right. Check it and try again.",
+      wait: "Too many tries. Wait a few minutes and try again.",
+    },
     invalid: {
       bad_link: {
         title: "This link doesn't work",
@@ -294,6 +312,15 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     footnote: (title) =>
       `Je bestanden worden in deze browser versleuteld voordat ze worden verstuurd. Alleen ${title} kan ze openen. Tessil niet, en ook niemand anders die hier bestanden instuurt.`,
     howItWorks: "Hoe dit werkt",
+    password: {
+      title: "Dit portaal heeft een wachtwoord",
+      body: "Wie je de link stuurde heeft het wachtwoord. Het staat bewust los van de link.",
+      label: "Wachtwoord",
+      open: "Openen",
+      opening: "Openen…",
+      wrong: "Dat wachtwoord klopt niet. Controleer het en probeer het opnieuw.",
+      wait: "Te veel pogingen. Wacht een paar minuten en probeer het opnieuw.",
+    },
     invalid: {
       bad_link: {
         title: "Deze link werkt niet",

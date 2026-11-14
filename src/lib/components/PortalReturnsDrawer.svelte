@@ -17,6 +17,7 @@
     loadReturns,
     pruneReturns,
     removeReturn,
+    removeReturnFile,
     sendReturn,
     type OpenedReturn,
   } from "$lib/portal/returns";
@@ -130,6 +131,22 @@
     }
   }
 
+  async function removeFile(batchId: string, fileId: string) {
+    if (removing) return;
+    removing = fileId;
+    error = null;
+    try {
+      onChanged(await removeReturnFile(portal, batchId, fileId));
+      batches = batches
+        .map((b) => (b.id === batchId ? { ...b, files: b.files.filter((f) => f.id !== fileId) } : b))
+        .filter((b) => b.files.length > 0);
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Couldn't remove this file.";
+    } finally {
+      removing = null;
+    }
+  }
+
   function close() {
     if (sending) return;
     rows = [];
@@ -197,16 +214,29 @@
           {#each batches as batch (batch.id)}
             <li class="space-y-1 rounded-md border border-border p-3">
               {#each batch.files as file (file.id)}
-                <p class="flex justify-between gap-3 text-sm text-foreground">
+                <p class="flex items-baseline justify-between gap-3 text-sm text-foreground">
                   <span class="min-w-0 break-words">{file.name}</span>
-                  <span class="shrink-0 text-muted-foreground">{formatSize(file.plainSize)}</span>
+                  <span class="flex shrink-0 items-baseline gap-3 text-muted-foreground">
+                    {formatSize(file.plainSize)}
+                    <TextLink
+                      class="text-xs"
+                      onclick={() => removeFile(batch.id, file.id)}
+                      disabled={removing !== null || sending}
+                    >
+                      {removing === file.id ? "Removing…" : "Remove"}<span class="sr-only">
+                        {file.name}</span
+                      >
+                    </TextLink>
+                  </span>
                 </p>
               {/each}
               <p class="flex items-center justify-between gap-3 pt-1 text-xs text-muted-foreground">
-                <span>Deleted on {dayFmt.format(new Date(batch.expiresAt))}</span>
-                <TextLink onclick={() => remove(batch.id)} disabled={removing !== null || sending}>
-                  {removing === batch.id ? "Removing…" : "Remove"}
-                </TextLink>
+                <span>Automatically deleted on {dayFmt.format(new Date(batch.expiresAt))}</span>
+                {#if batch.files.length > 1}
+                  <TextLink onclick={() => remove(batch.id)} disabled={removing !== null || sending}>
+                    {removing === batch.id ? "Removing…" : `Remove all ${batch.files.length}`}
+                  </TextLink>
+                {/if}
               </p>
             </li>
           {/each}

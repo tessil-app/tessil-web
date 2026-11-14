@@ -16,6 +16,7 @@ import {
   type DepositAnswer,
 } from "./deposit";
 import {
+  accessTokenFor,
   openPortalBundle,
   openPortalKeys,
   portalLink,
@@ -50,6 +51,7 @@ export interface OpenedMemberPortal {
   returns: PortalReturn[];
   closesAt: string | null;
   notifyOnDelivery: boolean;
+  hasPassword: boolean;
 }
 
 export type OpenMemberPortalResult =
@@ -93,6 +95,7 @@ export async function openMemberPortal(
       ...settingsOf(info),
       closesAt: row.closesAt ?? null,
       notifyOnDelivery: row.notifyOnDelivery ?? false,
+      hasPassword: row.hasPassword ?? false,
     },
   };
 }
@@ -145,6 +148,16 @@ export async function savePortalSettings(
     publicBundle: bytesToBase64Url(bundle),
     closesAt: settings.closesAt,
     notifyOnDelivery: settings.notifyOnDelivery,
+    // Absent: the password stays as it is.
+    ...(!settings.hasPassword
+      ? { accessToken: null }
+      : settings.newPassword
+        ? {
+            accessToken: bytesToBase64Url(
+              await accessTokenFor(portal.id, portal.linkKey, settings.newPassword),
+            ),
+          }
+        : {}),
   });
 }
 

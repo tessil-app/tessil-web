@@ -131,6 +131,41 @@ export async function depositTokenFor(linkKey: Uint8Array): Promise<Uint8Array> 
   return new Uint8Array(bits);
 }
 
+export const PORTAL_PASSWORD_MIN = 6;
+export const PORTAL_PASSWORD_MAX = 128;
+const ACCESS_CONTEXT = "tessil/portal-access/v1";
+const ACCESS_ITERATIONS = 210_000;
+
+/**
+ * What a visitor shows the server to prove they know a portal's password.
+ * Stretched from the password with a salt made from the link key, so the
+ * server, which never has the link key, cannot use it to guess the password.
+ */
+export async function accessTokenFor(
+  portalId: string,
+  linkKey: Uint8Array,
+  password: string,
+): Promise<Uint8Array> {
+  const context = encoder.encode(`${ACCESS_CONTEXT}|${portalId}|`);
+  const seed = new Uint8Array(context.length + linkKey.length);
+  seed.set(context);
+  seed.set(linkKey, context.length);
+  const salt = await crypto.subtle.digest("SHA-256", buffer(seed));
+  const material = await crypto.subtle.importKey(
+    "raw",
+    buffer(encoder.encode(password.normalize("NFKC"))),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations: ACCESS_ITERATIONS },
+    material,
+    256,
+  );
+  return new Uint8Array(bits);
+}
+
 // ─── public bundle ──────────────────────────────────────────────────────────
 
 export interface PortalPublicInfo {
@@ -175,6 +210,10 @@ export interface PortalSettings {
   closesAt: string | null;
   /** Email the members when files arrive. */
   notifyOnDelivery: boolean;
+  /** Visitors must give a password. The password itself is never read back. */
+  hasPassword: boolean;
+  /** A password to set. Empty: leave it as it is, or none when `hasPassword` is off. */
+  newPassword: string;
 }
 
 /** True once a closing moment has passed. */
@@ -184,7 +223,7 @@ export function hasClosed(closesAt: string | null | undefined, now = Date.now())
 
 export function settingsOf(
   info: PortalPublicInfo,
-): Omit<PortalSettings, "closesAt" | "notifyOnDelivery"> {
+): Omit<PortalSettings, "closesAt" | "notifyOnDelivery" | "hasPassword" | "newPassword"> {
   return {
     title: info.title,
     lang: info.lang ?? null,
