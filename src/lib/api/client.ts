@@ -1,5 +1,6 @@
 // Relative by default - same-origin in prod, /api proxy in dev. VITE_API_URL overrides for cross-origin setups.
-const API_URL = import.meta.env.VITE_API_URL ?? "";
+// `import.meta.env` is the build tool's; elsewhere there is none.
+const API_URL = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? "";
 
 export interface CreateTransferResponse {
   transferId: string;
@@ -336,11 +337,21 @@ export class ApiError extends Error {
   }
 }
 
-class ApiClient {
-  private baseUrl: string;
+export interface ApiClientOptions {
+  /**
+   * An access key. Sent as a bearer token in place of the session cookie,
+   * for use outside a browser.
+   */
+  token?: string;
+}
 
-  constructor(baseUrl: string) {
+export class ApiClient {
+  private baseUrl: string;
+  private token: string | null;
+
+  constructor(baseUrl: string, options: ApiClientOptions = {}) {
     this.baseUrl = baseUrl;
+    this.token = options.token ?? null;
   }
 
   private async request<T>(
@@ -352,10 +363,11 @@ class ApiClient {
     let response: Response;
     try {
       response = await fetch(url, {
-        credentials: "include",
+        credentials: this.token ? "omit" : "include",
         ...options,
         headers: {
           "Content-Type": "application/json",
+          ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
           ...options.headers,
         },
       });

@@ -6,7 +6,7 @@
 // Share-link fragment for a protected transfer: "w2.{salt}.{wrappedKey}".
 
 import { argon2id } from "hash-wasm";
-import { base64UrlToBytes, bytesToBase64Url } from "$lib/vault/crypto";
+import { base64UrlToBytes, bytesToBase64Url } from "./base64url";
 
 const SALT_BYTES = 16;
 const FRAGMENT_PREFIX = "w2.";

@@ -189,3 +189,75 @@ describe("an upload on a bad connection", () => {
     expect(aborted).toBe(1);
   });
 });
+
+describe("outside a browser", () => {
+  const realFetch = globalThis.fetch;
+  let fetched: { url: string; bytes: number }[] = [];
+  let outcomes: (number | "network")[] = [];
+  let ownComplete = 0;
+  let ownAbort = 0;
+
+  // Passed in place of the website's API, as a program with an access key would.
+  const ownApi = {
+    completeMultipartUpload: async () => {
+      ownComplete += 1;
+      return { fileId: "f", size: 30 };
+    },
+    abortMultipartUpload: async () => {
+      ownAbort += 1;
+    },
+  };
+
+  function runPortable() {
+    return uploadEncryptedStreamMultipart({
+      uploadId: "u",
+      fileId: "f",
+      transferId: "t",
+      r2Key: "k",
+      source: source(30),
+      partUrls: [1, 2, 3].map((n) => ({ partNumber: n, url: `http://s/${n}`, contentLength: 10 })),
+      api: ownApi,
+    });
+  }
+
+  beforeEach(() => {
+    delete (globalThis as unknown as { XMLHttpRequest?: unknown }).XMLHttpRequest;
+    fetched = [];
+    outcomes = [];
+    ownComplete = 0;
+    ownAbort = 0;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      const outcome = outcomes.shift() ?? 200;
+      if (outcome === "network") throw new TypeError("fetch failed");
+      fetched.push({ url: String(url), bytes: (init?.body as Blob).size });
+      return new Response(null, { status: outcome, headers: outcome === 200 ? { ETag: '"e"' } : {} });
+    }) as typeof fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  it("uploads the parts with fetch and finishes through the API it was given", async () => {
+    const result = await runPortable();
+    expect(result.size).toBe(30);
+    expect(fetched.map((f) => f.bytes)).toEqual([10, 10, 10]);
+    expect(ownComplete).toBe(1);
+    // The website's own API, mocked above, was not used.
+    expect(completeCalls).toBe(0);
+  });
+
+  it("retries a part after a network failure and a busy server", async () => {
+    outcomes = ["network", 503];
+    const result = await runPortable();
+    expect(result.size).toBe(30);
+    expect(fetched.filter((f) => f.bytes === 10).length).toBeGreaterThanOrEqual(3);
+    expect(ownAbort).toBe(0);
+  });
+
+  it("fails at once on an error that waiting cannot fix, and cleans up", async () => {
+    outcomes = [403];
+    await expect(runPortable()).rejects.toThrow("Part upload failed: 403");
+    expect(ownAbort).toBe(1);
+  });
+});
