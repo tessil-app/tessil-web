@@ -21,7 +21,7 @@
     type OpenedPortal,
   } from "$lib/portal/deposit";
   import { HTML_LANG, type Locale } from "$lib/i18n/locale";
-  import { hasClosed } from "$lib/portal/keys";
+  import { hasClosed, logoSrc } from "$lib/portal/keys";
   import { depositStrings } from "$lib/i18n/messages";
   import { buildReceiptText, depositReference, saveTextFile } from "$lib/portal/receipt";
   import { holdWhileUploading } from "$lib/upload/keepAwake";
@@ -234,6 +234,13 @@
 </script>
 
 <header class="mb-8 space-y-2">
+  {#if portal.logo}
+    <img
+      src={logoSrc(portal.logo)}
+      alt=""
+      class="mb-5 max-h-14 max-w-[220px] object-contain object-left"
+    />
+  {/if}
   <p class="text-sm text-muted-foreground">{t.sendTo}</p>
   <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground break-words">
     {portal.title}

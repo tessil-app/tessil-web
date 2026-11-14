@@ -24,6 +24,7 @@
   let phase = $state<Phase>("loading");
   let maxPortals = $state(0);
   let maxTotalSize = $state(0);
+  let canBrand = $state(false);
   let hasLoaded = $state(false);
 
   const wanted =
@@ -37,6 +38,7 @@
     message: "",
     thanks: "",
     fieldLabel: "",
+    logo: null,
     closesAt: null,
     notifyOnDelivery: false,
   };
@@ -45,7 +47,10 @@
     if (!auth.user) return;
     void api
       .getMyUsage()
-      .then((u) => (maxTotalSize = u.caps.maxTransferSize))
+      .then((u) => {
+        maxTotalSize = u.caps.maxTransferSize;
+        canBrand = u.tier === "max";
+      })
       .catch(() => {});
     try {
       const res = await api.listPortals();
@@ -150,6 +155,7 @@
       onSave={create}
       cancelHref="/dashboard/portals"
       {maxTotalSize}
+      {canBrand}
     />
   {/if}
 </PageLayout>

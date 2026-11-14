@@ -30,13 +30,17 @@
   let phase = $state<Phase>("loading");
   let portal = $state<OpenedMemberPortal | null>(null);
   let maxTotalSize = $state(0);
+  let canBrand = $state(false);
   let hasLoaded = $state(false);
 
   async function load() {
     if (!auth.user) return;
     void api
       .getMyUsage()
-      .then((u) => (maxTotalSize = u.caps.maxTransferSize))
+      .then((u) => {
+        maxTotalSize = u.caps.maxTransferSize;
+        canBrand = u.tier === "max";
+      })
       .catch(() => {});
     try {
       const opened = await openMemberPortal(auth.user.id, portalId, window.location.origin);
@@ -113,6 +117,7 @@
         message: portal.message,
         thanks: portal.thanks,
         fieldLabel: portal.fieldLabel,
+        logo: portal.logo,
         closesAt: portal.closesAt,
         notifyOnDelivery: portal.notifyOnDelivery,
       }}
@@ -120,6 +125,7 @@
       onSave={save}
       cancelHref={backHref}
       {maxTotalSize}
+      {canBrand}
     />
   {/if}
 </PageLayout>

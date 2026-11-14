@@ -16,6 +16,7 @@ import {
   linkKeyFromFragment,
   openPortalBundle,
   type ChecklistItem,
+  type PortalLogo,
 } from "./keys";
 
 export const DEPOSIT_NOTE_MAX = 200;
@@ -45,6 +46,7 @@ export interface OpenedPortal {
   fieldLabel: string;
   /** The owner's closing date, passed or not. */
   closesAt: string | null;
+  logo: PortalLogo | null;
 }
 
 export type OpenPortalResult =
@@ -89,6 +91,7 @@ export async function openPortalFromLink(
       thanks: info.thanks ?? "",
       fieldLabel: info.fieldLabel ?? "",
       closesAt: res.closesAt ?? null,
+      logo: info.logo ?? null,
     },
   };
 }
