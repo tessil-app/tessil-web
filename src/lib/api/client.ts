@@ -79,6 +79,10 @@ export interface PortalRow {
   sealedKeys: string;
   keyVersion: number;
   isDisabled: boolean;
+  /** When the portal stops taking new deliveries, if the owner set a date. */
+  closesAt?: string | null;
+  /** Members get an email when files arrive. */
+  notifyOnDelivery?: boolean;
   createdAt: string;
   /** Live deliveries; absent from an older server. */
   deliveries?: number;
@@ -127,6 +131,8 @@ export interface PortalPublic {
   keyVersion: number;
   /** False when the owner switched it off or left the paid plans. */
   accepting: boolean;
+  /** The owner's closing date, passed or not. */
+  closesAt?: string | null;
   /** Most that one deposit may hold. */
   maxTotalSize?: number;
 }
@@ -690,13 +696,20 @@ class ApiClient {
     publicBundle: string;
     sealedKeys: string;
     depositToken: string;
+    closesAt?: string | null;
+    notifyOnDelivery?: boolean;
   }): Promise<{ id: string; createdAt: string }> {
     return this.request("/api/portals", { method: "POST", body: JSON.stringify(body) });
   }
 
   async updatePortal(
     id: string,
-    changes: { isDisabled?: boolean; publicBundle?: string },
+    changes: {
+      isDisabled?: boolean;
+      publicBundle?: string;
+      closesAt?: string | null;
+      notifyOnDelivery?: boolean;
+    },
   ): Promise<{ ok: true }> {
     return this.request(`/api/portals/${encodeURIComponent(id)}`, {
       method: "PATCH",

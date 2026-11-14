@@ -37,6 +37,8 @@
     message: "",
     thanks: "",
     fieldLabel: "",
+    closesAt: null,
+    notifyOnDelivery: false,
   };
 
   async function load() {

@@ -43,6 +43,8 @@ export interface OpenedMemberPortal {
   message: string;
   thanks: string;
   fieldLabel: string;
+  closesAt: string | null;
+  notifyOnDelivery: boolean;
 }
 
 export type OpenMemberPortalResult =
@@ -84,6 +86,8 @@ export async function openMemberPortal(
       linkKey: keys.linkKey,
       keyVersion: info.keyVersion,
       ...settingsOf(info),
+      closesAt: row.closesAt ?? null,
+      notifyOnDelivery: row.notifyOnDelivery ?? false,
     },
   };
 }
@@ -112,7 +116,8 @@ export function coverageOf(checklist: ChecklistItem[], files: { itemId: string |
 
 /**
  * Replaces a portal's name, texts and switches. Re-seals the public bundle
- * under the same link key, so the portal's link does not change. Owner only.
+ * under the same link key, so the portal's link does not change. The
+ * closing date and the arrival email go to the server as they are. Owner only.
  */
 export async function savePortalSettings(
   portal: OpenedMemberPortal,
@@ -128,7 +133,11 @@ export async function savePortalSettings(
     thanks: settings.thanks,
     fieldLabel: settings.fieldLabel,
   });
-  await api.updatePortal(portal.id, { publicBundle: bytesToBase64Url(bundle) });
+  await api.updatePortal(portal.id, {
+    publicBundle: bytesToBase64Url(bundle),
+    closesAt: settings.closesAt,
+    notifyOnDelivery: settings.notifyOnDelivery,
+  });
 }
 
 export interface OpenedDeposit {

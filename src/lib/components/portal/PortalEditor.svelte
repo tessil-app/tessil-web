@@ -51,6 +51,23 @@
   let thanks = $state(start.thanks);
   let fieldOn = $state(start.fieldLabel.length > 0);
   let fieldLabel = $state(start.fieldLabel);
+  let closeOn = $state(start.closesAt !== null);
+  // The day in the owner's own time zone; the portal closes when it ends.
+  let closeDay = $state(start.closesAt ? dayOf(new Date(start.closesAt)) : "");
+  let notify = $state(start.notifyOnDelivery);
+
+  function dayOf(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function endOfDay(day: string): string | null {
+    const [y, m, d] = day.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+  }
+
+  const today = dayOf(new Date());
 
   let newLabel = $state("");
   let isSaving = $state(false);
@@ -65,10 +82,12 @@
     message: messageOn ? message.trim() : "",
     thanks: thanksOn ? thanks.trim() : "",
     fieldLabel: fieldOn ? fieldLabel.trim() || depositStrings[lang].fieldDefault : "",
+    closesAt: closeOn ? endOfDay(closeDay) : null,
+    notifyOnDelivery: notify,
   });
 
   // What was last saved; in create mode, what the form opened with.
-  let baseline = $state(JSON.stringify({ ...start, lang: start.lang ?? DEFAULT_LOCALE }));
+  let baseline = $state(untrack(() => JSON.stringify(settings)));
   const dirty = $derived(JSON.stringify(settings) !== baseline);
   const canSave = $derived(settings.title.length > 0 && (mode === "create" || dirty) && !isSaving);
 
@@ -122,6 +141,7 @@
     message: settings.message,
     thanks: settings.thanks,
     fieldLabel: settings.fieldLabel,
+    closesAt: settings.closesAt,
   });
 
   const card = "rounded-lg bg-card p-4 sm:p-5";
@@ -313,6 +333,44 @@
             disabled={isSaving}
           />
         </Reveal>
+      </div>
+
+      <div class="border-t border-border pt-5">
+        {@render option(
+          "opt-close",
+          "Closing date",
+          "The portal takes files up to and including this day, then closes by itself.",
+          closeOn,
+          (v) => {
+            closeOn = v;
+            if (v) {
+              view = "form";
+              if (!closeDay) closeDay = dayOf(new Date(Date.now() + 14 * 86_400_000));
+            }
+          },
+        )}
+        <Reveal open={closeOn}>
+          <TextInput
+            id="portal-close"
+            type="date"
+            label="Last day"
+            min={today}
+            bind:value={closeDay}
+            onfocus={() => (view = "form")}
+            disabled={isSaving}
+            class="max-w-[14rem]"
+          />
+        </Reveal>
+      </div>
+
+      <div class="border-t border-border pt-5">
+        {@render option(
+          "opt-notify",
+          "Email when files arrive",
+          "One email per portal per hour at most, to you and whoever you share the portal with. It can't say what was sent: we can't read that.",
+          notify,
+          (v) => (notify = v),
+        )}
       </div>
     </section>
 

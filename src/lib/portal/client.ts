@@ -23,6 +23,8 @@ export interface MyPortal {
   id: string;
   role: "owner" | "member";
   isDisabled: boolean;
+  /** The owner's closing date, if any. */
+  closesAt: string | null;
   createdAt: string;
   /**
    * open        title and link are available
@@ -66,6 +68,7 @@ async function readRow(
     id: row.id,
     role: row.role,
     isDisabled: row.isDisabled,
+    closesAt: row.closesAt ?? null,
     createdAt: row.createdAt,
     sharedBy,
     deliveries: row.deliveries ?? 0,
@@ -137,6 +140,8 @@ export async function createMyPortal(
     publicBundle: bytesToBase64Url(made.publicBundle),
     sealedKeys: bytesToBase64Url(made.sealedKeys),
     depositToken: bytesToBase64Url(made.depositToken),
+    ...(settings.closesAt ? { closesAt: settings.closesAt } : {}),
+    ...(settings.notifyOnDelivery ? { notifyOnDelivery: true } : {}),
   });
   return {
     ok: true,
@@ -144,6 +149,7 @@ export async function createMyPortal(
       id: made.id,
       role: "owner",
       isDisabled: false,
+      closesAt: settings.closesAt,
       createdAt: created.createdAt,
       sharedBy: null,
       deliveries: 0,

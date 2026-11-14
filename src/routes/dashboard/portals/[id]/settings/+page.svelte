@@ -113,6 +113,8 @@
         message: portal.message,
         thanks: portal.thanks,
         fieldLabel: portal.fieldLabel,
+        closesAt: portal.closesAt,
+        notifyOnDelivery: portal.notifyOnDelivery,
       }}
       mode="edit"
       onSave={save}
