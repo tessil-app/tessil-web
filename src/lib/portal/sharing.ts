@@ -44,6 +44,47 @@ export async function myKeypair(userId: string): Promise<RecipientKeypair | null
   return privateKey && publicKey ? { privateKey, publicKey } : null;
 }
 
+/**
+ * The fingerprint of this account's public key, for comparing with what an
+ * access key shows. `checked` is true when this browser confirmed, with the
+ * private key in the unlocked vault, that the public key the server names
+ * really is its other half. Then the value does not rest on the server's
+ * word. With the vault locked it does, and `checked` is false.
+ */
+export async function accountKeyFingerprint(
+  userId: string,
+): Promise<{ fingerprint: string; checked: boolean } | null> {
+  const publicKey = await myPublicKey();
+  if (!publicKey) return null;
+  const fingerprint = await publicKeyFingerprint(publicKey);
+  const privateKey = await getUserPrivateKey(userId).catch(() => null);
+  if (!privateKey) return { fingerprint, checked: false };
+  try {
+    // Two halves of one pair agree on a shared secret with any third key.
+    const ECDH = { name: "ECDH", namedCurve: "P-256" } as const;
+    const other = await crypto.subtle.generateKey(ECDH, false, ["deriveBits"]);
+    const named = await crypto.subtle.importKey(
+      "raw",
+      publicKey.buffer.slice(publicKey.byteOffset, publicKey.byteOffset + publicKey.byteLength) as ArrayBuffer,
+      ECDH,
+      false,
+      [],
+    );
+    const [mine, theirs] = await Promise.all([
+      crypto.subtle.deriveBits({ name: "ECDH", public: other.publicKey }, privateKey, 256),
+      crypto.subtle.deriveBits({ name: "ECDH", public: named }, other.privateKey, 256),
+    ]);
+    const a = new Uint8Array(mine);
+    const b = new Uint8Array(theirs);
+    let diff = a.length ^ b.length;
+    for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+    // A mismatch means the server names a key that is not this vault's. Show nothing.
+    return diff === 0 ? { fingerprint, checked: true } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function myFingerprint(): Promise<string | null> {
   const key = await myPublicKey();
   return key ? publicKeyFingerprint(key) : null;

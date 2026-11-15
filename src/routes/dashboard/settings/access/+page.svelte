@@ -20,6 +20,7 @@
   import { api, ApiError, type AccessKey } from "$lib/api/client";
   import { base64UrlToBytes } from "$lib/crypto/base64url";
   import { grantPortalToKey } from "$lib/portal/accessKeys";
+  import { accountKeyFingerprint } from "$lib/portal/sharing";
   import { loadMyPortals, type MyPortal } from "$lib/portal/client";
   import { auth } from "$lib/stores/auth.svelte";
   import { subscribeToVaultState } from "$lib/vault/client";
@@ -172,6 +173,14 @@
     }
   }
 
+  // ─── the account's own key, which a program compares before using portals ──
+  let accountKey = $state<{ fingerprint: string; checked: boolean } | null>(null);
+
+  async function loadAccountKey() {
+    if (!auth.user) return;
+    accountKey = await accountKeyFingerprint(auth.user.id).catch(() => null);
+  }
+
   // ─── which portals a key may open ─────────────────────────────────────────
   let portalsFor = $state<AccessKey | null>(null);
   let myPortals = $state<MyPortal[]>([]);
@@ -231,6 +240,7 @@
   }
 
   const unsubscribeVault = subscribeToVaultState(() => {
+    void loadAccountKey();
     if (portalsFor) void openPortals(portalsFor);
   });
   onDestroy(unsubscribeVault);
@@ -243,6 +253,7 @@
 
   onMount(() => {
     void load();
+    void loadAccountKey();
     // A program opens this page with its code already in the address.
     const fromLink = page.url.searchParams.get("code");
     if (fromLink) {
@@ -421,6 +432,24 @@
               </li>
             {/each}
           </ul>
+        {/if}
+
+        {#if portalsAllowed && accountKey}
+          <div class="space-y-1 rounded-md border border-border p-3">
+            <p class="text-sm font-medium text-foreground">Your account's key</p>
+            <p class="font-mono text-xs text-foreground">{accountKey.fingerprint}</p>
+            <p class="text-xs text-muted-foreground">
+              Before a program opens portals it shows you this code (<code>tessil trust</code>).
+              Confirm there only if it is exactly the same.
+              {#if !accountKey.checked}
+                Your vault is locked, so this is the code as our server reports it.
+                <TextLink onclick={() => unlockPrompt.request()}>Unlock the vault</TextLink>
+                and this page checks it against your own key first.
+              {:else}
+                Checked against the key in your vault.
+              {/if}
+            </p>
+          </div>
         {/if}
 
         <p class="text-xs text-muted-foreground">
