@@ -1,7 +1,7 @@
 <script lang="ts">
   import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { ACCESS_KEYS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
 </script>
 
 <Seo
@@ -86,6 +86,19 @@
               Signing in doesn't change how files are encrypted. Your encryption key
               never reaches our servers - signed in or not.
             </p>
+
+            {#if ACCESS_KEYS_ANNOUNCED}
+              <h3 class="text-lg font-medium text-foreground">Access keys</h3>
+              <p class="text-muted-foreground">
+                An access key lets the command-line tool on your own computer act for your
+                account. For each key we store the name you gave it, its public key, a scrambled
+                form of its sign-in token, what you allowed it to do, which portals you handed
+                it (with their keys in a locked form we cannot open), when it was approved, when
+                it was last used and when it stops working. Transfers a key sends are marked with
+                that key. A program that asks to be paired and is never approved leaves a record
+                for ten minutes. Revoked and expired keys are removed after 30 days.
+              </p>
+            {/if}
 
             {#if PORTALS_ANNOUNCED}
               <h3 class="text-lg font-medium text-foreground">Portals</h3>
