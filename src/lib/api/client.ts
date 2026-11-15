@@ -635,6 +635,27 @@ export class ApiClient {
     });
   }
 
+  /** Which portals a key has been handed. */
+  async listAccessKeyPortals(id: string): Promise<{ portals: { portalId: string; keyVersion: number }[] }> {
+    return this.request(`/api/devices/${encodeURIComponent(id)}/portals`);
+  }
+
+  /** Hands a portal to a key: its keys, sealed to the key in this browser. */
+  async grantAccessKeyPortal(id: string, portalId: string, body: { sealedKeys: string; keyVersion: number }): Promise<{ ok: true }> {
+    return this.request(`/api/devices/${encodeURIComponent(id)}/portals/${encodeURIComponent(portalId)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async revokeAccessKeyPortal(id: string, portalId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/devices/${encodeURIComponent(id)}/portals/${encodeURIComponent(portalId)}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    if (!response.ok && response.status !== 404) throw new Error(`Request failed: ${response.status}`);
+  }
+
   async revokeAccessKey(id: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/devices/${encodeURIComponent(id)}`, {
       method: "DELETE",

@@ -19,16 +19,31 @@
   import TextLink from "$lib/components/TextLink.svelte";
   import { api, ApiError, type AccessKey } from "$lib/api/client";
   import { base64UrlToBytes } from "$lib/crypto/base64url";
+  import { grantPortalToKey } from "$lib/portal/accessKeys";
+  import { loadMyPortals, type MyPortal } from "$lib/portal/client";
+  import { auth } from "$lib/stores/auth.svelte";
+  import { subscribeToVaultState } from "$lib/vault/client";
   import { publicKeyFingerprint } from "$lib/vault/keypair";
-  import { onMount } from "svelte";
+  import { unlockPrompt } from "$lib/vault/prompt.svelte";
+  import { onDestroy, onMount } from "svelte";
 
-  // What a key can be allowed. Portal access comes with a later release.
-  const PERMISSIONS = [
+  let portalsAllowed = $state(false);
+
+  // What a key can be allowed. The portal one is offered on plans with portals.
+  const TRANSFER_PERMISSIONS = [
     { id: "transfers:send", label: "Send files", about: "Create transfers on your account, within your plan's limits." },
     { id: "transfers:read", label: "See what it sent", about: "List its own transfers and how often they were downloaded." },
     { id: "transfers:delete", label: "Delete what it sent", about: "Remove its own transfers before they expire." },
   ] as const;
-  const LABELS: Record<string, string> = Object.fromEntries(PERMISSIONS.map((p) => [p.id, p.label]));
+  const PORTAL_PERMISSION = {
+    id: "portals:read",
+    label: "Read portals you pick",
+    about: "List and download what people sent to the portals you hand it. You choose which after approving.",
+  } as const;
+  const PERMISSIONS = $derived(portalsAllowed ? [...TRANSFER_PERMISSIONS, PORTAL_PERMISSION] : [...TRANSFER_PERMISSIONS]);
+  const LABELS: Record<string, string> = Object.fromEntries(
+    [...TRANSFER_PERMISSIONS, PORTAL_PERMISSION].map((p) => [p.id, p.label]),
+  );
 
   let keys = $state<AccessKey[]>([]);
   let maxKeys = $state(0);
@@ -43,6 +58,7 @@
       const res = await api.listAccessKeys();
       keys = res.devices;
       maxKeys = res.maxDevices;
+      portalsAllowed = res.portalsAllowed;
       loadError = null;
     } catch (err) {
       loadError = err instanceof Error ? err.message : "Couldn't load your access keys.";
@@ -61,6 +77,7 @@
     "transfers:send": true,
     "transfers:read": true,
     "transfers:delete": false,
+    "portals:read": false,
   });
   let approving = $state(false);
   let approveError = $state<string | null>(null);
@@ -155,6 +172,69 @@
     }
   }
 
+  // ─── which portals a key may open ─────────────────────────────────────────
+  let portalsFor = $state<AccessKey | null>(null);
+  let myPortals = $state<MyPortal[]>([]);
+  let granted = $state<Set<string>>(new Set());
+  let portalsLoading = $state(false);
+  let portalsError = $state<string | null>(null);
+  let togglingPortal = $state<string | null>(null);
+  let vaultLocked = $state(false);
+
+  async function openPortals(key: AccessKey) {
+    if (!auth.user) return;
+    portalsFor = key;
+    portalsError = null;
+    portalsLoading = true;
+    try {
+      const [mine, grants] = await Promise.all([
+        loadMyPortals(auth.user.id, window.location.origin),
+        api.listAccessKeyPortals(key.id),
+      ]);
+      // Only portals whose keys this browser can open can be handed on.
+      myPortals = mine.portals.filter((p) => p.state === "open" || p.state === "locked");
+      vaultLocked = mine.portals.some((p) => p.state === "locked");
+      granted = new Set(grants.portals.map((g) => g.portalId));
+    } catch (err) {
+      portalsError = err instanceof Error ? err.message : "Couldn't load your portals.";
+    } finally {
+      portalsLoading = false;
+    }
+  }
+
+  async function togglePortal(portal: MyPortal) {
+    if (!auth.user || !portalsFor || togglingPortal) return;
+    togglingPortal = portal.id;
+    portalsError = null;
+    try {
+      if (granted.has(portal.id)) {
+        await api.revokeAccessKeyPortal(portalsFor.id, portal.id);
+        granted.delete(portal.id);
+      } else {
+        const result = await grantPortalToKey(auth.user.id, portalsFor, portal.id);
+        if (!result.ok) {
+          portalsError =
+            result.reason === "locked"
+              ? "Your vault is locked. Unlock it to hand over a portal: its keys are sealed for this access key here in your browser."
+              : "This portal's keys could not be opened with your vault.";
+          if (result.reason === "locked") unlockPrompt.request();
+          return;
+        }
+        granted.add(portal.id);
+      }
+      granted = new Set(granted);
+    } catch (err) {
+      portalsError = err instanceof Error ? err.message : "Couldn't change that. Try again.";
+    } finally {
+      togglingPortal = null;
+    }
+  }
+
+  const unsubscribeVault = subscribeToVaultState(() => {
+    if (portalsFor) void openPortals(portalsFor);
+  });
+  onDestroy(unsubscribeVault);
+
   const dayFmt = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" });
 
   function daysLeft(iso: string | null): number {
@@ -182,7 +262,8 @@
           <p class="text-sm text-muted-foreground">
             A key lets a program on your own computer, such as the Tessil command-line tool, send
             files as you. It never gets your vault, your password or this session, and it cannot
-            reach your account settings, billing or portals.
+            reach your account settings or billing. It opens a portal only if you hand it that
+            portal.
           </p>
         </div>
 
@@ -319,6 +400,11 @@
                   </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-3">
+                  {#if key.active && key.permissions.includes("portals:read")}
+                    <TextLink class="text-sm" onclick={() => openPortals(key)} disabled={busyId !== null}>
+                      Portals
+                    </TextLink>
+                  {/if}
                   <TextLink class="text-sm" onclick={() => renew(key)} disabled={busyId !== null}>
                     {busyId === key.id && !revokeId ? "Renewing…" : "Renew"}
                   </TextLink>
@@ -358,5 +444,56 @@
     <Button type="button" fullWidth={false} onclick={confirmRevoke} disabled={busyId !== null}>
       {busyId ? "Revoking…" : "Revoke key"}
     </Button>
+  {/snippet}
+</Modal>
+
+<Modal
+  open={portalsFor !== null}
+  title="Portals for {portalsFor?.name ?? ''}"
+  description="Tick a portal to hand its keys to this access key. They are sealed for it here in your browser; we cannot read them. Untick to take the portal back."
+  onClose={() => (portalsFor = null)}
+>
+  <div class="space-y-3">
+    {#if portalsLoading}
+      <div class="flex items-center gap-2 text-sm text-muted-foreground">
+        <Spinner aria-hidden="true" />
+        Loading…
+      </div>
+    {:else if myPortals.length === 0}
+      <p class="text-sm text-muted-foreground">You have no portals yet.</p>
+    {:else}
+      {#if vaultLocked}
+        <Alert tone="warning">
+          Your vault is locked, so portal names are hidden and none can be handed over.
+          <TextLink onclick={() => unlockPrompt.request()}>Unlock vault</TextLink>
+        </Alert>
+      {/if}
+      <ul class="divide-y divide-border rounded-md border border-border">
+        {#each myPortals as portal (portal.id)}
+          <li class="px-3 py-2.5">
+            <Checkbox
+              checked={granted.has(portal.id)}
+              onchange={() => togglePortal(portal)}
+              disabled={togglingPortal !== null || (portal.state !== "open" && !granted.has(portal.id))}
+            >
+              {portal.title ?? "Locked portal"}
+              {#if togglingPortal === portal.id}
+                <span class="text-muted-foreground"> · saving…</span>
+              {/if}
+            </Checkbox>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+    {#if portalsError}
+      <Alert tone="destructive">{portalsError}</Alert>
+    {/if}
+    <p class="text-xs text-muted-foreground">
+      The key can list and download what was sent to these portals. It cannot change or delete
+      anything, and it loses a portal when you leave or delete it.
+    </p>
+  </div>
+  {#snippet footer()}
+    <Button type="button" fullWidth={false} onclick={() => (portalsFor = null)}>Done</Button>
   {/snippet}
 </Modal>

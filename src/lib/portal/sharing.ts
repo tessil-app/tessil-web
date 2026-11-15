@@ -38,7 +38,8 @@ async function myPublicKey(): Promise<Uint8Array | null> {
   return status.isSetup && status.publicKey ? base64UrlToBytes(status.publicKey) : null;
 }
 
-async function myKeypair(userId: string): Promise<RecipientKeypair | null> {
+/** This account's key pair, from the unlocked vault. Null while it is locked. */
+export async function myKeypair(userId: string): Promise<RecipientKeypair | null> {
   const [privateKey, publicKey] = await Promise.all([getUserPrivateKey(userId), myPublicKey()]);
   return privateKey && publicKey ? { privateKey, publicKey } : null;
 }
