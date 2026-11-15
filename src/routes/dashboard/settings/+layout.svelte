@@ -10,6 +10,7 @@
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
+  import { ACCESS_KEYS_ANNOUNCED } from "$lib/config/launch";
   import { auth } from "$lib/stores/auth.svelte";
   import { cn } from "$lib/utils";
 
@@ -19,6 +20,7 @@
     { href: "/dashboard/settings/account", label: "Account" },
     { href: "/dashboard/settings/security", label: "Security" },
     { href: "/dashboard/settings/vault", label: "Vault" },
+    ...(ACCESS_KEYS_ANNOUNCED ? [{ href: "/dashboard/settings/access", label: "Access keys" }] : []),
     { href: "/dashboard/settings/usage", label: "Usage" },
   ];
 
