@@ -565,6 +565,24 @@ export async function acceptPortalKeys(
   keyVersion: number,
   handedBlob: Uint8Array,
 ): Promise<{ keys: PortalKeys; kept: Uint8Array } | null> {
+  const material = await openHanded(to, from, portalId, keyVersion, handedBlob);
+  if (!material) return null;
+  try {
+    const keys = await importMaterial(material);
+    if (!keys) return null;
+    return { keys, kept: await keep(to, portalId, keyVersion, material) };
+  } finally {
+    material.fill(0);
+  }
+}
+
+async function openHanded(
+  to: { userId: string; keypair: RecipientKeypair },
+  from: { userId: string; publicKey: Uint8Array },
+  portalId: string,
+  keyVersion: number,
+  handedBlob: Uint8Array,
+): Promise<Uint8Array | null> {
   if (handedBlob.byteLength < 2 || handedBlob[0] !== FORM_HANDED) return null;
   const material = await openSealed(
     to.keypair,
@@ -572,11 +590,28 @@ export async function acceptPortalKeys(
     handoverContext(portalId, keyVersion, from.userId, to.userId),
     from.publicKey,
   );
-  if (!material || material.byteLength <= LINK_KEY_BYTES) return null;
+  return material && material.byteLength > LINK_KEY_BYTES ? material : null;
+}
+
+/**
+ * Opens keys handed to a recipient that has no vault to keep them in: an
+ * access key, whose ID stands where an account's would. Each use opens the
+ * handed copy again, so `from.publicKey` must be one the recipient has
+ * reason to trust every time: the account's own key, pinned when the
+ * access key was approved. Null when it was not sealed by that key for
+ * this recipient and portal.
+ */
+export async function openHandedPortalKeys(
+  to: { userId: string; keypair: RecipientKeypair },
+  from: { userId: string; publicKey: Uint8Array },
+  portalId: string,
+  keyVersion: number,
+  handedBlob: Uint8Array,
+): Promise<PortalKeys | null> {
+  const material = await openHanded(to, from, portalId, keyVersion, handedBlob);
+  if (!material) return null;
   try {
-    const keys = await importMaterial(material);
-    if (!keys) return null;
-    return { keys, kept: await keep(to, portalId, keyVersion, material) };
+    return await importMaterial(material);
   } finally {
     material.fill(0);
   }

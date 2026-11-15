@@ -11,6 +11,7 @@ import {
   linkKeyFromFragment,
   newPortalId,
   openPortalBundle,
+  openHandedPortalKeys,
   openPortalKeys,
   portalLink,
   sealPortalBundle,
@@ -343,5 +344,32 @@ describe("a portal's password token", () => {
     expect(await accessTokenFor("portal-a", link, "tulips-2026")).not.toEqual(token);
     expect(await accessTokenFor("portal-b", link, "tulips-2025")).not.toEqual(token);
     expect(await accessTokenFor("portal-a", other, "tulips-2025")).not.toEqual(token);
+  });
+});
+
+describe("handing a portal to an access key", () => {
+  it("opens for that key when signed by the account, and for nobody and nothing else", async () => {
+    const owner = await member("owner-1");
+    const stranger = await member("stranger");
+    // An access key has a key pair and an ID, and no vault.
+    const device = { userId: "device-1", keypair: (await member("unused")).keypair };
+    const other = { userId: "device-2", keypair: (await member("unused")).keypair };
+    const portal = await createPortalKeys("T", owner);
+
+    const handed = await handPortalKeys(owner, { userId: device.userId, publicKey: device.keypair.publicKey }, portal.id, 1, portal.sealedKeys);
+    const from = publicOf(owner);
+    const keys = await openHandedPortalKeys(device, from, portal.id, 1, handed!);
+    expect(keys?.linkKey).toEqual(portal.linkKey);
+
+    // Another key, even one that got hold of the blob.
+    expect(await openHandedPortalKeys(other, from, portal.id, 1, handed!)).toBeNull();
+    // The same key under another ID, another portal or another version.
+    expect(await openHandedPortalKeys({ ...device, userId: "device-9" }, from, portal.id, 1, handed!)).toBeNull();
+    expect(await openHandedPortalKeys(device, from, "other-portal", 1, handed!)).toBeNull();
+    expect(await openHandedPortalKeys(device, from, portal.id, 2, handed!)).toBeNull();
+    // Not signed by the account it claims to come from.
+    expect(await openHandedPortalKeys(device, publicOf(stranger), portal.id, 1, handed!)).toBeNull();
+    // The owner's own kept copy is not a handed one.
+    expect(await openHandedPortalKeys(device, from, portal.id, 1, portal.sealedKeys)).toBeNull();
   });
 });
