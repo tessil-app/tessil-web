@@ -1,7 +1,7 @@
 <script lang="ts">
   import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { ACCESS_KEYS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
 </script>
 
 <Seo
@@ -268,6 +268,50 @@
                 they are, the email address you invite, and when you last
                 opened it. Not its name, not what you ask for, not the notes,
                 the file names or the files.
+              </p>
+            </section>
+          {/if}
+
+          {#if ACCESS_KEYS_ANNOUNCED}
+            <section class="space-y-3" id="access-keys">
+              <h2 class="text-lg font-semibold text-foreground">The command-line tool and access keys</h2>
+              <p class="text-muted-foreground">
+                The <code>tessil</code> tool does on your own computer what this site does in your
+                browser, with the same encryption code. It can also run as an MCP server, so an AI
+                assistant on your machine can use it. It signs in with an access key, not with
+                your account.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li>An access key is made on your computer: a token, a key pair and a secret of its own. We store a hash of the token and the public key. The tool keeps the rest in your system's keychain</li>
+                <li>You approve a key in your browser by a short code, after comparing the key's fingerprint on both screens, and you choose what it may do. It works for 90 days and can be revoked at once. Signing out everywhere revokes every key</li>
+                <li>A key never has your vault, your password or your browser session. It cannot reach account settings, billing, passkeys or other keys, whatever it was allowed</li>
+                <li>A key sees only the transfers it sent itself</li>
+                <li>A key opens a portal only if you hand it that portal. Your browser locks the portal's keys to the access key's public key and signs them with yours; the tool refuses any that are not signed by the account key you confirmed. A key handed one portal cannot open another, because it was never given the means</li>
+              </ul>
+              <p class="text-muted-foreground">
+                <strong>With an AI assistant.</strong> What an assistant sees is kept by whoever
+                runs the model, and a link contains the key to the files. So the tool's MCP server
+                never gives the assistant a link, a key or a password: a new link goes to your
+                clipboard. No tool returns the contents of a file. What a sender wrote in a
+                delivery (notes, answers, file names) is passed on marked as theirs, cleaned and
+                shortened.
+              </p>
+              <p class="text-muted-foreground">
+                <strong>What this does not cover.</strong> An assistant that can also run commands
+                on your computer can do what you can do there, including reading your clipboard.
+                Those limits are the assistant's, set where you approve what it runs. The MCP
+                server runs only on your machine; we offer no hosted one, because it would have to
+                hold your keys.
+              </p>
+              <p class="text-muted-foreground">
+                <strong>What we can see about a key:</strong> its name, its public key, what you
+                allowed it, which portals you handed it, when it was last used, and which transfers
+                it sent. Not the files, their names, or anything a key decrypts.
+              </p>
+              <p class="text-muted-foreground">
+                The tool is open source, and its copy of the encryption code is checked against
+                data frozen from this site.
+                <a href="https://github.com/tessil-app/tessil-cli" class="text-primary underline underline-offset-2">Read the code</a>.
               </p>
             </section>
           {/if}

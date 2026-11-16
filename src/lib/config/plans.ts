@@ -3,6 +3,8 @@
 // PLAN_* settings); change both together. Prices are charged by Polar,
 // so these numbers must match the products there.
 
+import { ACCESS_KEYS_ANNOUNCED } from "./launch";
+
 export type PlanId = "free" | "pro" | "max";
 export type Cycle = "monthly" | "annual";
 
@@ -140,6 +142,24 @@ export const COMPARISON: ComparisonGroup[] = [
       { label: "Password on a portal", values: maxOnly },
     ],
   },
+  // Shown once the command-line tool is released.
+  ...(ACCESS_KEYS_ANNOUNCED
+    ? [
+        {
+          title: "From a terminal or an AI assistant",
+          rows: [
+            {
+              label: "Access keys",
+              note: "One per computer or assistant that uses the tessil tool.",
+              values: { free: "1", pro: "3", max: "10" },
+            },
+            { label: "Send, fetch and list transfers", values: all(true) },
+            { label: "Read portals you hand to a key", note: "List and download what arrived.", values: paid },
+            { label: "Use it from an assistant (MCP)", note: "It never receives a link or a key.", values: all(true) },
+          ],
+        } satisfies ComparisonGroup,
+      ]
+    : []),
   {
     title: "On every plan",
     rows: [
