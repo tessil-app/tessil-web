@@ -28,7 +28,7 @@
   import IconListRegular from "phosphor-icons-svelte/IconListRegular.svelte";
   import IconTrayRegular from "phosphor-icons-svelte/IconTrayRegular.svelte";
   import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
-  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { ACCESS_KEYS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
   import IconLockOpenRegular from "phosphor-icons-svelte/IconLockOpenRegular.svelte";
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
@@ -98,6 +98,7 @@
   // people get their own pages instead; these stay in the footer for them.
   const publicLinks = [
     ...(PORTALS_ANNOUNCED ? [{ href: "/portals", label: "Portals" }] : []),
+    ...(ACCESS_KEYS_ANNOUNCED ? [{ href: "/cli", label: "CLI" }] : []),
     { href: "/pricing", label: "Pricing" },
     { href: "/security", label: "Security" },
   ];
