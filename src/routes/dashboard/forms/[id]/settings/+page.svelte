@@ -81,61 +81,64 @@
 
 <Seo title="Settings - {form?.title ?? 'Form'} - Tessil" robots="noindex" />
 
-<PageLayout width="5xl">
-  <PageHeader
-    title="Edit form"
-    tagline={form ? form.title : undefined}
-    back={{ href: backHref, label: "Back to responses" }}
-    align="left"
+<!-- Once open, the editor is the whole screen. -->
+{#if phase === "ready" && form}
+  <FormEditor
+    initial={{
+      title: form.title,
+      lang: form.lang,
+      checklist: [],
+      message: form.message,
+      thanks: form.thanks,
+      fieldLabel: "",
+      logo: form.logo,
+      twoWay: false,
+      returns: [],
+      questions: form.questions,
+      closesAt: form.closesAt,
+      notifyOnDelivery: form.notifyOnDelivery,
+      hasPassword: form.hasPassword,
+      newPassword: "",
+    }}
+    mode="edit"
+    onSave={save}
+    cancelHref={backHref}
+    questionLimit={Math.max(limit, form.questions.length)}
+    {canBrand}
   />
-
-  {#if phase === "loading"}
-    <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
-      <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
-    </div>
-  {:else if phase === "locked"}
-    <EmptyState title={auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"}>
-      <p>A form's questions are encrypted with a key kept in your vault.</p>
-      {#snippet actions()}
-        {#if auth.needsVaultSetup}
-          <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
-        {:else}
-          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
-        {/if}
-      {/snippet}
-    </EmptyState>
-  {:else if phase === "missing"}
-    <EmptyState title="Form not found">
-      <p>It may have been deleted, or its keys did not open with your vault.</p>
-    </EmptyState>
-  {:else if phase === "not_owner"}
-    <EmptyState title="Only the owner can change this form">
-      <p>It was shared with you, so you can read and download the responses.</p>
-    </EmptyState>
-  {:else if form}
-    <FormEditor
-      initial={{
-        title: form.title,
-        lang: form.lang,
-        checklist: [],
-        message: form.message,
-        thanks: form.thanks,
-        fieldLabel: "",
-        logo: form.logo,
-        twoWay: false,
-        returns: [],
-        questions: form.questions,
-        closesAt: form.closesAt,
-        notifyOnDelivery: form.notifyOnDelivery,
-        hasPassword: form.hasPassword,
-        newPassword: "",
-      }}
-      mode="edit"
-      onSave={save}
-      cancelHref={backHref}
-      questionLimit={Math.max(limit, form.questions.length)}
-      {canBrand}
+{:else}
+  <PageLayout width="5xl">
+    <PageHeader
+      title="Edit form"
+      tagline={form ? form.title : undefined}
+      back={{ href: backHref, label: "Back to responses" }}
+      align="left"
     />
-  {/if}
-</PageLayout>
+
+    {#if phase === "loading"}
+      <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
+        <Spinner class="size-8" aria-hidden="true" />
+        <p class="text-muted-foreground">Loading…</p>
+      </div>
+    {:else if phase === "locked"}
+      <EmptyState title={auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"}>
+        <p>A form's questions are encrypted with a key kept in your vault.</p>
+        {#snippet actions()}
+          {#if auth.needsVaultSetup}
+            <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+          {:else}
+            <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+          {/if}
+        {/snippet}
+      </EmptyState>
+    {:else if phase === "missing"}
+      <EmptyState title="Form not found">
+        <p>It may have been deleted, or its keys did not open with your vault.</p>
+      </EmptyState>
+    {:else if phase === "not_owner"}
+      <EmptyState title="Only the owner can change this form">
+        <p>It was shared with you, so you can read and download the responses.</p>
+      </EmptyState>
+    {/if}
+  </PageLayout>
+{/if}

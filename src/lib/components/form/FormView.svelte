@@ -49,9 +49,11 @@
     locale: Locale;
     /** Shows one state with nothing to send; the parent makes it inert. */
     preview?: "form" | "sent";
+    /** Fully usable, but sending stays in the browser: the editor's try-out. */
+    rehearse?: boolean;
   }
 
-  let { form, locale, preview }: Props = $props();
+  let { form, locale, preview, rehearse = false }: Props = $props();
 
   const t = $derived(formStrings[locale]);
   const d = $derived(depositStrings[locale]);
@@ -162,6 +164,17 @@
       return;
     }
     failure = null;
+    if (rehearse) {
+      const answers = collectAnswers(form.questions, answered);
+      sent = {
+        reference: "7F3A-91C2",
+        at: new Date(),
+        answers,
+        files: rows.map((r) => ({ name: r.file.name, size: formatSize(r.file.size) })),
+      };
+      live = "done";
+      return;
+    }
     rows = rows.map((r) => ({ ...r, status: "idle", percent: 0 }));
     live = "sending";
     controller = new AbortController();

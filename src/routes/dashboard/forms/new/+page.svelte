@@ -140,55 +140,58 @@
 
 <Seo title="New form - Tessil" robots="noindex" />
 
-<PageLayout width="5xl">
-  <PageHeader
-    title={copyFrom ? "Duplicate form" : "New form"}
-    tagline={copyFrom
-      ? "A new form with its own link, set up like the one you copied. Responses are not copied."
-      : "Questions people answer through a link. Their answers are encrypted before they leave the browser."}
-    back={{ href: "/dashboard/forms", label: "All forms" }}
-    align="left"
-  />
+<!-- Once open, the editor is the whole screen. -->
+{#if phase === "ready"}
+  <FormEditor {initial} mode="create" onSave={create} cancelHref="/dashboard/forms" questionLimit={limit} {canBrand} />
+{:else}
+  <PageLayout width="5xl">
+    <PageHeader
+      title={copyFrom ? "Duplicate form" : "New form"}
+      tagline={copyFrom
+        ? "A new form with its own link, set up like the one you copied. Responses are not copied."
+        : "Questions people answer through a link. Their answers are encrypted before they leave the browser."}
+      back={{ href: "/dashboard/forms", label: "All forms" }}
+      align="left"
+    />
 
-  {#if phase === "loading"}
-    <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
-      <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
-    </div>
-  {:else if phase === "no_plan"}
-    <EmptyState title="Forms are part of the paid plans">
-      <p>
-        A form is a link where people answer your questions and can add documents, encrypted in
-        their browser so only you can read the answers.
-      </p>
-      {#snippet actions()}
-        <Button href="/pricing" fullWidth={false}>See the plans</Button>
-      {/snippet}
-    </EmptyState>
-  {:else if phase === "full"}
-    <EmptyState title="You have all the forms your plan includes">
-      <p>
-        Your plan includes {maxForms}
-        {maxForms === 1 ? "form" : "forms"}. Delete one you no longer use, or move to a plan with
-        more.
-      </p>
-      {#snippet actions()}
-        <Button href="/pricing" fullWidth={false}>See the plans</Button>
-        <Button href="/dashboard/forms" variant="secondary" fullWidth={false}>Your forms</Button>
-      {/snippet}
-    </EmptyState>
-  {:else if phase === "locked"}
-    <EmptyState title={auth.needsVaultSetup ? "Forms need a vault" : "Your vault is locked"}>
-      <p>A form's keys are kept in your vault, so only you can read what people answer.</p>
-      {#snippet actions()}
-        {#if auth.needsVaultSetup}
-          <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
-        {:else}
-          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
-        {/if}
-      {/snippet}
-    </EmptyState>
-  {:else}
-    <FormEditor {initial} mode="create" onSave={create} cancelHref="/dashboard/forms" questionLimit={limit} {canBrand} />
-  {/if}
-</PageLayout>
+    {#if phase === "loading"}
+      <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
+        <Spinner class="size-8" aria-hidden="true" />
+        <p class="text-muted-foreground">Loading…</p>
+      </div>
+    {:else if phase === "no_plan"}
+      <EmptyState title="Forms are part of the paid plans">
+        <p>
+          A form is a link where people answer your questions and can add documents, encrypted in
+          their browser so only you can read the answers.
+        </p>
+        {#snippet actions()}
+          <Button href="/pricing" fullWidth={false}>See the plans</Button>
+        {/snippet}
+      </EmptyState>
+    {:else if phase === "full"}
+      <EmptyState title="You have all the forms your plan includes">
+        <p>
+          Your plan includes {maxForms}
+          {maxForms === 1 ? "form" : "forms"}. Delete one you no longer use, or move to a plan with
+          more.
+        </p>
+        {#snippet actions()}
+          <Button href="/pricing" fullWidth={false}>See the plans</Button>
+          <Button href="/dashboard/forms" variant="secondary" fullWidth={false}>Your forms</Button>
+        {/snippet}
+      </EmptyState>
+    {:else if phase === "locked"}
+      <EmptyState title={auth.needsVaultSetup ? "Forms need a vault" : "Your vault is locked"}>
+        <p>A form's keys are kept in your vault, so only you can read what people answer.</p>
+        {#snippet actions()}
+          {#if auth.needsVaultSetup}
+            <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+          {:else}
+            <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+          {/if}
+        {/snippet}
+      </EmptyState>
+    {/if}
+  </PageLayout>
+{/if}

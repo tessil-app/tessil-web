@@ -12,6 +12,10 @@
     label?: string;
     triggerClass?: string;
     menuClass?: string;
+    /** Opens above the trigger, for menus at the bottom of the screen. */
+    side?: "bottom" | "top";
+    /** On the wrapper, e.g. to let the trigger fill its column. */
+    class?: string;
   }
 
   let {
@@ -21,6 +25,8 @@
     label = "Open menu",
     triggerClass,
     menuClass,
+    side = "bottom",
+    class: className,
   }: Props = $props();
 
   let open = $state(false);
@@ -105,7 +111,7 @@
   });
 </script>
 
-<div class="relative inline-block">
+<div class={cn("relative inline-block", className)}>
   <button
     bind:this={triggerEl}
     type="button"
@@ -130,8 +136,16 @@
       onkeydown={handleMenuKey}
       transition:scale={{ duration: 150, start: 0.96, opacity: 0, easing: expoOut }}
       class={cn(
-        "absolute z-50 mt-2 min-w-[12rem] rounded-md border border-border bg-card p-1 space-y-0.5 focus:outline-none",
-        align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left",
+        "absolute z-50 min-w-[12rem] rounded-md border border-border bg-card p-1 space-y-0.5 focus:outline-none",
+        side === "top" ? "bottom-full mb-2" : "mt-2",
+        align === "end" ? "right-0" : "left-0",
+        side === "top"
+          ? align === "end"
+            ? "origin-bottom-right"
+            : "origin-bottom-left"
+          : align === "end"
+            ? "origin-top-right"
+            : "origin-top-left",
         menuClass,
       )}
     >
