@@ -196,7 +196,7 @@
         {/each}
       </div>
       <div class="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2 pl-4 pr-2 text-left">
-        <code class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.8125rem] text-white sm:text-sm">{installCommand}</code>
+        <code class="command min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.8125rem] text-white sm:text-sm">{installCommand}</code>
         <button
           type="button"
           onclick={() => copy(installCommand)}
@@ -283,7 +283,7 @@
         {/each}
       </ul>
       <div class="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2 pl-4 pr-2">
-        <code class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.8125rem] text-white sm:text-sm">claude mcp add tessil -- tessil mcp</code>
+        <code class="command min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.8125rem] text-white sm:text-sm">claude mcp add tessil -- tessil mcp</code>
       </div>
       <p class="text-sm text-white/50">
         Works with any assistant that can start a local MCP server.
@@ -404,7 +404,7 @@
         One access key comes with every account, the free one included.
       </p>
       <div class="flex w-full max-w-xl items-center gap-2 rounded-xl border border-border bg-card py-2 pl-4 pr-2 text-left">
-        <code class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm text-foreground">{installs[0].command}</code>
+        <code class="command min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm text-foreground">{installs[0].command}</code>
         <Button fullWidth={false} class="shrink-0 px-3 py-1.5 text-sm" onclick={() => copy(installs[0].command)}>
           {copied ? "Copied" : "Copy"}
         </Button>
@@ -448,6 +448,30 @@
   @keyframes blink {
     50% {
       opacity: 0;
+    }
+  }
+
+  /* A long command scrolls sideways under a thin bar in the text's own
+     colour, in place of the system's heavy one. */
+  .command {
+    padding-bottom: 0.25rem;
+    margin-bottom: -0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, currentColor 30%, transparent) transparent;
+  }
+  .command::-webkit-scrollbar {
+    height: 4px;
+  }
+  .command::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .command::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, currentColor 30%, transparent);
+  }
+  @media (hover: hover) {
+    .command::-webkit-scrollbar-thumb:hover {
+      background: color-mix(in srgb, currentColor 55%, transparent);
     }
   }
 
