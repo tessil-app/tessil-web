@@ -28,6 +28,8 @@ import {
   type PortalSettings,
 } from "./keys";
 import { depositReference } from "./receipt";
+import { decryptAnswers, isAnswersFile, type FormAnswer } from "$lib/form/answers";
+import type { Question } from "$lib/form/questions";
 
 export interface OpenedMemberPortal {
   id: string;
@@ -49,6 +51,9 @@ export interface OpenedMemberPortal {
   logo: PortalLogo | null;
   twoWay: boolean;
   returns: PortalReturn[];
+  /** A form's questions; empty on a portal. */
+  questions: Question[];
+  kind: "portal" | "form";
   closesAt: string | null;
   notifyOnDelivery: boolean;
   hasPassword: boolean;
@@ -81,18 +86,21 @@ export async function openMemberPortal(
     ? await openPortalBundle(row.id, keys.linkKey, base64UrlToBytes(row.publicBundle))
     : null;
   if (!keys || !info) return { ok: false, reason: "unreadable" };
+  const kind = row.kind === "form" || info.questions ? "form" : "portal";
 
   return {
     ok: true,
     portal: {
       id: row.id,
       role: row.role,
-      link: portalLink(origin, row.id, keys.linkKey),
+      kind,
+      link: portalLink(origin, row.id, keys.linkKey, kind),
       isDisabled: row.isDisabled,
       keypair: { privateKey: keys.privateKey, publicKey: info.publicKey },
       linkKey: keys.linkKey,
       keyVersion: info.keyVersion,
       ...settingsOf(info),
+      questions: info.questions ?? [],
       closesAt: row.closesAt ?? null,
       notifyOnDelivery: row.notifyOnDelivery ?? false,
       hasPassword: row.hasPassword ?? false,
@@ -143,6 +151,7 @@ export async function savePortalSettings(
     ...(settings.logo ? { logo: settings.logo } : {}),
     twoWay: settings.twoWay,
     returns: settings.returns,
+    ...(settings.questions && settings.questions.length > 0 ? { questions: settings.questions } : {}),
   });
   await api.updatePortal(portal.id, {
     publicBundle: bytesToBase64Url(bundle),
@@ -171,6 +180,11 @@ export interface OpenedDeposit {
   note: string | null;
   /** What the depositor filled in, when the portal has an extra field. */
   answer: DepositAnswer | null;
+  /** A form response's answers. Null on a portal delivery, or when they did not open. */
+  answers: FormAnswer[] | null;
+  /** The answers file was there but could not be read. */
+  answersUnreadable: boolean;
+  /** The visitor's own files; a form's answers file is not among them. */
   files: DepositFile[];
   totalBytes: number;
   key: CryptoKey;
@@ -203,7 +217,8 @@ async function openDeposit(
       false,
       ["decrypt"],
     );
-    const files = await Promise.all(
+    const answersPromise = row.answersUrl ? readAnswers(row.answersUrl, key) : Promise.resolve(null);
+    const all = await Promise.all(
       row.files.map(async (f) => {
         const stored = await decryptFilename(f.encryptedName, f.encryptedNameIv, key).catch(
           () => null,
@@ -217,6 +232,8 @@ async function openDeposit(
       stored = await decryptString(row.encryptedTitle, row.encryptedTitleIv, key).catch(() => null);
     }
     const { note, answer } = decodeDepositNote(stored ?? "");
+    const files = all.filter((f) => !isAnswersFile(f));
+    const answers = await answersPromise;
     return {
       id: row.id,
       reference: await depositReference(row.id),
@@ -224,12 +241,24 @@ async function openDeposit(
       expiresAt: row.expiresAt,
       note,
       answer,
+      answers,
+      answersUnreadable: (row.answersUrl !== undefined || files.length < all.length) && answers === null,
       files,
       totalBytes: files.reduce((sum, f) => sum + f.plainSize, 0),
       key,
     };
   } finally {
     raw.fill(0);
+  }
+}
+
+async function readAnswers(url: string, key: CryptoKey): Promise<FormAnswer[] | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await decryptAnswers(new Uint8Array(await res.arrayBuffer()), key);
+  } catch {
+    return null;
   }
 }
 

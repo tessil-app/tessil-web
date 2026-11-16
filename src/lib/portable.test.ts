@@ -20,6 +20,8 @@ const ENTRIES = [
   "portal/keys.ts",
   "portal/deposit.ts",
   "portal/receipt.ts",
+  "form/questions.ts",
+  "form/answers.ts",
   "upload/multipart.ts",
   "upload/pool.ts",
   "upload/fileTypeCheck.ts",

@@ -52,4 +52,25 @@ describe("receipt text", () => {
     expect(text).not.toContain("Note:");
     expect(text).toContain("Keep your own copy");
   });
+
+  it("lists a form's answers, keeps long ones readable, and leaves out an empty file list", () => {
+    const text = buildReceiptText({
+      ...base,
+      kind: "received",
+      locale: "nl",
+      note: null,
+      files: [],
+      answers: [
+        { label: "Naam", value: "Anna de Vries" },
+        { label: "Waar gaat het over?", value: "Huurgeschil\nmet de verhuurder" },
+        { label: "Geboortedatum", value: "" },
+      ],
+    });
+    expect(text).toContain("Overzicht van een ingevuld formulier");
+    expect(text).toContain("Formulier: Administratiekantoor Jansen");
+    expect(text).toContain("Antwoorden:\n  Naam\n    Anna de Vries");
+    expect(text).toContain("    Huurgeschil\n    met de verhuurder");
+    expect(text).toContain("  Geboortedatum\n    (niet beantwoord)");
+    expect(text).not.toContain("Bestanden");
+  });
 });

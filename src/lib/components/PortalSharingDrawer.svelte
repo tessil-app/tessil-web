@@ -23,9 +23,13 @@
     onClose: () => void;
     /** Something changed on the server; the page reloads `sharing`. */
     onChanged: () => Promise<void>;
+    /** What the page calls the thing being shared. */
+    noun?: "portal" | "form";
   }
 
-  let { open, userId, portalId, sharing, onClose, onChanged }: Props = $props();
+  let { open, userId, portalId, sharing, onClose, onChanged, noun = "portal" }: Props = $props();
+  // What arrives through it: files for a portal, responses for a form.
+  const arrivals = $derived(noun === "form" ? "the responses to this form" : "what is sent to this portal");
 
   let email = $state("");
   let busy = $state<string | null>(null);
@@ -74,7 +78,7 @@
         unlockPrompt.request();
         throw new Error("Unlock your vault, then give access again.");
       }
-      throw new Error("This portal's keys could not be read from your vault.");
+      throw new Error(`This ${noun}'s keys could not be read from your vault.`);
     });
   }
 </script>
@@ -93,7 +97,7 @@
     {:else if guest}
       <DrawerSection
         title="Shared with {guest.email}"
-        description="They can see, download and delete what is sent to this portal. They can't change the portal or invite anyone."
+        description="They can see, download and delete {arrivals}. They can't change the {noun} or invite anyone."
       >
         <DetailList>
           <DetailItem label="Their key"><span class="font-mono text-xs">{guest.fingerprint ?? "unknown"}</span></DetailItem>
@@ -103,7 +107,7 @@
 
       <DrawerSection
         title="Remove access"
-        description="They can no longer open this portal. Files they already downloaded stay with them."
+        description="They can no longer open this {noun}. Files they already downloaded stay with them."
         tone="danger"
       >
         {#if confirmRemove}
@@ -134,7 +138,7 @@
       {#if invite.ready}
         <DrawerSection
           title="{invite.email} is ready"
-          description="Giving access hands them this portal's keys, encrypted so only their account can open them."
+          description="Giving access hands them this {noun}'s keys, encrypted so only their account can open them."
         >
           <DetailList>
             <DetailItem label="Their key"><span class="font-mono text-xs">{invite.ready.fingerprint}</span></DetailItem>
@@ -173,7 +177,7 @@
     {:else}
       <DrawerSection
         title="Invite one person"
-        description="They will be able to see, download and delete what is sent to this portal. They need a Tessil account with a vault; a free one is enough."
+        description="They will be able to see, download and delete {arrivals}. They need a Tessil account with a vault; a free one is enough."
       >
         <form onsubmit={sendInvite} class="space-y-3" novalidate>
           <TextInput
@@ -192,7 +196,7 @@
         <p class="text-xs text-muted-foreground">
           We email them the invitation. When they have signed in and set up a vault, we email
           you, and you give access here. That last step needs your browser, because only you
-          hold this portal's keys.
+          hold this {noun}'s keys.
         </p>
       </DrawerSection>
     {/if}

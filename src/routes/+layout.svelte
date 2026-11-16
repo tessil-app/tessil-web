@@ -27,8 +27,9 @@
   import IconGearRegular from "phosphor-icons-svelte/IconGearRegular.svelte";
   import IconListRegular from "phosphor-icons-svelte/IconListRegular.svelte";
   import IconTrayRegular from "phosphor-icons-svelte/IconTrayRegular.svelte";
+  import IconClipboardTextRegular from "phosphor-icons-svelte/IconClipboardTextRegular.svelte";
   import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
-  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
   import IconLockOpenRegular from "phosphor-icons-svelte/IconLockOpenRegular.svelte";
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
@@ -93,6 +94,7 @@
   const showPortals = $derived(
     auth.user?.tier === "pro" || auth.user?.tier === "max" || hasSharedPortals,
   );
+  const showForms = $derived(FORMS_ANNOUNCED && showPortals);
 
   // Signed-out visitors get the pages that help them decide. Signed-in
   // people get their own pages instead; these stay in the footer for them.
@@ -305,6 +307,15 @@
                 Portals
               </a>
             {/if}
+            {#if showForms}
+              <a
+                href="/dashboard/forms"
+                aria-current={isActive("/dashboard/forms") ? "page" : undefined}
+                class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard/forms") ? navLinkActive : navLinkInactive)}
+              >
+                Forms
+              </a>
+            {/if}
             <DropdownMenu
               align="end"
               label="Account menu"
@@ -352,6 +363,16 @@
                   >
                     <IconTrayRegular class="size-4 opacity-70" />
                     Portals
+                  </DropdownMenuItem>
+                {/if}
+                {#if showForms}
+                  <DropdownMenuItem
+                    href="/dashboard/forms"
+                    onSelect={() => { goto("/dashboard/forms"); close(); }}
+                    class={cn("sm:hidden", isActive("/dashboard/forms") && "bg-accent")}
+                  >
+                    <IconClipboardTextRegular class="size-4 opacity-70" />
+                    Forms
                   </DropdownMenuItem>
                 {/if}
                 <div class="my-1 h-px bg-border sm:hidden" role="separator"></div>

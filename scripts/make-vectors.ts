@@ -25,6 +25,8 @@ import {
   sealPortalBundle,
 } from "../src/lib/portal/keys";
 import { depositReference } from "../src/lib/portal/receipt";
+import { ANSWERS_FILE_NAME, collectAnswers, encodeAnswers } from "../src/lib/form/answers";
+import type { Question } from "../src/lib/form/questions";
 import { importVaultDerivationKey, publicKeyFingerprint } from "../src/lib/vault/keypair";
 
 const PATH = new URL("../src/lib/crypto/vectors.json", import.meta.url).pathname;
@@ -198,6 +200,56 @@ await once("sealed", async () => {
     plaintext: b64(plaintext),
     anonymous: b64(await sealTo(to.live.keypair.publicKey, plaintext, "test|context")),
     authenticated: b64(await sealTo(to.live.keypair.publicKey, plaintext, "test|context", from.live.keypair)),
+  };
+});
+
+await once("form", async () => {
+  const owner = await person("owner-user-id-0000001");
+  const questions: Question[] = [
+    { id: "name01", type: "short", label: "Naam", required: true },
+    { id: "about1", type: "long", label: "Waar gaat het over?", hint: "Een paar regels" },
+    { id: "pick01", type: "choice", label: "Soort klant", options: ["Particulier", "Zakelijk"], required: true },
+    { id: "many01", type: "choices", label: "Wat heb je al?", options: ["ID", "Loonstrook", "Contract"] },
+    { id: "yes001", type: "yesno", label: "Vorig jaar aangifte gedaan?" },
+    { id: "date01", type: "date", label: "Geboortedatum" },
+    { id: "file01", type: "file", label: "Kopie van je ID", required: true },
+  ];
+  const made = await createPortalKeys("Intake Jansen", owner.live, "nl", { questions, message: "Welkom." });
+  const info = (await openPortalBundle(made.id, made.linkKey, made.publicBundle))!;
+  const answers = collectAnswers(questions, {
+    name01: "Anna de Vries",
+    about1: "Huurgeschil\nmet de verhuurder",
+    pick01: "Zakelijk",
+    many01: ["ID", "Contract"],
+    yes001: true,
+    date01: "1990-04-01",
+    file01: ["paspoort.jpg"],
+  });
+  // A response: its key sealed to the form, its answers file and one named file.
+  const transferId = "Uakgb_J5m9g-0JDMbcJqL";
+  const responseKey = random(32);
+  const key = await aesKey(responseKey);
+  const sealedKey = await sealTo(info.publicKey, responseKey, depositKeyContext(made.id, transferId));
+  const plain = encodeAnswers(answers);
+  const answersFile = await collect(streamingEncrypt(new Blob([plain as BlobPart]).stream(), plain.length, key));
+  const answersName = await encryptFilename(ANSWERS_FILE_NAME, key);
+  const fileName = await encryptFilename(encodeDepositFileName("paspoort.jpg", "file01"), key);
+  return {
+    owner: owner.stored,
+    formId: made.id,
+    linkKey: b64(made.linkKey),
+    bundle: b64(made.publicBundle),
+    questions,
+    keptKeys: b64(made.sealedKeys),
+    response: {
+      transferId,
+      key: b64(responseKey),
+      sealedKey: b64(sealedKey),
+      answers,
+      answersFile: b64(answersFile),
+      answersName,
+      fileName,
+    },
   };
 });
 

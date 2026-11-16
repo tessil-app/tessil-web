@@ -88,7 +88,7 @@
     try {
       const res = await api.listPortals();
       maxPortals = res.maxPortals;
-      const owned = res.portals.filter((p) => p.role === "owner").length;
+      const owned = res.portals.filter((p) => p.role === "owner" && p.kind !== "form").length;
       if (maxPortals === 0) phase = "no_plan";
       else if (owned >= maxPortals) phase = "full";
       else if (auth.needsVaultSetup || !(await isUnlocked(auth.user.id))) phase = "locked";

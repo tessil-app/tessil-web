@@ -24,6 +24,7 @@
   import Switch from "$lib/components/Switch.svelte";
   import * as Table from "$lib/components/table";
   import TextInput from "$lib/components/TextInput.svelte";
+  import Select from "$lib/components/Select.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
@@ -159,10 +160,19 @@
     </section>
 
     <section class="space-y-4">
-      {@render section("Fields", "A label above every field. Search and filters sit in one row above a list.")}
+      {@render section("Fields", "A label above every field. Search and filters sit in one row above a list. A select only where radio buttons would not fit.")}
       <div class="grid gap-4 sm:grid-cols-2">
         <TextInput id="sg-text" label="Name" placeholder="For example: Documents 2025" bind:value={text} />
         <TextInput id="sg-error" label="With an error" value="x" error="Use at least 3 characters." />
+        <Select
+          id="sg-select"
+          label="Select, for a short fixed list"
+          value="short"
+          options={[
+            { value: "short", label: "Short answer" },
+            { value: "long", label: "Long answer" },
+          ]}
+        />
       </div>
     </section>
 

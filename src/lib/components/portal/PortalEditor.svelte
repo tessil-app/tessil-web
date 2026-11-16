@@ -205,6 +205,8 @@
     twoWay,
     returns: [],
     accessToken: null,
+    kind: "portal",
+    questions: [],
   });
 
   const card = "rounded-lg bg-card p-4 sm:p-5";

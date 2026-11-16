@@ -353,3 +353,115 @@ export const depositStrings: Record<Locale, DepositStrings> = {
     },
   },
 };
+
+/** A form's page: what differs from a portal's. File rows and upload errors come from `depositStrings`. */
+export interface FormStrings {
+  pageTitle: string;
+  opening: string;
+  optional: string;
+  required: string;
+  yes: string;
+  no: string;
+  choosePlaceholder: string;
+  chooseFiles: string;
+  addFiles: string;
+  missing: (count: number) => string;
+  missingOne: string;
+  send: string;
+  sending: string;
+  sentTitle: string;
+  sentBody: (title: string) => string;
+  again: string;
+  closedTitle: string;
+  closedBody: (title: string) => string;
+  closedOnTitle: string;
+  closedOnBody: (title: string, date: string) => string;
+  openUntil: (date: string) => string;
+  footnote: (title: string) => string;
+  passwordTitle: string;
+  notFound: { title: string; body: string };
+  offline: { title: string; body: string };
+  notAccepting: string;
+  closed: string;
+  gone: string;
+  failed: string;
+}
+
+export const formStrings: Record<Locale, FormStrings> = {
+  en: {
+    pageTitle: "Fill in a form securely - Tessil",
+    opening: "Opening form…",
+    optional: "optional",
+    required: "required",
+    yes: "Yes",
+    no: "No",
+    choosePlaceholder: "Choose…",
+    chooseFiles: "Choose files",
+    addFiles: "Add more",
+    missing: (count) => `${count} required ${count === 1 ? "question is" : "questions are"} not answered yet.`,
+    missingOne: "Answer this question before sending.",
+    send: "Send",
+    sending: "Sending…",
+    sentTitle: "Your answers were sent",
+    sentBody: (title) => `Only ${title} can read them. You can close this page.`,
+    again: "Fill in again",
+    closedTitle: "Not taking answers right now",
+    closedBody: (title) => `This form has been switched off. Let ${title} know, and they can switch it back on.`,
+    closedOnTitle: "This form has closed",
+    closedOnBody: (title, date) =>
+      `It took answers until ${date}. If you still need to send something, ask ${title} to open it again.`,
+    openUntil: (date) => `You can fill this in until ${date}.`,
+    footnote: (title) =>
+      `Your answers and files are encrypted in this browser before they are sent. Only ${title} can read them. Tessil cannot.`,
+    passwordTitle: "This form has a password",
+    notFound: {
+      title: "This form no longer exists",
+      body: "It may have been deleted. Ask the person who sent you the link for a new one.",
+    },
+    offline: { title: "Couldn't open this form", body: "Check your connection and reload the page." },
+    notAccepting: "This form is not taking answers right now.",
+    closed: "This form has closed and takes no more answers.",
+    gone: "This form no longer exists.",
+    failed: "Sending failed. Check your connection and try again. Your answers are still here.",
+  },
+  nl: {
+    pageTitle: "Veilig een formulier invullen - Tessil",
+    opening: "Formulier openen…",
+    optional: "optioneel",
+    required: "verplicht",
+    yes: "Ja",
+    no: "Nee",
+    choosePlaceholder: "Kies…",
+    chooseFiles: "Bestanden kiezen",
+    addFiles: "Meer toevoegen",
+    missing: (count) =>
+      `${count} ${count === 1 ? "verplichte vraag is" : "verplichte vragen zijn"} nog niet beantwoord.`,
+    missingOne: "Beantwoord deze vraag voordat je verstuurt.",
+    send: "Versturen",
+    sending: "Versturen…",
+    sentTitle: "Je antwoorden zijn verstuurd",
+    sentBody: (title) => `Alleen ${title} kan ze lezen. Je kunt deze pagina sluiten.`,
+    again: "Opnieuw invullen",
+    closedTitle: "Neemt nu geen antwoorden aan",
+    closedBody: (title) => `Dit formulier is uitgezet. Laat het ${title} weten, dan kan het weer worden aangezet.`,
+    closedOnTitle: "Dit formulier is gesloten",
+    closedOnBody: (title, date) =>
+      `Het nam antwoorden aan tot en met ${date}. Moet je toch nog iets versturen, vraag ${title} dan om het weer open te zetten.`,
+    openUntil: (date) => `Je kunt dit invullen tot en met ${date}.`,
+    footnote: (title) =>
+      `Je antwoorden en bestanden worden in deze browser versleuteld voordat ze worden verstuurd. Alleen ${title} kan ze lezen. Tessil niet.`,
+    passwordTitle: "Dit formulier heeft een wachtwoord",
+    notFound: {
+      title: "Dit formulier bestaat niet meer",
+      body: "Het is mogelijk verwijderd. Vraag de afzender om een nieuwe link.",
+    },
+    offline: {
+      title: "Het formulier kon niet worden geopend",
+      body: "Controleer je verbinding en laad de pagina opnieuw.",
+    },
+    notAccepting: "Dit formulier neemt nu geen antwoorden aan.",
+    closed: "Dit formulier is gesloten en neemt geen antwoorden meer aan.",
+    gone: "Dit formulier bestaat niet meer.",
+    failed: "Het versturen is mislukt. Controleer je verbinding en probeer het opnieuw. Je antwoorden staan er nog.",
+  },
+};
