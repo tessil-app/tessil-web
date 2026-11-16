@@ -78,7 +78,11 @@
   let title = $state(start.title);
   let lang = $state<Locale>(start.lang ?? DEFAULT_LOCALE);
   let questions = $state<Question[]>(
-    (start.questions ?? []).map((q) => ({ ...q, options: q.options ? [...q.options] : undefined })),
+    (start.questions ?? []).map((q) => ({
+      ...q,
+      required: q.required ?? false,
+      options: q.options ? [...q.options] : undefined,
+    })),
   );
   let messageOn = $state(start.message.length > 0);
   let message = $state(start.message);
@@ -162,7 +166,7 @@
   async function addQuestion() {
     if (atLimit) return;
     const id = newQuestionId();
-    questions = [...questions, { id, type: "short", label: "" }];
+    questions = [...questions, { id, type: "short", label: "", required: false }];
     view = "form";
     await tick();
     document.getElementById(`fq-${id}-label`)?.focus();
