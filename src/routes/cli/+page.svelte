@@ -4,10 +4,10 @@
   // Every claim here is one /security#access-keys makes.
 
   import Button from "$lib/components/Button.svelte";
+  import CommandTabs from "$lib/components/cli/CommandTabs.svelte";
   import DemoTerminal from "$lib/components/cli/DemoTerminal.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
-  import SegmentedControl from "$lib/components/SegmentedControl.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconXRegular from "phosphor-icons-svelte/IconXRegular.svelte";
@@ -21,9 +21,6 @@
     },
     { id: "npm", label: "npm", command: "npx tessil help" },
   ] as const;
-  type InstallId = (typeof installs)[number]["id"];
-  let install = $state<InstallId>("brew");
-  const installCommand = $derived(installs.find((i) => i.id === install)!.command);
   let copied = $state<string | null>(null);
 
   async function copy(text: string) {
@@ -90,15 +87,7 @@
           <TextLink href="https://github.com/tessil-app/tessil-cli">Read the code</TextLink>
         </p>
       </div>
-      <div class="min-w-0 space-y-3">
-        <SegmentedControl
-          label="How to install"
-          value={install}
-          onChange={(v: InstallId) => (install = v)}
-          options={installs.map((i) => ({ value: i.id, label: i.label }))}
-        />
-        {@render commandRow(installCommand)}
-      </div>
+      <CommandTabs id="install" label="How to install" options={installs} class="min-w-0" />
     </div>
   </section>
 
@@ -289,9 +278,7 @@
       <p class="max-w-lg text-lg text-muted-foreground">
         One access key comes with every account, the free one included.
       </p>
-      <div class="w-full max-w-xl">
-        {@render commandRow(installs[0].command)}
-      </div>
+      <CommandTabs id="install-again" label="How to install" options={installs} class="w-full max-w-xl" />
       <p class="flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
         <TextLink href="https://github.com/tessil-app/tessil-cli#readme">Every command</TextLink>
         <TextLink href="https://github.com/tessil-app/tessil-cli/releases">Downloads</TextLink>
