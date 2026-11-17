@@ -13,6 +13,7 @@
   import FormEditor from "$lib/components/form/FormEditor.svelte";
   import { api, ApiError } from "$lib/api/client";
   import { newQuestionId, questionLimit } from "$lib/form/questions";
+  import { forgetTryout, readTryout } from "$lib/form/tryout";
   import { DEFAULT_LOCALE, LOCALES } from "$lib/i18n/locale";
   import { createMyPortal } from "$lib/portal/client";
   import { openMemberPortal } from "$lib/portal/deposits";
@@ -57,6 +58,9 @@
   const copyFrom = $derived($page.url.searchParams.get("from"));
 
   async function prefill(userId: string) {
+    // A form built on /forms/try before there was an account or a plan.
+    const tried = copyFrom ? null : readTryout();
+    if (tried) initial = { ...initial, ...tried };
     if (!copyFrom) return;
     const opened = await openMemberPortal(userId, copyFrom, window.location.origin).catch(() => null);
     if (!opened?.ok) return;
@@ -134,6 +138,7 @@
       unlockPrompt.request();
       throw new Error("Your vault is locked. Unlock it and try again.");
     }
+    forgetTryout();
     await goto(`/dashboard/forms/${result.portal.id}`);
   }
 </script>

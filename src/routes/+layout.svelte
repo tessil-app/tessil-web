@@ -100,6 +100,7 @@
   // people get their own pages instead; these stay in the footer for them.
   const publicLinks = [
     ...(PORTALS_ANNOUNCED ? [{ href: "/portals", label: "Portals" }] : []),
+    ...(FORMS_ANNOUNCED ? [{ href: "/forms", label: "Forms" }] : []),
     { href: "/pricing", label: "Pricing" },
     { href: "/security", label: "Security" },
   ];
