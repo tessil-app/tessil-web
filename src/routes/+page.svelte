@@ -9,11 +9,11 @@
   import Button from "$lib/components/Button.svelte";
   import CircularProgress from "$lib/components/CircularProgress.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
-  import Badge from "$lib/components/Badge.svelte";
   import PlanCards from "$lib/components/PlanCards.svelte";
   import { fade } from "svelte/transition";
   import TextLink from "$lib/components/TextLink.svelte";
-  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import FeatureAccordion, { type Feature } from "$lib/components/FeatureAccordion.svelte";
+  import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
   import Modal from "$lib/components/Modal.svelte";
   import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
@@ -148,6 +148,50 @@
       // Clipboard refused; the text is on the page to select by hand.
     }
   }
+
+  // What Tessil does besides sending, each shown once it is announced.
+  const features: Feature[] = [
+    ...(PORTALS_ANNOUNCED
+      ? [
+          {
+            id: "portals" as const,
+            name: "Portals",
+            line: "A link where people send you files. Only you can open them.",
+            href: "/portals",
+            link: "Meet portals",
+            pill: "Now you can receive files too",
+          },
+        ]
+      : []),
+    ...(FORMS_ANNOUNCED
+      ? [
+          {
+            id: "forms" as const,
+            name: "Forms",
+            fresh: true,
+            line: "Ask your questions with one link. Only you can read the answers.",
+            href: "/forms",
+            link: "Meet forms",
+            pill: "Forms only you can read",
+          },
+        ]
+      : []),
+    ...(ACCESS_KEYS_ANNOUNCED
+      ? [
+          {
+            id: "cli" as const,
+            name: "Terminal",
+            fresh: true,
+            line: "Send and receive from your terminal, or let your AI assistant do it.",
+            href: "/cli",
+            link: "Meet the tool",
+            pill: "Tessil in your terminal",
+          },
+        ]
+      : []),
+  ];
+
+  const newest = features.findLast((f) => f.fresh) ?? null;
 
   const steps: { title: string; body: string; link?: { href: string; label: string } }[] = [
     {
@@ -819,13 +863,14 @@
     )}
   >
     <div class="mx-auto flex max-w-2xl shrink-0 flex-col items-center gap-2.5 sm:gap-3 text-center">
-        {#if PORTALS_ANNOUNCED}
+        <!-- On a phone the panes below sit under the fold, so the newest thing is named up here. -->
+        {#if newest}
           <a
-            href="/portals"
-            class="inline-flex items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3.5 text-sm text-foreground transition-colors duration-200 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            href={newest.href}
+            class="inline-flex sm:hidden items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3.5 text-sm text-foreground transition-colors duration-200 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <span class="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">New</span>
-            Now you can receive files too
+            {newest.pill}
           </a>
         {/if}
         {#if supportPillVisible}
@@ -1175,22 +1220,8 @@
         </div>
       </aside>
 
-      {#if PORTALS_ANNOUNCED && !hasFiles}
-        <a
-          href="/portals"
-          class="group relative self-end w-full sm:w-80 rounded-lg bg-card/95 p-5 shadow-lg space-y-2 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <span class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Receive
-            <Badge tone="info">New</Badge>
-          </span>
-          <span class="block text-base font-semibold leading-snug text-foreground">
-            A link where people send you files. Only you can open them.
-          </span>
-          <span class="block text-sm text-primary underline-offset-4 group-hover:underline">
-            Meet portals
-          </span>
-        </a>
+      {#if features.length > 0 && !hasFiles}
+        <FeatureAccordion {features} class="self-end w-full sm:w-[30rem]" />
       {/if}
     </div>
 
