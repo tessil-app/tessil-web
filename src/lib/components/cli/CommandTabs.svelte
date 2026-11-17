@@ -66,13 +66,12 @@
 </script>
 
 <div class={cn("overflow-hidden rounded-xl border border-border bg-card text-left", className)}>
-  <div role="tablist" aria-label={label} tabindex="-1" {onkeydown} class="relative flex border-b border-border bg-secondary">
-    <!-- The chosen tab's ground: the field's own colour, reaching down into it. -->
+  <div role="tablist" aria-label={label} tabindex="-1" {onkeydown} class="relative flex border-b border-border bg-secondary px-2 pt-1.5">
+    <!-- The chosen tab's ground: the field's own colour, flaring out into it like a folder's tab. -->
     <span
       aria-hidden="true"
       class={cn(
-        "absolute inset-y-0 left-0 -mb-px border-r border-border bg-card",
-        chosen > 0 && "border-l",
+        "ground absolute top-1.5 bottom-0 left-0 -mb-px rounded-t-lg bg-card",
         ready && "transition-[transform,width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none",
       )}
       style:width="{box.w}px"
@@ -112,6 +111,24 @@
 </div>
 
 <style>
+  /* The outward curves where the chosen tab meets the field. */
+  .ground::before,
+  .ground::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+  .ground::before {
+    right: 100%;
+    background: radial-gradient(circle at 0 0, transparent 0.5rem, var(--card) calc(0.5rem + 0.5px));
+  }
+  .ground::after {
+    left: 100%;
+    background: radial-gradient(circle at 100% 0, transparent 0.5rem, var(--card) calc(0.5rem + 0.5px));
+  }
+
   /* A long command scrolls sideways under a thin bar in the text's own colour. */
   .command {
     padding-bottom: 0.25rem;
