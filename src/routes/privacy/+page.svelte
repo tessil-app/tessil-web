@@ -1,7 +1,7 @@
 <script lang="ts">
   import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import { ACCESS_KEYS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
 </script>
 
 <Seo
@@ -146,6 +146,32 @@
               </p>
             {/if}
 
+            {#if FORMS_ANNOUNCED}
+              <h3 class="text-lg font-medium text-foreground">Forms</h3>
+              <p class="text-muted-foreground">
+                A form is a link through which other people answer an account holder's questions.
+                It is stored and handled like a portal.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li>
+                  <strong>If you own a form.</strong> We store what we store for a portal, and
+                  that it is a form. Its name, your questions and their options, your texts and
+                  your logo are stored only in encrypted form that we cannot read.
+                </li>
+                <li>
+                  <strong>If you fill in a form.</strong> You need no account and we do not ask
+                  who you are. We store your encrypted answers, any files you add with their
+                  encrypted names, their sizes and when they arrived. Only the form's owner, and
+                  one person they may share it with, can decrypt them.
+                </li>
+              </ul>
+              <p class="text-muted-foreground">
+                Answers to a form often contain personal data. We cannot see them. The form's
+                owner decides what to ask and what to do with the answers, and is responsible for
+                that under data protection law; we store them on their behalf.
+              </p>
+            {/if}
+
             <h3 class="text-lg font-medium text-foreground">2.3 Security and Audit Data</h3>
             <p class="text-muted-foreground">
               To operate the service, prevent abuse, and meet legal recordkeeping needs, we process:
@@ -221,6 +247,13 @@
                 </li>
                 <li>
                   <strong>Portal invitations:</strong> Deleted when accepted, declined or withdrawn.
+                </li>
+              {/if}
+              {#if FORMS_ANNOUNCED}
+                <li>
+                  <strong>Responses to a form:</strong> Automatically deleted 30 days after they
+                  arrive, or 90 days on the larger plan. The form's owner can delete them sooner.
+                  Deleting a form or its owner's account deletes them as well.
                 </li>
               {/if}
               <li>
