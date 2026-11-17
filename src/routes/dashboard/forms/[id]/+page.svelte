@@ -20,10 +20,13 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import * as Table from "$lib/components/table";
   import ResponseDrawer from "$lib/components/form/ResponseDrawer.svelte";
+  import ResponseSummary from "$lib/components/form/ResponseSummary.svelte";
+  import Tabs from "$lib/components/Tabs.svelte";
   import { api } from "$lib/api/client";
   import { saveDecryptedFile, StreamInterruptedError } from "$lib/download/saveFile";
   import { saveTextFile } from "$lib/download/saveTextFile";
   import { answersCsv, answerText, leadingAnswer } from "$lib/form/answers";
+  import { pickedOption, summarise, type QuestionSummary } from "$lib/form/summary";
   import { loadDeposits, openMemberPortal, type OpenedDeposit, type OpenedMemberPortal } from "$lib/portal/deposits";
   import { hasClosed } from "$lib/portal/keys";
   import { buildReceiptText } from "$lib/portal/receipt";
@@ -35,6 +38,7 @@
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
+  import IconXRegular from "phosphor-icons-svelte/IconXRegular.svelte";
   import { onDestroy } from "svelte";
 
   type Phase = "loading" | "locked" | "missing" | "unreadable" | "ready";
@@ -64,6 +68,13 @@
   let filter = $state<Filter>("all");
   let openId = $state<string | null>(null);
   let seenBefore = $state<string | null>(null);
+
+  // ─── summary ──────────────────────────────────────────────────────────────
+  let view = $state<"responses" | "summary">("responses");
+  /** Set by picking an option in the summary: only responses that chose it. */
+  let picked = $state<{ questionId: string; value: string | boolean; label: string } | null>(null);
+  let loadingAll = $state(false);
+  const summaries = $derived(view === "summary" ? summarise(form?.questions ?? [], responses) : []);
 
   function daysUntil(iso: string): number {
     return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
@@ -100,7 +111,9 @@
     const needle = query.trim().toLowerCase();
     return rows.filter(
       (r) =>
-        (filter === "all" || (filter === "new" ? r.isNew : r.soon)) && (needle === "" || r.haystack.includes(needle)),
+        (filter === "all" || (filter === "new" ? r.isNew : r.soon)) &&
+        (needle === "" || r.haystack.includes(needle)) &&
+        (!picked || pickedOption(r.response.answers, picked.questionId, picked.value)),
     );
   });
   const openResponse = $derived(responses.find((r) => r.id === openId) ?? null);
@@ -253,17 +266,46 @@
 
   let exporting = $state(false);
 
+  /** Loads every older response. Throws when a page does not come. */
+  async function loadAll() {
+    while (nextCursor) {
+      const before = nextCursor;
+      await loadMore();
+      if (nextCursor === before) throw new Error("Couldn't load every response. Try again.");
+    }
+  }
+
+  // A summary of some responses would mislead, so it waits for all of them.
+  async function showSummary() {
+    view = "summary";
+    if (!nextCursor || loadingAll) return;
+    loadingAll = true;
+    errorMessage = null;
+    try {
+      await loadAll();
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : "Couldn't load every response.";
+    } finally {
+      loadingAll = false;
+    }
+  }
+
+  function pick(question: QuestionSummary, value: string | boolean) {
+    picked = {
+      questionId: question.id,
+      value,
+      label: `${question.label}: ${typeof value === "boolean" ? (value ? "Yes" : "No") : value}`,
+    };
+    view = "responses";
+  }
+
   // Loads every older response first, so the file holds them all.
   async function exportCsv() {
     if (!form || exporting) return;
     exporting = true;
     errorMessage = null;
     try {
-      while (nextCursor) {
-        const before = nextCursor;
-        await loadMore();
-        if (nextCursor === before) throw new Error("Couldn't load every response. Try again.");
-      }
+      await loadAll();
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = (iso: string) => {
         const d = new Date(iso);
@@ -420,6 +462,30 @@
           <p>Share the form's link. Answers appear here as soon as someone sends them.</p>
         </EmptyState>
       {:else}
+        <Tabs
+          label="View"
+          value={view}
+          onChange={(v) => (v === "summary" ? void showSummary() : (view = v))}
+          tabs={[
+            { value: "responses", label: "Responses" },
+            { value: "summary", label: "Summary" },
+          ]}
+        />
+      {/if}
+
+      {#if responses.length > 0 && view === "summary"}
+        {#if loadingAll}
+          <p class="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+            <Spinner aria-hidden="true" />
+            Loading every response: {responses.length} so far…
+          </p>
+        {:else if nextCursor}
+          <Alert tone="warning">
+            Older responses are not loaded, so this counts the newest {responses.length} only.
+          </Alert>
+        {/if}
+        <ResponseSummary {summaries} total={responses.length} onPick={pick} onOpen={(id) => (openId = id)} />
+      {:else if responses.length > 0}
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
           <SearchField
             bind:value={query}
@@ -443,6 +509,23 @@
             {exporting ? "Exporting…" : "Export CSV"}
           </Button>
         </div>
+
+        {#if picked}
+          <div class="flex items-center gap-2 text-sm">
+            <span class="shrink-0 text-muted-foreground">Answered</span>
+            <span class="inline-flex min-w-0 items-center gap-1 rounded-full bg-secondary py-1 pl-3 pr-1 text-foreground">
+              <span class="truncate">{picked.label}</span>
+              <button
+                type="button"
+                aria-label="Show all responses again"
+                onclick={() => (picked = null)}
+                class="shrink-0 rounded-full p-1 text-muted-foreground transition-colors duration-150 ease-out hover:cursor-pointer hover:bg-accent hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <IconXRegular class="size-3.5" />
+              </button>
+            </span>
+          </div>
+        {/if}
 
         {#if visible.length === 0}
           <div class="rounded-lg bg-card px-4 py-10 text-center text-sm text-muted-foreground">
@@ -554,6 +637,7 @@
 <ResponseDrawer
   open={openResponse !== null}
   response={openResponse}
+  questions={form?.questions ?? []}
   {fileStates}
   busy={downloadingAll !== null}
   onClose={() => (openId = null)}

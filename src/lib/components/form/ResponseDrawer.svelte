@@ -11,13 +11,17 @@
   import DrawerSection from "$lib/components/DrawerSection.svelte";
   import FileRow from "$lib/components/FileRow.svelte";
   import type { DepositFileState } from "$lib/components/DepositDrawer.svelte";
+  import Badge from "$lib/components/Badge.svelte";
   import { answerText } from "$lib/form/answers";
+  import type { Question } from "$lib/form/questions";
   import type { OpenedDeposit } from "$lib/portal/deposits";
   import { formatSize } from "$lib/utils";
 
   interface Props {
     open: boolean;
     response: OpenedDeposit | null;
+    /** The form's questions now, to tell when a response words one differently. */
+    questions: Question[];
     fileStates: Record<string, DepositFileState>;
     /** A "download all" is running somewhere on the page. */
     busy: boolean;
@@ -28,7 +32,7 @@
     onDelete: () => void;
   }
 
-  let { open, response, fileStates, busy, onClose, onDownload, onDownloadAll, onSaveRecord, onDelete }: Props =
+  let { open, response, questions, fileStates, busy, onClose, onDownload, onDownloadAll, onSaveRecord, onDelete }: Props =
     $props();
 
   // Files whose question is gone from the answers, so they show somewhere.
@@ -96,8 +100,18 @@
         {#if response.answers}
           <dl class="space-y-4">
             {#each response.answers as answer (answer.id)}
+              {@const asked = questions.find((q) => q.id === answer.id)?.label}
               <div class="space-y-1">
-                <dt class="text-sm text-muted-foreground break-words">{answer.label}</dt>
+                <dt class="text-sm text-muted-foreground break-words">
+                  {answer.label}
+                  {#if asked !== undefined && asked !== answer.label}
+                    <Badge tone="warning" class="ml-1 align-middle">Wording differs</Badge>
+                    <span class="mt-1 block text-xs">
+                      The form now asks: "{asked}". The wording above came with the response, from the
+                      sender's browser.
+                    </span>
+                  {/if}
+                </dt>
                 <dd class="text-sm text-foreground">
                   {#if answer.type === "file"}
                     {@const files = response.files.filter((f) => f.itemId === answer.id)}
