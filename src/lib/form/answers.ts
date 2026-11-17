@@ -9,6 +9,8 @@ import { QUESTION_OPTION_MAX, type Question, type QuestionType } from "./questio
 export const ANSWERS_FILE_NAME = "\u001fanswers.json";
 /** Lets the server hand out the answers with the list of responses. */
 export const ANSWERS_MIME_TYPE = "application/vnd.tessil.answers+json";
+/** The server's limit too. Fifty full answers stay under it. */
+export const ANSWERS_MAX_BYTES = 2 * 1024 * 1024;
 
 export const ANSWER_SHORT_MAX = 300;
 export const ANSWER_LONG_MAX = 5000;
@@ -31,8 +33,9 @@ export interface FormAnswer {
 /** What a visitor has filled in so far, by question ID. */
 export type AnswerDraft = Record<string, AnswerValue | undefined>;
 
-export function isAnswersFile(file: { name: string; mimeType?: string | null }): boolean {
-  return file.name === ANSWERS_FILE_NAME || file.mimeType === ANSWERS_MIME_TYPE;
+/** By stored type and size: a visitor picks the type, so a large file stays an ordinary file. */
+export function isAnswersFile(file: { mimeType?: string | null; size: number }): boolean {
+  return file.mimeType === ANSWERS_MIME_TYPE && file.size <= ANSWERS_MAX_BYTES;
 }
 
 function textMax(type: QuestionType): number {
@@ -116,8 +119,11 @@ export function decodeAnswers(bytes: Uint8Array): FormAnswer[] | null {
       (t) => t === a?.type,
     );
     if (!type || typeof a?.id !== "string" || typeof a.label !== "string") continue;
+    const id = a.id.slice(0, 16);
+    // One answer per question; a repeat is not something this code writes.
+    if (out.some((o) => o.id === id)) continue;
     out.push({
-      id: a.id.slice(0, 16),
+      id,
       type,
       label: a.label.trim().slice(0, 200),
       // The options at the time are not known here; any text is kept.

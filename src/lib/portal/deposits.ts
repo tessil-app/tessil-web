@@ -28,7 +28,7 @@ import {
   type PortalSettings,
 } from "./keys";
 import { depositReference } from "./receipt";
-import { decryptAnswers, isAnswersFile, type FormAnswer } from "$lib/form/answers";
+import { ANSWERS_MAX_BYTES, decryptAnswers, isAnswersFile, type FormAnswer } from "$lib/form/answers";
 import type { Question } from "$lib/form/questions";
 
 export interface OpenedMemberPortal {
@@ -217,7 +217,10 @@ async function openDeposit(
       false,
       ["decrypt"],
     );
-    const answersPromise = row.answersUrl ? readAnswers(row.answersUrl, key) : Promise.resolve(null);
+    // The first small file of the answers type, which is the one the server links to.
+    const answersFile = row.files.find(isAnswersFile) ?? null;
+    const answersPromise =
+      row.answersUrl && answersFile ? readAnswers(row.answersUrl, key) : Promise.resolve(null);
     const all = await Promise.all(
       row.files.map(async (f) => {
         const stored = await decryptFilename(f.encryptedName, f.encryptedNameIv, key).catch(
@@ -232,7 +235,7 @@ async function openDeposit(
       stored = await decryptString(row.encryptedTitle, row.encryptedTitleIv, key).catch(() => null);
     }
     const { note, answer } = decodeDepositNote(stored ?? "");
-    const files = all.filter((f) => !isAnswersFile(f));
+    const files = all.filter((f) => f.id !== answersFile?.id);
     const answers = await answersPromise;
     return {
       id: row.id,
@@ -242,7 +245,7 @@ async function openDeposit(
       note,
       answer,
       answers,
-      answersUnreadable: (row.answersUrl !== undefined || files.length < all.length) && answers === null,
+      answersUnreadable: answersFile !== null && answers === null,
       files,
       totalBytes: files.reduce((sum, f) => sum + f.plainSize, 0),
       key,
@@ -255,7 +258,7 @@ async function openDeposit(
 async function readAnswers(url: string, key: CryptoKey): Promise<FormAnswer[] | null> {
   try {
     const res = await fetch(url);
-    if (!res.ok) return null;
+    if (!res.ok || Number(res.headers.get("content-length") ?? 0) > ANSWERS_MAX_BYTES) return null;
     return await decryptAnswers(new Uint8Array(await res.arrayBuffer()), key);
   } catch {
     return null;

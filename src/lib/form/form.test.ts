@@ -5,6 +5,8 @@ import { createPortalKeys, openPortalBundle, sealPortalBundle } from "$lib/porta
 import { importVaultDerivationKey } from "$lib/vault/keypair";
 import {
   ANSWERS_FILE_NAME,
+  ANSWERS_MAX_BYTES,
+  ANSWERS_MIME_TYPE,
   answersCsv,
   answerText,
   collectAnswers,
@@ -153,6 +155,18 @@ describe("answers", () => {
       new TextEncoder().encode(JSON.stringify({ v: 1, answers: [{ id: "a", type: "short", label: "L", value: 5 }, null] })),
     );
     expect(odd).toEqual([{ id: "a", type: "short", label: "L", value: null }]);
+    const twice = decodeAnswers(
+      new TextEncoder().encode(
+        JSON.stringify({
+          v: 1,
+          answers: [
+            { id: "a", type: "short", label: "L", value: "first" },
+            { id: "a", type: "short", label: "L", value: "second" },
+          ],
+        }),
+      ),
+    );
+    expect(twice).toEqual([{ id: "a", type: "short", label: "L", value: "first" }]);
   });
 
   it("open with the response's key after streaming encryption", async () => {
@@ -165,11 +179,20 @@ describe("answers", () => {
   });
 
   it("are told apart from the visitor's files", () => {
-    expect(isAnswersFile({ name: ANSWERS_FILE_NAME })).toBe(true);
-    expect(isAnswersFile({ name: "answers.json", mimeType: "application/json" })).toBe(false);
-    // A visitor cannot name a file so it passes for the answers.
-    const stored = encodeDepositFileName(ANSWERS_FILE_NAME, null);
-    expect(isAnswersFile(decodeDepositFileName(stored))).toBe(false);
+    expect(isAnswersFile({ mimeType: ANSWERS_MIME_TYPE, size: 1024 })).toBe(true);
+    expect(isAnswersFile({ mimeType: "application/json", size: 1024 })).toBe(false);
+    // A visitor picks the type; a large file under it stays an ordinary file.
+    expect(isAnswersFile({ mimeType: ANSWERS_MIME_TYPE, size: ANSWERS_MAX_BYTES + 1 })).toBe(false);
+    // Fifty answers of the greatest length fit.
+    const full = Array.from({ length: 50 }, (_, i) => ({
+      id: `q${i}`,
+      type: "long" as const,
+      label: "L".repeat(200),
+      value: "\u0001".repeat(5000),
+    }));
+    expect(encodeAnswers(full).length).toBeLessThan(ANSWERS_MAX_BYTES - 64 * 1024);
+    // The reserved name cannot come from a visitor's file.
+    expect(encodeDepositFileName(ANSWERS_FILE_NAME, null)).not.toBe(ANSWERS_FILE_NAME);
     // Files answer file questions like checklist items.
     expect(decodeDepositFileName(encodeDepositFileName("id.jpg", "file01"))).toEqual({ name: "id.jpg", itemId: "file01" });
   });
