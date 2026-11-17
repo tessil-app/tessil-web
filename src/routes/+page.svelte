@@ -1440,7 +1440,7 @@
         <div class="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
           <div class="max-w-xl space-y-3">
             <h2 id="pricing-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
-              {FORMS_ANNOUNCED ? "Pay to receive. Never for privacy." : "Pay for portals. Never for privacy."}
+              Pay for more. Never for privacy.
             </h2>
             <p class="text-base sm:text-lg leading-relaxed text-muted-foreground">
               Sending is free, encrypted, and stays that way. A plan adds

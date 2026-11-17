@@ -112,7 +112,7 @@
   <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-20">
     <header class="mx-auto flex max-w-3xl flex-col items-center gap-5 pb-10 text-center sm:pb-12">
       <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-none" style="letter-spacing: -0.035em">
-        {FORMS_ANNOUNCED ? "Pay to receive." : "Pay for portals."}<br />Never for privacy.
+        Pay for more.<br />Never for privacy.
       </h1>
       <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
         {#if FORMS_ANNOUNCED}
