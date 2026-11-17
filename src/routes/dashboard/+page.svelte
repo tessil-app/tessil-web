@@ -439,7 +439,7 @@
   );
 </script>
 
-<Seo title="Dashboard - Tessil" robots="noindex" />
+<Seo title="Transfers - Tessil" robots="noindex" />
 
 <PageLayout width="5xl">
   {#if !auth.loaded}

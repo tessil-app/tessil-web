@@ -45,7 +45,7 @@
       <p class="text-muted-foreground">Loading…</p>
     </div>
   {:else if auth.user}
-    <PageHeader title="Settings" align="left" back={{ href: "/dashboard", label: "Dashboard" }} />
+    <PageHeader title="Settings" align="left" back={{ href: "/dashboard", label: "Transfers" }} />
 
     <IdentityStrip>
       <DefinitionRow label="Email" value={auth.user.email} />

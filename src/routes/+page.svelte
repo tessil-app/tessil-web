@@ -950,7 +950,7 @@
                 Expires in {formatExpiry(uploadStore.expiresInHours)}.
                 {formatDownloads(uploadStore.maxDownloads)}.
                 {#if lastUploadVaulted}
-                  Saved to your dashboard.
+                  Saved to your transfers.
                 {:else if auth.isAuthenticated}
                   Keep this link: without a vault it can't be shown again.
                 {/if}
@@ -1037,7 +1037,7 @@
               {:else}
                 {#if auth.isAuthenticated && auth.needsVaultSetup}
                   <p class="text-xs text-muted-foreground">
-                    You can send right away. To keep names and links in your dashboard,
+                    You can send right away. To keep names and links in your list of transfers,
                     <button
                       type="button"
                       onclick={goToSetup}
@@ -1293,7 +1293,7 @@
               {auth.user ? "Open your portals" : "See the plans"}
             </Button>
             <p class="text-sm text-muted-foreground">
-              You set portals up in your dashboard. Sending stays free.
+              You set portals up in your account. Sending stays free.
               <TextLink href="/portals">Take the tour</TextLink>
             </p>
           </div>
@@ -1369,7 +1369,7 @@
         </p>
         <p>
           Anonymous transfers expire in hours; signed-in transfers
-          can run longer and live on your dashboard. Password
+          can run longer and stay in your list of transfers. Password
           protection adds a second factor independent of the link.
           Read more about the security model on the
           <a href="/security" class="text-primary underline underline-offset-2">security page</a>.
@@ -1406,7 +1406,7 @@
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-3 text-muted-foreground leading-relaxed">
-            No. You can send and receive files anonymously. A free account is optional and just adds a dashboard to manage the transfers you create. It doesn't change how files are encrypted.
+            No. You can send and receive files anonymously. A free account is optional and just adds a list to manage the transfers you create. It doesn't change how files are encrypted.
           </p>
         </details>
         <details class="group py-5">
@@ -1484,8 +1484,8 @@
 
 <Modal
   open={unlockOpen}
-  title="Keep this transfer in your dashboard?"
-  description="Unlock your vault and the dashboard can show this transfer's name and give you its link again. Or send without unlocking and keep the link yourself."
+  title="Keep this transfer in your list?"
+  description="Unlock your vault and your list of transfers can show this one's name and give you its link again. Or send without unlocking and keep the link yourself."
   onClose={() => closeUnlockModal("cancelled")}
 >
   <!-- The footer is a snippet of the Modal, so it sits outside the form and

@@ -33,7 +33,7 @@
             {#if PORTALS_ANNOUNCED}
               <p class="text-muted-foreground">
                 Sending files is free. It works without an account; signing in adds
-                a dashboard and longer-lived transfers.
+                a list of what you sent and longer-lived transfers.
               </p>
               <p class="text-muted-foreground">
                 Paid plans add portals: links through which other people send
@@ -43,7 +43,7 @@
             {:else}
               <p class="text-muted-foreground">
                 Tessil is free to use. It works without an account; signing in adds
-                a dashboard and longer-lived transfers. There is no paid plan at
+                a list of what you sent and longer-lived transfers. There is no paid plan at
                 this time.
               </p>
             {/if}

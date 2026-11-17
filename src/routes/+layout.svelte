@@ -297,7 +297,7 @@
               aria-current={isActive("/dashboard", true) ? "page" : undefined}
               class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard", true) ? navLinkActive : navLinkInactive)}
             >
-              Dashboard
+              Transfers
             </a>
             {#if showPortals}
               <a
@@ -354,7 +354,7 @@
                   class={cn("sm:hidden", isActive("/dashboard", true) && "bg-accent")}
                 >
                   <IconListRegular class="size-4 opacity-70" />
-                  Dashboard
+                  Transfers
                 </DropdownMenuItem>
                 {#if showPortals}
                   <DropdownMenuItem

@@ -376,7 +376,7 @@
         Open one.
       </h2>
       <p class="max-w-lg text-lg text-muted-foreground">
-        Portals are part of the paid plans. You set them up in your dashboard, and it takes
+        Portals are part of the paid plans. You set them up in your account, and it takes
         about as long as reading this sentence twice.
       </p>
       <div class="flex flex-wrap items-center justify-center gap-3">

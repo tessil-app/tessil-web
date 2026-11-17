@@ -31,7 +31,7 @@ export const PLANS: Plan[] = [
       "Send up to 1 GB per transfer",
       "2 GB a month, 20 transfers a day",
       "Links that last up to 3 days",
-      "A dashboard of what you sent",
+      "A list of what you sent",
       "Can be invited to someone's portal",
     ],
   },
@@ -104,7 +104,7 @@ export const COMPARISON: ComparisonGroup[] = [
       },
       { label: "Transfers per day", values: { free: "20", pro: "100", max: "100" } },
       { label: "Password and download limit on a link", values: all(true) },
-      { label: "Dashboard of what you sent", values: all(true) },
+      { label: "List of what you sent", values: all(true) },
     ],
   },
   {

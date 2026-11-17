@@ -193,7 +193,7 @@
             <h2 class="text-lg font-semibold text-foreground">The vault (optional)</h2>
             <p class="text-muted-foreground">
               An account works without a vault: you can sign in and send, and
-              your dashboard lists what you sent by size and date. A vault adds
+              your list of transfers shows what you sent by size and date. A vault adds
               the two things we cannot keep for you in readable form: the names
               of what you sent, and the links to it.
             </p>
@@ -217,7 +217,7 @@
             <p class="text-muted-foreground">
               When you send while signed in with the vault open, your browser
               locks that transfer's key under the vault key and stores the
-              locked copy with us. That is how the dashboard can show names
+              locked copy with us. That is how your list of transfers can show names
               and rebuild a link later. The vault also holds a key pair for
               your account: we store the public half, and the private half
               only in locked form.
@@ -296,7 +296,7 @@
                 handled by the visitor's browser, and each answer arrives with
                 the question as that browser showed it. Someone who tampers
                 with their own browser can send different wording or skip a
-                required question. Your dashboard marks an answer whose
+                required question. The form's page marks an answer whose
                 wording differs from the form's.
               </p>
               <p class="text-muted-foreground">

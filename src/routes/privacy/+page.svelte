@@ -79,7 +79,7 @@
               </li>
               <li>
                 <strong>Ownership link on transfers.</strong> Transfers you create while signed in are tagged with
-                your account ID so they appear on your dashboard. Anonymous transfers carry no such link.
+                your account ID so they appear in your list of transfers. Anonymous transfers carry no such link.
               </li>
             </ul>
             <p class="text-muted-foreground">
@@ -207,7 +207,7 @@
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>Provide the file transfer service</li>
               <li>Send one-time sign-in links and account-related notifications (e.g. confirming an account deletion)</li>
-              <li>Keep your dashboard in sync with the transfers you own</li>
+              <li>Keep your list of transfers in sync with the transfers you own</li>
               <li>Enforce rate limits to ensure fair usage</li>
               <li>Protect against abuse and maintain service security</li>
               <li>Automatically delete files after expiration</li>

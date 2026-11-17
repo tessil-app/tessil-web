@@ -96,7 +96,7 @@ export const comparisons: Comparison[] = [
       },
       {
         q: "Do I need an account to use Tessil?",
-        a: "No. You can send anonymously. An optional free account adds a dashboard to manage the transfers you create - it doesn't change how files are encrypted.",
+        a: "No. You can send anonymously. An optional free account adds a list of the transfers you create, where you can manage them - it doesn't change how files are encrypted.",
       },
     ],
   },
@@ -183,7 +183,7 @@ export const comparisons: Comparison[] = [
       },
       {
         q: "Do I need an account for Tessil like I do for Proton?",
-        a: "No. Tessil works fully anonymously. An account is optional and only adds a dashboard for managing transfers you create.",
+        a: "No. Tessil works fully anonymously. An account is optional and only adds a list of the transfers you create, where you can manage them.",
       },
       {
         q: "Are both end-to-end encrypted?",
@@ -248,7 +248,7 @@ export const comparisons: Comparison[] = [
       "The same key-in-the-link model as Wormhole, plus open source, EU hosting, and optional accounts.",
     intro: [
       "Wormhole (wormhole.app) popularised the clean, modern take on encrypted sending: files are encrypted in the browser and the key lives in the link, so the service can't read them. Transfers auto-expire quickly. It's a great tool and the closest in spirit to Tessil.",
-      "Tessil uses the same core idea - browser-side encryption with the key in the URL fragment - and differs on the things around it. It's open source under AGPL-3.0, hosted in the EU rather than the US, and offers an optional free account with a dashboard so you can manage and re-share your transfers instead of every send being purely ephemeral.",
+      "Tessil uses the same core idea - browser-side encryption with the key in the URL fragment - and differs on the things around it. It's open source under AGPL-3.0, hosted in the EU rather than the US, and offers an optional free account with a list of your transfers, so you can manage and re-share your transfers instead of every send being purely ephemeral.",
       "You also get to choose expiry windows rather than being limited to a fixed short lifetime.",
     ],
     rows: [
@@ -258,7 +258,7 @@ export const comparisons: Comparison[] = [
       { label: "Open source", tessil: TESSIL.openSource, competitor: false },
       { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "United States (Socket)" },
       { label: "Ads & third-party tracking", tessil: TESSIL.tracking, competitor: "None" },
-      { label: "Optional accounts / dashboard", tessil: true, competitor: false },
+      { label: "Optional accounts / list of transfers", tessil: true, competitor: false },
       { label: "Configurable link expiry", tessil: TESSIL.expiry, competitor: "Fixed short lifetime" },
       { label: "Price", tessil: TESSIL.price, competitor: "Free" },
     ],

@@ -481,7 +481,7 @@
         <Spinner aria-hidden="true" />
         Saving…
       {:else}
-        Continue to dashboard
+        Continue to your transfers
       {/if}
     </Button>
   {/snippet}
