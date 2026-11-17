@@ -41,6 +41,30 @@
     return () => ro.disconnect();
   });
 
+  // The strip's bottom line and the tab's outline as one path: along the
+  // strip, out on a curve, up, around the top, down, and on along the strip.
+  // One stroke, so the translucent line never doubles up where parts meet.
+  // Drawn on half pixels so it is one crisp pixel wide.
+  const R = 8;
+  let height = $state(0);
+  const shape = $derived.by(() => {
+    const w = box.w;
+    const h = height;
+    if (w <= 2 * R || h <= 2 * R) return null;
+    const left = 0.5;
+    const right = w - 0.5;
+    const top = 0.5;
+    const outline = (base: number) =>
+      `M${left - R} ${base} A${R} ${R} 0 0 0 ${left} ${base - R} V${top + R} A${R} ${R} 0 0 1 ${left + R} ${top} ` +
+      `H${right - R} A${R} ${R} 0 0 1 ${right} ${top + R} V${base - R} A${R} ${R} 0 0 0 ${right + R} ${base}`;
+    // Far enough to either side to cross the whole box wherever the tab is; the box clips it.
+    const reach = 4000;
+    return {
+      line: `M${-reach} ${h - 0.5} H${left - R} ${outline(h - 0.5).replace(/^M\S+ \S+ /, "")} H${reach}`,
+      fill: `${outline(h)} Z`,
+    };
+  });
+
   function pick(i: number) {
     chosen = i;
     copied = false;
@@ -66,18 +90,22 @@
 </script>
 
 <div class={cn("overflow-hidden rounded-xl border border-border bg-card text-left", className)}>
-  <div role="tablist" aria-label={label} tabindex="-1" {onkeydown} class="relative flex border-b border-border bg-secondary px-2 pt-1.5">
+  <div role="tablist" aria-label={label} tabindex="-1" {onkeydown} class={cn("relative flex bg-secondary px-2 pt-1.5", shape ? "pb-px" : "border-b border-border")}>
     <!-- The chosen tab's ground: the field's own colour, flaring out into it like a
-         folder's tab. The strip's hairline runs on around it. -->
+         folder's tab. One drawn line carries the strip's hairline around it. -->
     <span
       aria-hidden="true"
-      class={cn("ground absolute top-1.5 bottom-0 left-0 -mb-px", ready && "moving")}
+      bind:clientHeight={height}
+      class={cn("ground absolute top-1.5 bottom-0 left-0", ready && "moving")}
       style:width="{box.w}px"
       style:transform="translateX({box.x}px)"
     >
-      <span class="body"></span>
-      <span class="ear left"></span>
-      <span class="ear right"></span>
+      {#if shape}
+        <svg class="absolute left-0 top-0 overflow-visible" width={box.w} {height}>
+          <path d={shape.fill} fill="var(--card)" />
+          <path d={shape.line} fill="none" stroke="var(--border)" stroke-width="1" />
+        </svg>
+      {/if}
     </span>
     {#each options as option, i (option.id)}
       {@const on = i === chosen}
@@ -113,60 +141,8 @@
 </div>
 
 <style>
-  /* The chosen tab, drawn in three parts so one hairline can follow its
-     whole outline: up the outward curve, around the top, and down again. */
-  .ground {
-    --r: 0.5rem;
-  }
   .ground.moving {
-    transition:
-      transform 160ms cubic-bezier(0.25, 1, 0.5, 1),
-      width 160ms cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  .body {
-    position: absolute;
-    inset: 0;
-    border: 1px solid var(--border);
-    border-bottom: 0;
-    border-radius: var(--r) var(--r) 0 0;
-    background: var(--card);
-    /* The sides stop where the curves begin; below that the ears carry the line. */
-    clip-path: inset(0 0 var(--r) 0 round var(--r) var(--r) 0 0);
-  }
-  .ground::after {
-    content: "";
-    position: absolute;
-    inset: auto 0 0 0;
-    height: var(--r);
-    background: var(--card);
-  }
-  .ear {
-    position: absolute;
-    z-index: 1;
-    bottom: 0;
-    width: var(--r);
-    height: var(--r);
-  }
-  /* A ring one pixel wide on the curve, the field's colour beyond it. */
-  .ear.left {
-    right: calc(100% - 1px);
-    background: radial-gradient(
-      circle at 0 0,
-      transparent calc(var(--r) - 1.25px),
-      var(--border) calc(var(--r) - 0.75px),
-      var(--border) calc(var(--r) - 0.25px),
-      var(--card) calc(var(--r) + 0.25px)
-    );
-  }
-  .ear.right {
-    left: calc(100% - 1px);
-    background: radial-gradient(
-      circle at 100% 0,
-      transparent calc(var(--r) - 1.25px),
-      var(--border) calc(var(--r) - 0.75px),
-      var(--border) calc(var(--r) - 0.25px),
-      var(--card) calc(var(--r) + 0.25px)
-    );
+    transition: transform 160ms cubic-bezier(0.25, 1, 0.5, 1);
   }
   @media (prefers-reduced-motion: reduce) {
     .ground.moving {
