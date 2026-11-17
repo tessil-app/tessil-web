@@ -1,6 +1,6 @@
 <script lang="ts">
-  // Send files from inside the account: the same panel as the homepage,
-  // without the homepage around it.
+  // Send files from inside the account: the homepage's send flow, laid out
+  // as a page of its own with files on one side and the link on the other.
 
   import PageHeader from "$lib/components/PageHeader.svelte";
   import PageLayout from "$lib/components/PageLayout.svelte";
@@ -25,15 +25,12 @@
   {:else if auth.user}
     <PageHeader
       title="New transfer"
-      tagline="Drop files in the panel, or anywhere on this page. They are encrypted here before any of it leaves."
+      tagline="Add files, set how the link behaves, and share it. Everything is encrypted in your browser first."
       back={{ href: "/dashboard", label: "Transfers" }}
       align="left"
     />
 
-    <!-- The panel's own ground, as the artwork is on the homepage. -->
-    <div class="flex flex-wrap items-start rounded-2xl bg-muted p-3 sm:min-h-[30rem] sm:p-6">
-      <SendPanel returnTo="/dashboard/new" emptyClass="sm:h-[420px]" />
-    </div>
+    <SendPanel layout="page" returnTo="/dashboard/new" />
 
     {#if sent}
       <p class="mt-4 text-sm text-muted-foreground">

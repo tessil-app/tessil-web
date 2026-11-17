@@ -51,9 +51,14 @@
     returnTo?: string;
     /** Sizes the empty panel from sm up. The homepage's default fits its one-screen hero. */
     emptyClass?: string;
+    /**
+     * "panel": the glass panel that hangs on the homepage's wall.
+     * "page": files on the left, the link's settings on the right, for a page of its own.
+     */
+    layout?: "panel" | "page";
   }
 
-  let { returnTo = "/", emptyClass = "panel-empty" }: Props = $props();
+  let { returnTo = "/", emptyClass = "panel-empty", layout = "panel" }: Props = $props();
 
   const MIN_PASSWORD_LENGTH = 8;
   const MAX_FILENAME_BYTES = 255;
@@ -666,316 +671,484 @@
   </div>
 {/if}
 
-      <aside
-        bind:this={panelEl}
-        class={cn(
-          "relative w-full sm:w-auto sm:flex sm:items-stretch",
-          isSuccess ? "sm:h-auto" : hasFiles ? "sm:h-[580px]" : emptyClass,
-        )}
-        style="transition: height 450ms cubic-bezier(0.16, 1, 0.3, 1);"
-      >
-        <!-- Loses right-side border + rounded corners when the extension is open so they visually fuse. -->
-        <div
-          class={cn(
-            "glass-panel relative z-10 w-full sm:w-[320px] sm:flex sm:flex-col ease-liquid",
-            hasFiles &&
-              !isSuccess &&
-              "lg:rounded-tr-none lg:rounded-br-none lg:border-r-transparent",
+{#snippet fields()}
+  <div class="space-y-4 pt-1">
+    <div class="space-y-1">
+      <TextInput
+        id="home-transfer-title"
+        label="Transfer name (optional)"
+        placeholder="e.g. Q3 designs"
+        value={uploadStore.title}
+        oninput={(e) =>
+          uploadStore.setTitle(
+            (e.currentTarget as HTMLInputElement).value,
           )}
-          style="transition: border-radius 450ms cubic-bezier(0.16, 1, 0.3, 1), border-color 450ms cubic-bezier(0.16, 1, 0.3, 1);"
-        >
-          {#if isSuccess}
-            <div class="px-5 py-4 border-b border-border">
-              <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <IconLockRegular class="size-4 text-primary" />
-                Share link ready
-              </div>
-              <p class="text-xs text-muted-foreground mt-0.5">
-                Decrypts in the recipient's browser.
-              </p>
-            </div>
-            <div class="p-5 space-y-3">
-              <TextInput
-                id="home-share-link"
-                aria-label="Share link"
-                value={uploadStore.shareUrl ?? ""}
-                readonly
-                mono
-                onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
-              />
-              <p class="text-xs text-muted-foreground">
-                Expires in {formatExpiry(uploadStore.expiresInHours)}.
-                {formatDownloads(uploadStore.maxDownloads)}.
-                {#if lastUploadVaulted}
-                  Saved to your transfers.
-                {:else if auth.isAuthenticated}
-                  Keep this link: without a vault it can't be shown again.
-                {/if}
-              </p>
-            </div>
-            <div class="flex items-center gap-2 px-5 py-4 border-t border-border bg-muted/30">
-              <Button variant="secondary" fullWidth={false} class="flex-1 whitespace-nowrap" onclick={resetUpload}>
-                Send another
-              </Button>
-              <Button variant="primary" fullWidth={false} class="flex-1" onclick={copyShareLink}>
-                {#if copied}
-                  <IconCheckRegular class="size-4" />
-                  Copied
-                {:else}
-                  <IconCopyRegular class="size-4" />
-                  Copy link
-                {/if}
-              </Button>
-            </div>
-          {:else if !hasFiles}
+        maxlength={TITLE_MAX + 32}
+      />
+      {#if uploadStore.title.length > TITLE_MAX}
+        <p class="text-xs text-warning-foreground">
+          {uploadStore.title.length} / {TITLE_MAX} - too long.
+        </p>
+      {/if}
+    </div>
+
+    <SegmentedControl
+      label="Expires in"
+      options={EXPIRES_OPTIONS}
+      value={uploadStore.expiresInHours}
+      onChange={(v) => uploadStore.setExpiresInHours(v)}
+    />
+
+    <SegmentedControl
+      label="Max downloads"
+      options={DOWNLOADS_OPTIONS}
+      value={uploadStore.maxDownloads}
+      onChange={(v) => uploadStore.setMaxDownloads(v)}
+    />
+
+    <div class="space-y-1">
+      <PasswordInput
+        id="home-transfer-password"
+        label="Password (optional)"
+        placeholder="Add a password to protect the link"
+        value={uploadStore.password}
+        oninput={(e) =>
+          uploadStore.setPassword(
+            (e.currentTarget as HTMLInputElement).value,
+          )}
+      />
+      {#if passwordTooShort}
+        <p class="text-xs text-warning-foreground">
+          At least {MIN_PASSWORD_LENGTH} characters.
+        </p>
+      {/if}
+    </div>
+  </div>
+{/snippet}
+
+{#if layout === "page"}
+  {#if isSuccess}
+    <section class="max-w-2xl space-y-4 rounded-lg bg-card p-5 sm:p-6" aria-labelledby="send-ready">
+      <div>
+        <h2 id="send-ready" class="flex items-center gap-2 text-base font-semibold text-foreground">
+          <IconLockRegular class="size-4 text-primary" />
+          Share link ready
+        </h2>
+        <p class="mt-0.5 text-sm text-muted-foreground">It decrypts in the recipient's browser.</p>
+      </div>
+      <TextInput
+        id="home-share-link"
+        aria-label="Share link"
+        value={uploadStore.shareUrl ?? ""}
+        readonly
+        mono
+        onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
+      />
+      <p class="text-sm text-muted-foreground">
+        Expires in {formatExpiry(uploadStore.expiresInHours)}.
+        {formatDownloads(uploadStore.maxDownloads)}.
+        {#if lastUploadVaulted}
+          Saved to your transfers.
+        {:else}
+          Keep this link: without a vault it can't be shown again.
+        {/if}
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <Button variant="primary" fullWidth={false} onclick={copyShareLink}>
+          {#if copied}
+            <IconCheckRegular class="size-4" />
+            Copied
+          {:else}
+            <IconCopyRegular class="size-4" />
+            Copy link
+          {/if}
+        </Button>
+        <Button variant="secondary" fullWidth={false} onclick={resetUpload}>Send another</Button>
+      </div>
+    </section>
+  {:else}
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+      <!-- What goes: the files, and the place to add them. -->
+      <section class="space-y-4 rounded-lg bg-card p-4 sm:p-5" aria-labelledby="send-files">
+        <div class="flex items-center justify-between gap-3">
+          <h2 id="send-files" class="text-base font-semibold text-foreground">
+            Files
+            {#if hasFiles}
+              <span class="font-normal text-muted-foreground">
+                {uploadStore.files.length}, {formatSize(totalSize)}
+              </span>
+            {/if}
+          </h2>
+          {#if hasFiles && !isProcessing}
             <button
               type="button"
-              onclick={openFilePicker}
-              disabled={isProcessing}
-              aria-label="Drop files here or click to browse"
-              class={cn(
-                "w-full p-5 flex flex-col items-center justify-center text-center hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-lg transition-colors duration-200 ease-out sm:flex-1",
-                isDraggingOver ? "bg-primary/5" : "hover:bg-accent",
-                isProcessing && "opacity-60 cursor-not-allowed",
-              )}
+              onclick={resetUpload}
+              class="rounded text-sm text-muted-foreground transition-colors duration-200 ease-out hover:cursor-pointer hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              <span class="inline-flex items-center justify-center size-9 rounded-full bg-primary/10 text-primary">
-                <IconUploadRegular class="size-4" />
-              </span>
-              <div class="space-y-0.5 mt-3.5">
-                <p class="text-sm font-semibold text-foreground leading-snug">
-                  {#if isDraggingOver}
-                    Release to encrypt
-                  {:else}
-                    Drop a file
-                  {/if}
-                </p>
-                <p class="text-xs text-muted-foreground leading-relaxed max-w-[16rem]">
-                  Or click to browse. Encrypts in your browser.
-                </p>
-              </div>
-              <span class="mt-4 text-[11px] text-muted-foreground/80">
-                Up to {formatSize(MAX_TOTAL_UPLOAD_SIZE)} per transfer
-              </span>
+              Clear
             </button>
-          {:else}
-            <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2 text-sm font-semibold text-foreground min-w-0">
-                <IconLockRegular class="size-4 text-primary shrink-0" />
-                <span class="truncate">
-                  {uploadStore.files.length} file{uploadStore.files.length !== 1 ? "s" : ""}
-                  · {formatSize(totalSize)}
-                </span>
-              </div>
-              {#if !isProcessing}
-                <button
-                  type="button"
-                  onclick={resetUpload}
-                  class="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-                >
-                  Clear
-                </button>
-              {/if}
-            </div>
-
-            <div class={cn("px-5 py-4 flex flex-col gap-4 flex-1 min-h-0 file-list-scroll overflow-x-hidden", isMorphing ? "overflow-y-hidden" : "overflow-y-auto")}>
-              {#if uploadStore.status === "error"}
-                <div role="alert" class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
-                  <span class="inline-flex items-center justify-center size-12 rounded-full bg-destructive/10 text-destructive-foreground">
-                    <IconWarningRegular class="size-6" />
-                  </span>
-                  <div class="space-y-1">
-                    <p class="text-sm font-semibold text-foreground">Upload failed</p>
-                    <p class="text-xs text-muted-foreground leading-relaxed max-w-[18rem]">
-                      {uploadStore.error}
-                    </p>
-                  </div>
-                </div>
-              {:else}
-                {#if auth.isAuthenticated && auth.needsVaultSetup}
-                  <p class="text-xs text-muted-foreground">
-                    You can send right away. To keep names and links in your list of transfers,
-                    <button
-                      type="button"
-                      onclick={goToSetup}
-                      class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-                    >
-                      set up a vault
-                    </button>.
-                  </p>
-                {/if}
-
-              {#if isProcessing}
-                <div class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
-                  <CircularProgress
-                    percent={uploadStore.overallProgress}
-                    sublabel={phaseLabel}
-                  />
-                  <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
-                    {#if isSending && uploadStalled}
-                      <p class="text-warning-foreground">
-                        Connection lost. Continuing as soon as it is back. Keep this tab open.
-                      </p>
-                    {:else if isSending && uploadSpeed}
-                      <p class="tabular-nums">
-                        {formatSpeed(uploadSpeed)}{#if uploadEta} · {formatEta(uploadEta)} left{/if}
-                      </p>
-                    {/if}
-                    {#if uploadStore.files.length > 1}
-                      <p>{filesDone} of {uploadStore.files.length} files done</p>
-                    {/if}
-                  </div>
-                </div>
-              {/if}
-
-              <!-- Inline file list for viewports below the extension's breakpoint. -->
-              <div class="lg:hidden">
-                {#each uploadStore.files as fileState, index (fileState.id)}
-                  <FileRow
-                    name={fileState.file.name}
-                    size={formatSize(fileState.file.size)}
-                    kind="upload"
-                    status={fileRowStatus(fileState.status)}
-                    percent={fileState.progress}
-                    onRemove={() => removeFile(index)}
-                  />
-                {/each}
-              </div>
-
-              {#if !isProcessing}
-                <button
-                  type="button"
-                  onclick={openFilePicker}
-                  class="w-full flex items-center justify-center gap-2 py-2.5 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:border-muted-foreground hover:text-foreground transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:cursor-pointer"
-                >
-                  <IconPlusRegular class="size-4" />
-                  Add more files
-                </button>
-
-                <div class="space-y-4 pt-1">
-                  <div class="space-y-1">
-                    <TextInput
-                      id="home-transfer-title"
-                      label="Transfer name (optional)"
-                      placeholder="e.g. Q3 designs"
-                      value={uploadStore.title}
-                      oninput={(e) =>
-                        uploadStore.setTitle(
-                          (e.currentTarget as HTMLInputElement).value,
-                        )}
-                      maxlength={TITLE_MAX + 32}
-                    />
-                    {#if uploadStore.title.length > TITLE_MAX}
-                      <p class="text-xs text-warning-foreground">
-                        {uploadStore.title.length} / {TITLE_MAX} - too long.
-                      </p>
-                    {/if}
-                  </div>
-
-                  <SegmentedControl
-                    label="Expires in"
-                    options={EXPIRES_OPTIONS}
-                    value={uploadStore.expiresInHours}
-                    onChange={(v) => uploadStore.setExpiresInHours(v)}
-                  />
-
-                  <SegmentedControl
-                    label="Max downloads"
-                    options={DOWNLOADS_OPTIONS}
-                    value={uploadStore.maxDownloads}
-                    onChange={(v) => uploadStore.setMaxDownloads(v)}
-                  />
-
-                  <div class="space-y-1">
-                    <PasswordInput
-                      id="home-transfer-password"
-                      label="Password (optional)"
-                      placeholder="Add a password to protect the link"
-                      value={uploadStore.password}
-                      oninput={(e) =>
-                        uploadStore.setPassword(
-                          (e.currentTarget as HTMLInputElement).value,
-                        )}
-                    />
-                    {#if passwordTooShort}
-                      <p class="text-xs text-warning-foreground">
-                        At least {MIN_PASSWORD_LENGTH} characters.
-                      </p>
-                    {/if}
-                  </div>
-                </div>
-              {/if}
-              {/if}
-            </div>
-
-            <div class="flex items-center gap-2 px-5 py-4 border-t border-border bg-muted/30">
-              {#if isProcessing}
-                <Button variant="secondary" fullWidth={false} class="flex-1" onclick={stopUpload}>
-                  Stop
-                </Button>
-              {:else if uploadStore.status === "error"}
-                <Button variant="secondary" fullWidth={false} class="flex-1" onclick={returnToSettings}>
-                  Back
-                </Button>
-                {#if uploadStore.errorUpgradeUrl && !auth.isAuthenticated}
-                  <Button variant="primary" fullWidth={false} class="flex-1" onclick={() => goto(`/login?redirect=${encodeURIComponent(returnTo)}`)}>
-                    Sign in
-                  </Button>
-                {:else}
-                  <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>
-                    Try again
-                  </Button>
-                {/if}
-              {:else}
-                <Button
-                  variant="primary"
-                  fullWidth={false}
-                  class="flex-1"
-                  onclick={handleUpload}
-                  disabled={passwordTooShort}
-                >
-                  Create share link
-                </Button>
-              {/if}
-            </div>
           {/if}
         </div>
 
-        <!-- Extension slides out as an in-flow flex sibling so the grid's first column tracks its width. -->
-        <div
-          aria-hidden={!(hasFiles && !isSuccess)}
-          class={cn(
-            "hidden lg:block overflow-hidden ease-liquid shrink-0",
-            hasFiles && !isSuccess
-              ? "w-[300px]"
-              : "w-0 pointer-events-none",
-          )}
-          style="transition: width 450ms cubic-bezier(0.16, 1, 0.3, 1);"
-        >
-          <div class="glass-panel w-[300px] h-full flex flex-col rounded-l-none border-l-0">
-            <div class="px-5 py-4 border-b border-border">
-              <p class="text-sm font-semibold text-foreground">
-                Files
-                <span class="font-normal text-muted-foreground">
-                  · Queued for this transfer.
-                </span>
-              </p>
-            </div>
-            <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden file-list-scroll">
-              {#each uploadStore.files as fileState, index (fileState.id)}
-                <FileRow
-                  name={fileState.file.name}
-                  size={formatSize(fileState.file.size)}
-                  kind="upload"
-                  status={fileRowStatus(fileState.status)}
-                  percent={fileState.progress}
-                  onRemove={() => removeFile(index)}
-                />
-              {/each}
+        {#if hasFiles}
+          <div class="overflow-hidden rounded-md border border-border">
+            {#each uploadStore.files as fileState, index (fileState.id)}
+              <FileRow
+                name={fileState.file.name}
+                size={formatSize(fileState.file.size)}
+                kind="upload"
+                status={fileRowStatus(fileState.status)}
+                percent={fileState.progress}
+                onRemove={() => removeFile(index)}
+              />
+            {/each}
+          </div>
+        {/if}
+
+        {#if !isProcessing && uploadStore.status !== "error"}
+          <button
+            type="button"
+            onclick={openFilePicker}
+            aria-label={hasFiles ? "Add more files" : "Drop files here or click to choose them"}
+            class={cn(
+              "flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border text-center transition-colors duration-200 ease-out hover:cursor-pointer hover:border-muted-foreground hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+              hasFiles ? "px-4 py-5" : "px-4 py-16 sm:py-24",
+            )}
+          >
+            <span class="inline-flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+              {#if hasFiles}
+                <IconPlusRegular class="size-4" />
+              {:else}
+                <IconUploadRegular class="size-4" />
+              {/if}
+            </span>
+            <span class="space-y-0.5">
+              <span class="block text-sm font-semibold text-foreground">
+                {hasFiles ? "Add more files" : "Drop files here"}
+              </span>
+              <span class="block text-sm text-muted-foreground">
+                {hasFiles ? "Drop them anywhere on this page, or click." : "Anywhere on this page works, or click to choose them."}
+              </span>
+            </span>
+            {#if !hasFiles}
+              <span class="text-xs text-muted-foreground">Up to {formatSize(MAX_TOTAL_UPLOAD_SIZE)} per transfer</span>
+            {/if}
+          </button>
+        {/if}
+      </section>
+
+      <!-- How the link behaves, and the button that makes it. -->
+      <section class="space-y-4 rounded-lg bg-card p-4 sm:p-5 lg:sticky lg:top-20" aria-labelledby="send-link">
+        <h2 id="send-link" class="text-base font-semibold text-foreground">The link</h2>
+        {#if uploadStore.status === "error"}
+          <Alert tone="destructive">{uploadStore.error}</Alert>
+          <div class="flex gap-2">
+            <Button variant="secondary" fullWidth={false} class="flex-1" onclick={returnToSettings}>Back</Button>
+            <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>Try again</Button>
+          </div>
+        {:else if isProcessing}
+          <div class="flex flex-col items-center gap-3 py-4 text-center">
+            <CircularProgress percent={uploadStore.overallProgress} sublabel={phaseLabel} />
+            <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
+              {#if isSending && uploadStalled}
+                <p class="text-warning-foreground">
+                  Connection lost. Continuing as soon as it is back. Keep this tab open.
+                </p>
+              {:else if isSending && uploadSpeed}
+                <p class="tabular-nums">
+                  {formatSpeed(uploadSpeed)}{#if uploadEta}, {formatEta(uploadEta)} left{/if}
+                </p>
+              {/if}
+              {#if uploadStore.files.length > 1}
+                <p>{filesDone} of {uploadStore.files.length} files done</p>
+              {/if}
             </div>
           </div>
+          <Button variant="secondary" onclick={stopUpload}>Stop</Button>
+        {:else}
+          {@render fields()}
+          <Button variant="primary" onclick={handleUpload} disabled={!hasFiles || passwordTooShort}>
+            Create share link
+          </Button>
+          <p class="text-xs leading-relaxed text-muted-foreground">
+            {#if auth.needsVaultSetup}
+              Sends right away. To keep names and links in your list of transfers,
+              <button
+                type="button"
+                onclick={goToSetup}
+                class="rounded underline underline-offset-2 hover:cursor-pointer hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                set up a vault
+              </button>.
+            {:else}
+              Files and their names are encrypted here before upload. The key travels in the link, never to us.
+            {/if}
+          </p>
+        {/if}
+      </section>
+    </div>
+  {/if}
+{:else}
+  <aside
+    bind:this={panelEl}
+    class={cn(
+      "relative w-full sm:w-auto sm:flex sm:items-stretch",
+      isSuccess ? "sm:h-auto" : hasFiles ? "sm:h-[580px]" : emptyClass,
+    )}
+    style="transition: height 450ms cubic-bezier(0.16, 1, 0.3, 1);"
+  >
+    <!-- Loses right-side border + rounded corners when the extension is open so they visually fuse. -->
+    <div
+      class={cn(
+        "glass-panel relative z-10 w-full sm:w-[320px] sm:flex sm:flex-col ease-liquid",
+        hasFiles &&
+          !isSuccess &&
+          "lg:rounded-tr-none lg:rounded-br-none lg:border-r-transparent",
+      )}
+      style="transition: border-radius 450ms cubic-bezier(0.16, 1, 0.3, 1), border-color 450ms cubic-bezier(0.16, 1, 0.3, 1);"
+    >
+      {#if isSuccess}
+        <div class="px-5 py-4 border-b border-border">
+          <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <IconLockRegular class="size-4 text-primary" />
+            Share link ready
+          </div>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            Decrypts in the recipient's browser.
+          </p>
         </div>
-      </aside>
+        <div class="p-5 space-y-3">
+          <TextInput
+            id="home-share-link"
+            aria-label="Share link"
+            value={uploadStore.shareUrl ?? ""}
+            readonly
+            mono
+            onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
+          />
+          <p class="text-xs text-muted-foreground">
+            Expires in {formatExpiry(uploadStore.expiresInHours)}.
+            {formatDownloads(uploadStore.maxDownloads)}.
+            {#if lastUploadVaulted}
+              Saved to your transfers.
+            {:else if auth.isAuthenticated}
+              Keep this link: without a vault it can't be shown again.
+            {/if}
+          </p>
+        </div>
+        <div class="flex items-center gap-2 px-5 py-4 border-t border-border bg-muted/30">
+          <Button variant="secondary" fullWidth={false} class="flex-1 whitespace-nowrap" onclick={resetUpload}>
+            Send another
+          </Button>
+          <Button variant="primary" fullWidth={false} class="flex-1" onclick={copyShareLink}>
+            {#if copied}
+              <IconCheckRegular class="size-4" />
+              Copied
+            {:else}
+              <IconCopyRegular class="size-4" />
+              Copy link
+            {/if}
+          </Button>
+        </div>
+      {:else if !hasFiles}
+        <button
+          type="button"
+          onclick={openFilePicker}
+          disabled={isProcessing}
+          aria-label="Drop files here or click to browse"
+          class={cn(
+            "w-full p-5 flex flex-col items-center justify-center text-center hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-lg transition-colors duration-200 ease-out sm:flex-1",
+            isDraggingOver ? "bg-primary/5" : "hover:bg-accent",
+            isProcessing && "opacity-60 cursor-not-allowed",
+          )}
+        >
+          <span class="inline-flex items-center justify-center size-9 rounded-full bg-primary/10 text-primary">
+            <IconUploadRegular class="size-4" />
+          </span>
+          <div class="space-y-0.5 mt-3.5">
+            <p class="text-sm font-semibold text-foreground leading-snug">
+              {#if isDraggingOver}
+                Release to encrypt
+              {:else}
+                Drop a file
+              {/if}
+            </p>
+            <p class="text-xs text-muted-foreground leading-relaxed max-w-[16rem]">
+              Or click to browse. Encrypts in your browser.
+            </p>
+          </div>
+          <span class="mt-4 text-[11px] text-muted-foreground/80">
+            Up to {formatSize(MAX_TOTAL_UPLOAD_SIZE)} per transfer
+          </span>
+        </button>
+      {:else}
+        <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 text-sm font-semibold text-foreground min-w-0">
+            <IconLockRegular class="size-4 text-primary shrink-0" />
+            <span class="truncate">
+              {uploadStore.files.length} file{uploadStore.files.length !== 1 ? "s" : ""}
+              · {formatSize(totalSize)}
+            </span>
+          </div>
+          {#if !isProcessing}
+            <button
+              type="button"
+              onclick={resetUpload}
+              class="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+            >
+              Clear
+            </button>
+          {/if}
+        </div>
+
+        <div class={cn("px-5 py-4 flex flex-col gap-4 flex-1 min-h-0 file-list-scroll overflow-x-hidden", isMorphing ? "overflow-y-hidden" : "overflow-y-auto")}>
+          {#if uploadStore.status === "error"}
+            <div role="alert" class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
+              <span class="inline-flex items-center justify-center size-12 rounded-full bg-destructive/10 text-destructive-foreground">
+                <IconWarningRegular class="size-6" />
+              </span>
+              <div class="space-y-1">
+                <p class="text-sm font-semibold text-foreground">Upload failed</p>
+                <p class="text-xs text-muted-foreground leading-relaxed max-w-[18rem]">
+                  {uploadStore.error}
+                </p>
+              </div>
+            </div>
+          {:else}
+            {#if auth.isAuthenticated && auth.needsVaultSetup}
+              <p class="text-xs text-muted-foreground">
+                You can send right away. To keep names and links in your list of transfers,
+                <button
+                  type="button"
+                  onclick={goToSetup}
+                  class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+                >
+                  set up a vault
+                </button>.
+              </p>
+            {/if}
+
+          {#if isProcessing}
+            <div class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
+              <CircularProgress
+                percent={uploadStore.overallProgress}
+                sublabel={phaseLabel}
+              />
+              <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
+                {#if isSending && uploadStalled}
+                  <p class="text-warning-foreground">
+                    Connection lost. Continuing as soon as it is back. Keep this tab open.
+                  </p>
+                {:else if isSending && uploadSpeed}
+                  <p class="tabular-nums">
+                    {formatSpeed(uploadSpeed)}{#if uploadEta} · {formatEta(uploadEta)} left{/if}
+                  </p>
+                {/if}
+                {#if uploadStore.files.length > 1}
+                  <p>{filesDone} of {uploadStore.files.length} files done</p>
+                {/if}
+              </div>
+            </div>
+          {/if}
+
+          <!-- Inline file list for viewports below the extension's breakpoint. -->
+          <div class="lg:hidden">
+            {#each uploadStore.files as fileState, index (fileState.id)}
+              <FileRow
+                name={fileState.file.name}
+                size={formatSize(fileState.file.size)}
+                kind="upload"
+                status={fileRowStatus(fileState.status)}
+                percent={fileState.progress}
+                onRemove={() => removeFile(index)}
+              />
+            {/each}
+          </div>
+
+          {#if !isProcessing}
+            <button
+              type="button"
+              onclick={openFilePicker}
+              class="w-full flex items-center justify-center gap-2 py-2.5 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:border-muted-foreground hover:text-foreground transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:cursor-pointer"
+            >
+              <IconPlusRegular class="size-4" />
+              Add more files
+            </button>
+
+            {@render fields()}
+          {/if}
+          {/if}
+        </div>
+
+        <div class="flex items-center gap-2 px-5 py-4 border-t border-border bg-muted/30">
+          {#if isProcessing}
+            <Button variant="secondary" fullWidth={false} class="flex-1" onclick={stopUpload}>
+              Stop
+            </Button>
+          {:else if uploadStore.status === "error"}
+            <Button variant="secondary" fullWidth={false} class="flex-1" onclick={returnToSettings}>
+              Back
+            </Button>
+            {#if uploadStore.errorUpgradeUrl && !auth.isAuthenticated}
+              <Button variant="primary" fullWidth={false} class="flex-1" onclick={() => goto(`/login?redirect=${encodeURIComponent(returnTo)}`)}>
+                Sign in
+              </Button>
+            {:else}
+              <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>
+                Try again
+              </Button>
+            {/if}
+          {:else}
+            <Button
+              variant="primary"
+              fullWidth={false}
+              class="flex-1"
+              onclick={handleUpload}
+              disabled={passwordTooShort}
+            >
+              Create share link
+            </Button>
+          {/if}
+        </div>
+      {/if}
+    </div>
+
+    <!-- Extension slides out as an in-flow flex sibling so the grid's first column tracks its width. -->
+    <div
+      aria-hidden={!(hasFiles && !isSuccess)}
+      class={cn(
+        "hidden lg:block overflow-hidden ease-liquid shrink-0",
+        hasFiles && !isSuccess
+          ? "w-[300px]"
+          : "w-0 pointer-events-none",
+      )}
+      style="transition: width 450ms cubic-bezier(0.16, 1, 0.3, 1);"
+    >
+      <div class="glass-panel w-[300px] h-full flex flex-col rounded-l-none border-l-0">
+        <div class="px-5 py-4 border-b border-border">
+          <p class="text-sm font-semibold text-foreground">
+            Files
+            <span class="font-normal text-muted-foreground">
+              · Queued for this transfer.
+            </span>
+          </p>
+        </div>
+        <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden file-list-scroll">
+          {#each uploadStore.files as fileState, index (fileState.id)}
+            <FileRow
+              name={fileState.file.name}
+              size={formatSize(fileState.file.size)}
+              kind="upload"
+              status={fileRowStatus(fileState.status)}
+              percent={fileState.progress}
+              onRemove={() => removeFile(index)}
+            />
+          {/each}
+        </div>
+      </div>
+    </div>
+  </aside>
+{/if}
 
 <Modal
   open={unlockOpen}
