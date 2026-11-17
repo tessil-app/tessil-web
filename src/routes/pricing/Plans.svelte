@@ -11,6 +11,7 @@
   import SiteFooter from "$lib/components/SiteFooter.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
   import { api, ApiError } from "$lib/api/client";
+  import { FORMS_ANNOUNCED } from "$lib/config/launch";
   import type { Cycle, PlanId } from "$lib/config/plans";
   import { SUPPORT_EMAIL } from "$lib/config/support";
   import { auth } from "$lib/stores/auth.svelte";
@@ -83,16 +84,20 @@
       a: `Within 14 days of your first payment, yes, in full: write to ${SUPPORT_EMAIL}. After that a period that has started is not refunded, except where the law gives you that right.`,
     },
     {
-      q: "What happens to my portals when a plan ends?",
-      a: "They stop accepting files. What they already hold stays available to you until it expires. Sending works as before.",
+      q: FORMS_ANNOUNCED ? "What happens to my portals and forms when a plan ends?" : "What happens to my portals when a plan ends?",
+      a: FORMS_ANNOUNCED
+        ? "They stop accepting files and answers. What they already hold stays available to you until it expires. Sending works as before."
+        : "They stop accepting files. What they already hold stays available to you until it expires. Sending works as before.",
     },
     {
       q: "Who am I paying?",
       a: "Polar, our payment provider, is the seller on your invoice and handles tax. We never see your card details.",
     },
     {
-      q: "Do the people who send me files need a plan?",
-      a: "No. They need no account at all. Someone you share a portal with needs an account, and a free one is enough.",
+      q: FORMS_ANNOUNCED ? "Do the people who send me files or answers need a plan?" : "Do the people who send me files need a plan?",
+      a: FORMS_ANNOUNCED
+        ? "No. They need no account at all. Someone you share a portal or form with needs an account, and a free one is enough."
+        : "No. They need no account at all. Someone you share a portal with needs an account, and a free one is enough.",
     },
   ];
 </script>
@@ -107,11 +112,16 @@
   <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-20">
     <header class="mx-auto flex max-w-3xl flex-col items-center gap-5 pb-10 text-center sm:pb-12">
       <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-none" style="letter-spacing: -0.035em">
-        Pay for portals.<br />Never for privacy.
+        {FORMS_ANNOUNCED ? "Pay to receive." : "Pay for portals."}<br />Never for privacy.
       </h1>
       <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
-        Sending files is free, encrypted, and stays that way. A plan adds portals: links
-        where other people send files that only you can open.
+        {#if FORMS_ANNOUNCED}
+          Sending files is free, encrypted, and stays that way. A plan adds portals and forms:
+          links where other people send files and answers that only you can open.
+        {:else}
+          Sending files is free, encrypted, and stays that way. A plan adds portals: links
+          where other people send files that only you can open.
+        {/if}
       </p>
       <div class="flex flex-wrap items-center justify-center gap-3">
         <Tabs label="Billing period" tabs={cycleOptions} value={cycle} onChange={(v) => (cycle = v)} />

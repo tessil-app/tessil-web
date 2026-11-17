@@ -191,6 +191,25 @@
       : []),
   ];
 
+  // Plays a film only while it is on screen, and not at all for people who asked for less motion.
+  function playInView(node: HTMLVideoElement) {
+    if (typeof IntersectionObserver === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      node.controls = true;
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) void node.play().catch(() => {});
+          else node.pause();
+        }
+      },
+      { threshold: 0.4 },
+    );
+    observer.observe(node);
+    return { destroy: () => observer.disconnect() };
+  }
+
   const newest = features.findLast((f) => f.fresh) ?? null;
 
   const steps: { title: string; body: string; link?: { href: string; label: string } }[] = [
@@ -1245,12 +1264,9 @@
 <div class="bg-background">
   <section aria-labelledby="how-title" class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
     <h2 id="how-title" class="sr-only">How it works</h2>
-    <ol class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-      {#each steps as step, i (step.title)}
-        <li class="space-y-2">
-          <p class="text-xs font-semibold tracking-wider text-primary tabular-nums" aria-hidden="true">
-            0{i + 1}
-          </p>
+    <ul class="grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+      {#each steps as step (step.title)}
+        <li class="space-y-2 border-t border-border pt-5">
           <h3 class="text-lg font-semibold tracking-tight text-foreground">{step.title}</h3>
           <p class="text-sm leading-relaxed text-muted-foreground">
             {step.body}
@@ -1260,7 +1276,7 @@
           </p>
         </li>
       {/each}
-    </ol>
+    </ul>
   </section>
 
   {#if PORTALS_ANNOUNCED}
@@ -1271,7 +1287,6 @@
     >
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center">
         <div class="space-y-5">
-          <p class="text-xs font-semibold uppercase tracking-wider text-primary">New: portals</p>
           <h2 id="portals-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
             Now it works both ways.
           </h2>
@@ -1327,16 +1342,109 @@
     </section>
   {/if}
 
+  {#if FORMS_ANNOUNCED}
+    <section id="forms" aria-labelledby="forms-title" class="border-t border-border scroll-mt-20">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid gap-12 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-center">
+        <!-- The editor at work, recorded. Plays while it is in view. -->
+        <div class="order-last overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:order-first">
+          <video
+            use:playInView
+            class="block h-auto w-full"
+            poster="/featured/forms-editor.jpg"
+            width="1600"
+            height="1000"
+            muted
+            loop
+            playsinline
+            preload="none"
+            aria-label="The form editor: questions are added, then the form is filled in and sent."
+          >
+            <source src="/featured/forms-editor.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="space-y-5">
+          <h2 id="forms-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
+            Ask anything. Only you read the answers.
+          </h2>
+          <p class="max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground">
+            A form is a link with your questions on it. The questions are encrypted in your
+            browser and each answer in theirs, so we can read neither. Together the answers add
+            up to a summary only you see.
+          </p>
+          <ul class="space-y-2.5 text-sm text-foreground">
+            {#each ["Seven kinds of question, files among them", "A summary per question, and an export to a spreadsheet", "No account for the people who answer"] as point (point)}
+              <li class="flex items-center gap-2.5">
+                <IconCheckRegular class="size-4 shrink-0 text-primary" />
+                {point}
+              </li>
+            {/each}
+          </ul>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-3 pt-2">
+            <Button href="/forms/try" fullWidth={false}>Try the editor</Button>
+            <p class="text-sm text-muted-foreground">
+              No account needed to try it.
+              <TextLink href="/forms">Take the tour</TextLink>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if ACCESS_KEYS_ANNOUNCED}
+    <section id="terminal" aria-labelledby="terminal-title" class="border-t border-border scroll-mt-20">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center">
+        <div class="space-y-5">
+          <h2 id="terminal-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
+            No browser needed.
+          </h2>
+          <p class="max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground">
+            The same encrypted transfers and portals from your terminal, your scripts and your
+            AI assistant. The tool signs in with a key of its own, never your password, and an
+            assistant that sends a file for you never sees the link.
+          </p>
+          <ul class="space-y-2.5 text-sm text-foreground">
+            {#each ["Open source, on macOS and Linux", "Pull what arrived in a portal into folders", "One access key with every account, the free one too"] as point (point)}
+              <li class="flex items-center gap-2.5">
+                <IconCheckRegular class="size-4 shrink-0 text-primary" />
+                {point}
+              </li>
+            {/each}
+          </ul>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-3 pt-2">
+            <Button href="/cli" fullWidth={false}>Meet the tool</Button>
+            <p class="text-sm text-muted-foreground">
+              <code class="font-mono text-foreground">brew install tessil-app/tap/tessil</code>
+            </p>
+          </div>
+        </div>
+
+        <!-- The tool at work. An illustration, not a control. -->
+        <div aria-hidden="true" class="overflow-x-auto rounded-xl bg-[#07080d] p-5 font-mono text-[0.8125rem] leading-relaxed shadow-sm sm:p-6 sm:text-sm">
+          <p class="whitespace-pre text-white"><span class="pr-[1ch] text-white/40">$</span>tessil send report.pdf</p>
+          <p class="whitespace-pre text-emerald-300">Sent report.pdf (2.4 MB), encrypted on this machine.</p>
+          <p class="whitespace-pre text-white/80">The link works for 7 days.</p>
+          <p class="whitespace-pre text-[#9db4ff]">https://tessil.app/d/8sKq2ZpLw4…#rT9c…</p>
+          <p class="mt-4 whitespace-pre text-white"><span class="pr-[1ch] text-white/40">$</span>tessil pull "Tax 2025"</p>
+          <p class="whitespace-pre text-white/80">Tax 2025/7F3A-91C2/passport.jpg</p>
+          <p class="whitespace-pre text-white/80">Tax 2025/7F3A-91C2/annual-statement.pdf</p>
+          <p class="whitespace-pre text-emerald-300">Tax 2025: 1 delivery saved to ./Tax 2025, 4 already there.</p>
+        </div>
+      </div>
+    </section>
+  {/if}
+
   {#if PORTALS_ANNOUNCED}
     <section aria-labelledby="pricing-title" class="border-t border-border">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 space-y-10">
         <div class="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
           <div class="max-w-xl space-y-3">
             <h2 id="pricing-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
-              Pay for portals. Never for privacy.
+              {FORMS_ANNOUNCED ? "Pay to receive. Never for privacy." : "Pay for portals. Never for privacy."}
             </h2>
             <p class="text-base sm:text-lg leading-relaxed text-muted-foreground">
-              Sending is free, encrypted, and stays that way. A plan adds portals.
+              Sending is free, encrypted, and stays that way. A plan adds
+              {FORMS_ANNOUNCED ? "portals and forms" : "portals"}.
             </p>
           </div>
           <TextLink href="/pricing" class="text-primary">See what each plan includes</TextLink>
@@ -1379,8 +1487,13 @@
           <a href="/compare" class="text-primary underline underline-offset-2">WeTransfer, Proton Drive, and other tools</a>.
         </p>
         <p>
-          Built and run by one person, and free to use. If Tessil saves you a
-          headache, you can support the project. The link's in the footer below.
+          {#if PORTALS_ANNOUNCED}
+            Built and run by one person. Sending is free; the paid plans, for receiving, are
+            what keeps it running.
+          {:else}
+            Built and run by one person, and free to use. If Tessil saves you a
+            headache, you can support the project. The link's in the footer below.
+          {/if}
         </p>
       </div>
     </section>
@@ -1434,7 +1547,12 @@
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-3 text-muted-foreground leading-relaxed">
-            Yes, completely free, with no ads and no selling of data. Tessil is open source under the AGPL-3.0 licence, so anyone can audit exactly how it handles encryption.
+{#if PORTALS_ANNOUNCED}
+              Sending is free, with or without an account, and stays that way. Paid plans add ways to receive: {FORMS_ANNOUNCED ? "portals for files and forms for answers" : "portals, links where people send files to you"}. No ads and no selling of data on any plan, and the code is open under the AGPL-3.0 licence.
+              <a href="/pricing" class="text-primary underline underline-offset-2">See the plans</a>.
+            {:else}
+              Yes, completely free, with no ads and no selling of data. Tessil is open source under the AGPL-3.0 licence, so anyone can audit exactly how it handles encryption.
+            {/if}
           </p>
         </details>
         <details class="group py-5">
