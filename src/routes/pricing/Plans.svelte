@@ -6,7 +6,7 @@
   import Badge from "$lib/components/Badge.svelte";
   import PlanComparison from "$lib/components/PlanComparison.svelte";
   import PlanCards from "$lib/components/PlanCards.svelte";
-  import SegmentedControl from "$lib/components/SegmentedControl.svelte";
+  import Tabs from "$lib/components/Tabs.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
@@ -114,13 +114,7 @@
         where other people send files that only you can open.
       </p>
       <div class="flex flex-wrap items-center justify-center gap-3">
-        <SegmentedControl
-          label="Billing period"
-          class="[&>span]:sr-only"
-          options={cycleOptions}
-          value={cycle}
-          onChange={(v) => (cycle = v)}
-        />
+        <Tabs label="Billing period" tabs={cycleOptions} value={cycle} onChange={(v) => (cycle = v)} />
         <Badge tone="success">2 months free yearly</Badge>
       </div>
     </header>
