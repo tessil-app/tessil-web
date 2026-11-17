@@ -120,7 +120,7 @@
       passkeys = authenticators;
     } catch (err) {
       passkeysError =
-        err instanceof Error ? err.message : "Couldn't load sign-in keys.";
+        err instanceof Error ? err.message : "Couldn't load passkeys.";
       passkeys = [];
     }
   }
@@ -262,10 +262,10 @@
 
 <Frame.Root>
   <Frame.Header>
-    <Frame.Title class="text-base">Sign-in keys</Frame.Title>
+    <Frame.Title class="text-base">Passkeys</Frame.Title>
     {#if showFraming}
       <Frame.Description class="mt-1 block">
-        Sign-in keys are tied to this site - they can't be used to sign in
+        Passkeys are tied to this site - they can't be used to sign in
         anywhere else. Email sign-in stays available either way.
       </Frame.Description>
     {/if}
@@ -274,7 +274,7 @@
   <Frame.Panel>
     {#if !passkeySupported}
       <Alert tone="info" title="Your browser doesn't support passkeys">
-        Sign-in keys need a recent browser with a platform authenticator
+        Passkeys need a recent browser with a platform authenticator
         (Touch ID, Face ID, Windows Hello) or a security key.
       </Alert>
     {:else if passkeys === null}
@@ -295,18 +295,18 @@
           </li>
         {/each}
       </ul>
-      <span class="sr-only" role="status" aria-live="polite">Loading sign-in keys…</span>
+      <span class="sr-only" role="status" aria-live="polite">Loading passkeys…</span>
     {:else if passkeys.length === 0}
       <div class="flex flex-col items-center gap-3 py-4 text-center">
         <p class="text-sm text-muted-foreground max-w-md text-pretty">
-          Add a sign-in key to skip the email step next time. Sign-in keys are
+          Add a passkey to skip the email step next time. Passkeys are
           tied to this site - they can't be used to sign in anywhere else.
           Email sign-in stays available either way.
         </p>
         <div class="w-full max-w-64">
           <Button onclick={startAddPasskey}>
             <IconPlusRegular class="size-4" />
-            Add a sign-in key
+            Add a passkey
           </Button>
         </div>
         {#if passkeysError}
@@ -417,7 +417,7 @@
               {#if isConfirmingThis}
                 {#if isCurrent}
                   <Alert tone="warning">
-                    This is the sign-in key for your current session. You'll
+                    This is the passkey for your current session. You'll
                     stay signed in here, but you'll need to sign in by email
                     or another passkey next time.
                   </Alert>
@@ -427,7 +427,7 @@
                 {/if}
                 <div class="flex flex-wrap items-center gap-2">
                   <p class="flex-1 basis-32 text-sm text-foreground">
-                    Remove this sign-in key?
+                    Remove this passkey?
                   </p>
                   <Button
                     variant="secondary"
@@ -512,7 +512,7 @@
         <div>
           <Button variant="secondary" fullWidth={false} onclick={startAddPasskey}>
             <IconPlusRegular class="size-4" />
-            Add a sign-in key
+            Add a passkey
           </Button>
         </div>
       {/if}
@@ -572,8 +572,8 @@
 
 <Modal
   open={enableFor !== null}
-  title="Unlock your vault with this sign-in key"
-  description="Confirm it's you once. After that, this sign-in key opens your vault with a touch or a glance. Every other way in keeps working."
+  title="Unlock your vault with this passkey"
+  description="Confirm it's you once. After that, this passkey opens your vault with a touch or a glance. Every other way in keeps working."
   onClose={() => {
     if (!isEnabling) enableFor = null;
   }}

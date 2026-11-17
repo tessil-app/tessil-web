@@ -49,7 +49,7 @@
             nickname ? "text-foreground" : "italic font-normal text-muted-foreground"
           )}
         >
-          {nickname ?? "Unnamed sign-in key"}
+          {nickname ?? "Unnamed passkey"}
         </div>
         <div class="mt-0.5 text-xs text-muted-foreground">
           {meta}{#if isCurrent}
