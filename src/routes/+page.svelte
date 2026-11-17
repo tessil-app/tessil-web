@@ -106,13 +106,15 @@
     ];
     if (!auth.user) return base;
     const free = [...base, { value: 72, label: "3d" }];
-    if (auth.user.tier !== "pro") return free;
-    return [
+    if (auth.user.tier !== "pro" && auth.user.tier !== "max") return free;
+    const pro = [
       ...free,
       { value: 168, label: "7d" },
       { value: 336, label: "14d" },
       { value: 720, label: "30d" },
     ];
+    // Mirrors MAX_EXPIRY_HOURS in the API's tiers.
+    return auth.user.tier === "max" ? [...pro, { value: 1440, label: "60d" }, { value: 2160, label: "90d" }] : pro;
   });
 
   $effect(() => {
