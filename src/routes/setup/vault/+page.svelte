@@ -23,7 +23,6 @@
   import {
     evaluatePassword,
     MIN_PASSWORD_LENGTH,
-    MIN_PASSWORD_SCORE,
     scoreLabel,
     type PasswordStrength,
   } from "$lib/vault/strength";
@@ -305,7 +304,7 @@
               <div class="flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   {#if password.length === 0}
-                    At least {MIN_PASSWORD_LENGTH} characters · zxcvbn score ≥ {MIN_PASSWORD_SCORE}
+                    At least {MIN_PASSWORD_LENGTH} characters, and not easy to guess
                   {:else if isEvaluating}
                     Checking…
                   {:else}

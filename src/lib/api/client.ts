@@ -597,7 +597,7 @@ export class ApiClient {
     return this.request("/api/auth/logout", { method: "POST" });
   }
 
-  async logoutAll(): Promise<{ ok: true; sessionsRevoked: number }> {
+  async logoutAll(): Promise<{ ok: true; sessionsRevoked: number; devicesRevoked?: number }> {
     return this.request("/api/auth/logout-all", { method: "POST" });
   }
 

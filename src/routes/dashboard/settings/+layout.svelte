@@ -62,7 +62,7 @@
     <div class="grid grid-cols-1 md:grid-cols-[12rem_1fr] gap-6 md:gap-8 mt-6">
       <nav aria-label="Settings sections">
         <ul
-          class="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0"
+          class="flex md:flex-col gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0"
         >
           {#each navItems as item (item.href)}
             {@const active = currentPath === item.href || currentPath.startsWith(item.href + "/")}

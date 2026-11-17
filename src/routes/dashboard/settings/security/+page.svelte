@@ -14,6 +14,8 @@
   import TextInput from "$lib/components/TextInput.svelte";
   import IconPlusRegular from "phosphor-icons-svelte/IconPlusRegular.svelte";
   import { api, type PasskeySummary } from "$lib/api/client";
+  import { goto } from "$app/navigation";
+  import { ACCESS_KEYS_ANNOUNCED } from "$lib/config/launch";
   import { auth } from "$lib/stores/auth.svelte";
   import {
     enrollPasskey,
@@ -238,6 +240,24 @@
   const showFooter = $derived(
     passkeySupported && passkeys !== null && (passkeys.length > 0 || isAdding),
   );
+
+  // ─── signing out everywhere ───────────────────────────────────────────────
+  let confirmingSignOut = $state(false);
+  let signingOut = $state(false);
+  let signOutError = $state<string | null>(null);
+
+  async function signOutEverywhere() {
+    if (signingOut) return;
+    signingOut = true;
+    signOutError = null;
+    try {
+      await auth.logoutEverywhere();
+      await goto("/login", { replaceState: true });
+    } catch {
+      signOutError = "Couldn't sign out everywhere. Nothing was changed; try again.";
+      signingOut = false;
+    }
+  }
 </script>
 
 <Frame.Root>
@@ -499,6 +519,56 @@
     </Frame.Footer>
   {/if}
 </Frame.Root>
+
+<Frame.Root>
+  <Frame.Header>
+    <Frame.Title class="text-base">Signed-in devices</Frame.Title>
+    <Frame.Description class="mt-1 block">
+      Lost a device, or signed in somewhere you no longer trust? This signs your account out
+      everywhere, this browser included{ACCESS_KEYS_ANNOUNCED ? ", and ends every access key" : ""}.
+    </Frame.Description>
+  </Frame.Header>
+  <Frame.Panel>
+    <Button
+      variant="secondary"
+      fullWidth={false}
+      onclick={() => {
+        signOutError = null;
+        confirmingSignOut = true;
+      }}
+    >
+      Sign out everywhere
+    </Button>
+  </Frame.Panel>
+</Frame.Root>
+
+<Modal
+  open={confirmingSignOut}
+  title="Sign out everywhere?"
+  description={ACCESS_KEYS_ANNOUNCED
+    ? "Every browser and device is signed out, this one too, and every access key stops working. Programs using a key have to be paired again. Your files, portals and vault are not touched."
+    : "Every browser and device is signed out, this one too. Your files, portals and vault are not touched."}
+  onClose={() => {
+    if (!signingOut) confirmingSignOut = false;
+  }}
+>
+  {#if signOutError}
+    <Alert tone="destructive">{signOutError}</Alert>
+  {/if}
+  {#snippet footer()}
+    <Button type="button" variant="ghost" fullWidth={false} onclick={() => (confirmingSignOut = false)} disabled={signingOut}>
+      Stay signed in
+    </Button>
+    <Button type="button" fullWidth={false} onclick={signOutEverywhere} disabled={signingOut}>
+      {#if signingOut}
+        <Spinner aria-hidden="true" />
+        Signing out…
+      {:else}
+        Sign out everywhere
+      {/if}
+    </Button>
+  {/snippet}
+</Modal>
 
 <Modal
   open={enableFor !== null}

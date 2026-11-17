@@ -44,6 +44,13 @@ class AuthState {
       this.user = null;
     }
   }
+
+  /** Ends every session of this account and every access key. Throws if the server did not confirm. */
+  async logoutEverywhere(): Promise<void> {
+    await api.logoutAll();
+    clearVaultCache();
+    this.user = null;
+  }
 }
 
 export const auth = new AuthState();
