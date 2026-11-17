@@ -67,16 +67,18 @@
 
 <div class={cn("overflow-hidden rounded-xl border border-border bg-card text-left", className)}>
   <div role="tablist" aria-label={label} tabindex="-1" {onkeydown} class="relative flex border-b border-border bg-secondary px-2 pt-1.5">
-    <!-- The chosen tab's ground: the field's own colour, flaring out into it like a folder's tab. -->
+    <!-- The chosen tab's ground: the field's own colour, flaring out into it like a
+         folder's tab. The strip's hairline runs on around it. -->
     <span
       aria-hidden="true"
-      class={cn(
-        "ground absolute top-1.5 bottom-0 left-0 -mb-px rounded-t-lg bg-card",
-        ready && "transition-[transform,width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none",
-      )}
+      class={cn("ground absolute top-1.5 bottom-0 left-0 -mb-px", ready && "moving")}
       style:width="{box.w}px"
       style:transform="translateX({box.x}px)"
-    ></span>
+    >
+      <span class="body"></span>
+      <span class="ear left"></span>
+      <span class="ear right"></span>
+    </span>
     {#each options as option, i (option.id)}
       {@const on = i === chosen}
       <button
@@ -89,7 +91,7 @@
         tabindex={on ? 0 : -1}
         onclick={() => pick(i)}
         class={cn(
-          "relative z-10 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-150 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+          "relative z-10 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-100 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
           on ? "text-foreground" : "text-muted-foreground hover:text-foreground",
         )}
       >
@@ -111,22 +113,65 @@
 </div>
 
 <style>
-  /* The outward curves where the chosen tab meets the field. */
-  .ground::before,
+  /* The chosen tab, drawn in three parts so one hairline can follow its
+     whole outline: up the outward curve, around the top, and down again. */
+  .ground {
+    --r: 0.5rem;
+  }
+  .ground.moving {
+    transition:
+      transform 160ms cubic-bezier(0.25, 1, 0.5, 1),
+      width 160ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .body {
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: var(--r) var(--r) 0 0;
+    background: var(--card);
+    /* The sides stop where the curves begin; below that the ears carry the line. */
+    clip-path: inset(0 0 var(--r) 0 round var(--r) var(--r) 0 0);
+  }
   .ground::after {
     content: "";
     position: absolute;
+    inset: auto 0 0 0;
+    height: var(--r);
+    background: var(--card);
+  }
+  .ear {
+    position: absolute;
+    z-index: 1;
     bottom: 0;
-    width: 0.5rem;
-    height: 0.5rem;
+    width: var(--r);
+    height: var(--r);
   }
-  .ground::before {
-    right: 100%;
-    background: radial-gradient(circle at 0 0, transparent 0.5rem, var(--card) calc(0.5rem + 0.5px));
+  /* A ring one pixel wide on the curve, the field's colour beyond it. */
+  .ear.left {
+    right: calc(100% - 1px);
+    background: radial-gradient(
+      circle at 0 0,
+      transparent calc(var(--r) - 1.25px),
+      var(--border) calc(var(--r) - 0.75px),
+      var(--border) calc(var(--r) - 0.25px),
+      var(--card) calc(var(--r) + 0.25px)
+    );
   }
-  .ground::after {
-    left: 100%;
-    background: radial-gradient(circle at 100% 0, transparent 0.5rem, var(--card) calc(0.5rem + 0.5px));
+  .ear.right {
+    left: calc(100% - 1px);
+    background: radial-gradient(
+      circle at 100% 0,
+      transparent calc(var(--r) - 1.25px),
+      var(--border) calc(var(--r) - 0.75px),
+      var(--border) calc(var(--r) - 0.25px),
+      var(--card) calc(var(--r) + 0.25px)
+    );
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ground.moving {
+      transition: none;
+    }
   }
 
   /* A long command scrolls sideways under a thin bar in the text's own colour. */
