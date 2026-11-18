@@ -26,6 +26,7 @@ import {
   openPortalKeys,
 } from "$lib/portal/keys";
 import { depositReference } from "$lib/portal/receipt";
+import { ANSWERS_FILE_NAME, decryptAnswers } from "$lib/form/answers";
 import { importVaultDerivationKey, publicKeyFingerprint } from "$lib/vault/keypair";
 import vectors from "./vectors.json";
 
@@ -183,5 +184,31 @@ describe("sealing to a public key", () => {
     expect(await openSealed(recipient, bytes(s.authenticated), s.context)).toBeNull();
     expect(await openSealed(recipient, bytes(s.authenticated), s.context, recipient.publicKey)).toBeNull();
     expect(await openSealed(recipient, bytes(s.anonymous), "other|context")).toBeNull();
+  });
+});
+
+describe("a form", () => {
+  const f = vectors.form;
+
+  it("opens its questions, and a response's key, answers and file names", async () => {
+    const info = await openPortalBundle(f.formId, bytes(f.linkKey), bytes(f.bundle));
+    expect(info?.questions).toEqual(f.questions as never);
+
+    const owner = await person(f.owner);
+    const keys = await openPortalKeys(owner, f.formId, 1, bytes(f.keptKeys));
+    const raw = await openSealed(
+      { privateKey: keys!.privateKey, publicKey: info!.publicKey },
+      bytes(f.response.sealedKey),
+      depositKeyContext(f.formId, f.response.transferId),
+    );
+    expect(bytesToBase64Url(raw!)).toBe(f.response.key);
+
+    const key = await aesKey(f.response.key);
+    expect(await decryptAnswers(bytes(f.response.answersFile), key)).toEqual(f.response.answers as never);
+    expect(await decryptFilename(f.response.answersName.encryptedName, f.response.answersName.iv, key)).toBe(
+      ANSWERS_FILE_NAME,
+    );
+    const stored = await decryptFilename(f.response.fileName.encryptedName, f.response.fileName.iv, key);
+    expect(decodeDepositFileName(stored)).toEqual({ name: "paspoort.jpg", itemId: "file01" });
   });
 });

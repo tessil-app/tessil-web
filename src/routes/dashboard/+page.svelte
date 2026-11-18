@@ -439,7 +439,7 @@
   );
 </script>
 
-<Seo title="Dashboard - Tessil" robots="noindex" />
+<Seo title="Transfers - Tessil" robots="noindex" />
 
 <PageLayout width="5xl">
   {#if !auth.loaded}
@@ -460,7 +460,7 @@
       {#snippet actions()}
         <!-- The empty state has its own button; two would be one too many. -->
         {#if transfers.length > 0}
-          <Button href="/" fullWidth={false} class="whitespace-nowrap">New transfer</Button>
+          <Button href="/dashboard/new" fullWidth={false} class="whitespace-nowrap">New transfer</Button>
         {/if}
       {/snippet}
     </PageHeader>
@@ -523,7 +523,7 @@
             Anything you upload while signed in appears here.
           </p>
           {#snippet actions()}
-            <Button href="/" fullWidth={false}>Create your first transfer</Button>
+            <Button href="/dashboard/new" fullWidth={false}>Create your first transfer</Button>
           {/snippet}
         </EmptyState>
       {:else}

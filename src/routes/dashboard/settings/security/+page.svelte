@@ -14,6 +14,7 @@
   import TextInput from "$lib/components/TextInput.svelte";
   import IconPlusRegular from "phosphor-icons-svelte/IconPlusRegular.svelte";
   import { api, type PasskeySummary } from "$lib/api/client";
+  import { goto } from "$app/navigation";
   import { auth } from "$lib/stores/auth.svelte";
   import {
     enrollPasskey,
@@ -118,7 +119,7 @@
       passkeys = authenticators;
     } catch (err) {
       passkeysError =
-        err instanceof Error ? err.message : "Couldn't load sign-in keys.";
+        err instanceof Error ? err.message : "Couldn't load passkeys.";
       passkeys = [];
     }
   }
@@ -238,14 +239,32 @@
   const showFooter = $derived(
     passkeySupported && passkeys !== null && (passkeys.length > 0 || isAdding),
   );
+
+  // ─── signing out everywhere ───────────────────────────────────────────────
+  let confirmingSignOut = $state(false);
+  let signingOut = $state(false);
+  let signOutError = $state<string | null>(null);
+
+  async function signOutEverywhere() {
+    if (signingOut) return;
+    signingOut = true;
+    signOutError = null;
+    try {
+      await auth.logoutEverywhere();
+      await goto("/login", { replaceState: true });
+    } catch {
+      signOutError = "Couldn't sign out everywhere. Nothing was changed; try again.";
+      signingOut = false;
+    }
+  }
 </script>
 
 <Frame.Root>
   <Frame.Header>
-    <Frame.Title class="text-base">Sign-in keys</Frame.Title>
+    <Frame.Title class="text-base">Passkeys</Frame.Title>
     {#if showFraming}
       <Frame.Description class="mt-1 block">
-        Sign-in keys are tied to this site - they can't be used to sign in
+        Passkeys are tied to this site - they can't be used to sign in
         anywhere else. Email sign-in stays available either way.
       </Frame.Description>
     {/if}
@@ -254,7 +273,7 @@
   <Frame.Panel>
     {#if !passkeySupported}
       <Alert tone="info" title="Your browser doesn't support passkeys">
-        Sign-in keys need a recent browser with a platform authenticator
+        Passkeys need a recent browser with a platform authenticator
         (Touch ID, Face ID, Windows Hello) or a security key.
       </Alert>
     {:else if passkeys === null}
@@ -275,18 +294,18 @@
           </li>
         {/each}
       </ul>
-      <span class="sr-only" role="status" aria-live="polite">Loading sign-in keys…</span>
+      <span class="sr-only" role="status" aria-live="polite">Loading passkeys…</span>
     {:else if passkeys.length === 0}
       <div class="flex flex-col items-center gap-3 py-4 text-center">
         <p class="text-sm text-muted-foreground max-w-md text-pretty">
-          Add a sign-in key to skip the email step next time. Sign-in keys are
+          Add a passkey to skip the email step next time. Passkeys are
           tied to this site - they can't be used to sign in anywhere else.
           Email sign-in stays available either way.
         </p>
         <div class="w-full max-w-64">
           <Button onclick={startAddPasskey}>
             <IconPlusRegular class="size-4" />
-            Add a sign-in key
+            Add a passkey
           </Button>
         </div>
         {#if passkeysError}
@@ -397,7 +416,7 @@
               {#if isConfirmingThis}
                 {#if isCurrent}
                   <Alert tone="warning">
-                    This is the sign-in key for your current session. You'll
+                    This is the passkey for your current session. You'll
                     stay signed in here, but you'll need to sign in by email
                     or another passkey next time.
                   </Alert>
@@ -407,7 +426,7 @@
                 {/if}
                 <div class="flex flex-wrap items-center gap-2">
                   <p class="flex-1 basis-32 text-sm text-foreground">
-                    Remove this sign-in key?
+                    Remove this passkey?
                   </p>
                   <Button
                     variant="secondary"
@@ -492,7 +511,7 @@
         <div>
           <Button variant="secondary" fullWidth={false} onclick={startAddPasskey}>
             <IconPlusRegular class="size-4" />
-            Add a sign-in key
+            Add a passkey
           </Button>
         </div>
       {/if}
@@ -500,10 +519,58 @@
   {/if}
 </Frame.Root>
 
+<Frame.Root>
+  <Frame.Header>
+    <Frame.Title class="text-base">Signed-in devices</Frame.Title>
+    <Frame.Description class="mt-1 block">
+      Lost a device, or signed in somewhere you no longer trust? This signs your account out
+      everywhere, this browser included, and ends every access key a program was paired with.
+    </Frame.Description>
+  </Frame.Header>
+  <Frame.Panel>
+    <Button
+      variant="secondary"
+      fullWidth={false}
+      onclick={() => {
+        signOutError = null;
+        confirmingSignOut = true;
+      }}
+    >
+      Sign out everywhere
+    </Button>
+  </Frame.Panel>
+</Frame.Root>
+
+<Modal
+  open={confirmingSignOut}
+  title="Sign out everywhere?"
+  description="Every browser and device is signed out, this one too, and every access key stops working. A program using a key, such as the tessil tool, has to be paired again. Your files, portals and vault are not touched."
+  onClose={() => {
+    if (!signingOut) confirmingSignOut = false;
+  }}
+>
+  {#if signOutError}
+    <Alert tone="destructive">{signOutError}</Alert>
+  {/if}
+  {#snippet footer()}
+    <Button type="button" variant="ghost" fullWidth={false} onclick={() => (confirmingSignOut = false)} disabled={signingOut}>
+      Stay signed in
+    </Button>
+    <Button type="button" fullWidth={false} onclick={signOutEverywhere} disabled={signingOut}>
+      {#if signingOut}
+        <Spinner aria-hidden="true" />
+        Signing out…
+      {:else}
+        Sign out everywhere
+      {/if}
+    </Button>
+  {/snippet}
+</Modal>
+
 <Modal
   open={enableFor !== null}
-  title="Unlock your vault with this sign-in key"
-  description="Confirm it's you once. After that, this sign-in key opens your vault with a touch or a glance. Every other way in keeps working."
+  title="Unlock your vault with this passkey"
+  description="Confirm it's you once. After that, this passkey opens your vault with a touch or a glance. Every other way in keeps working."
   onClose={() => {
     if (!isEnabling) enableFor = null;
   }}

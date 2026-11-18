@@ -22,8 +22,10 @@
   import Seo from "$lib/components/Seo.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import Switch from "$lib/components/Switch.svelte";
+  import Tabs from "$lib/components/Tabs.svelte";
   import * as Table from "$lib/components/table";
   import TextInput from "$lib/components/TextInput.svelte";
+  import Select from "$lib/components/Select.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
@@ -51,6 +53,7 @@
   );
   const opened = $derived(people.find((p) => p.id === openId) ?? null);
   let switchOn = $state(true);
+  let tab = $state<"questions" | "after">("questions");
 </script>
 
 <Seo title="Components - Tessil" robots="noindex" />
@@ -159,10 +162,19 @@
     </section>
 
     <section class="space-y-4">
-      {@render section("Fields", "A label above every field. Search and filters sit in one row above a list.")}
+      {@render section("Fields", "A label above every field. Search and filters sit in one row above a list. A select only where radio buttons would not fit.")}
       <div class="grid gap-4 sm:grid-cols-2">
         <TextInput id="sg-text" label="Name" placeholder="For example: Documents 2025" bind:value={text} />
         <TextInput id="sg-error" label="With an error" value="x" error="Use at least 3 characters." />
+        <Select
+          id="sg-select"
+          label="Select, for a short fixed list"
+          value="short"
+          options={[
+            { value: "short", label: "Short answer" },
+            { value: "long", label: "Long answer" },
+          ]}
+        />
       </div>
     </section>
 
@@ -267,6 +279,24 @@
           <p class="text-sm text-muted-foreground">They fill in their name before sending.</p>
         </div>
         <Switch bind:checked={switchOn} labelledby="sg-switch-name" />
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      {@render section(
+        "Tabs",
+        "Switch between views of the same thing, like the pages of a form in its editor. Not for a choice that is saved: use a switch or radios for that.",
+      )}
+      <div class="rounded-lg bg-card p-4">
+        <Tabs
+          label="Page"
+          value={tab}
+          onChange={(v) => (tab = v)}
+          tabs={[
+            { value: "questions", label: "Questions" },
+            { value: "after", label: "After sending" },
+          ]}
+        />
       </div>
     </section>
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import { ACCESS_KEYS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
 </script>
 
 <Seo
@@ -193,7 +193,7 @@
             <h2 class="text-lg font-semibold text-foreground">The vault (optional)</h2>
             <p class="text-muted-foreground">
               An account works without a vault: you can sign in and send, and
-              your dashboard lists what you sent by size and date. A vault adds
+              your list of transfers shows what you sent by size and date. A vault adds
               the two things we cannot keep for you in readable form: the names
               of what you sent, and the links to it.
             </p>
@@ -217,7 +217,7 @@
             <p class="text-muted-foreground">
               When you send while signed in with the vault open, your browser
               locks that transfer's key under the vault key and stores the
-              locked copy with us. That is how the dashboard can show names
+              locked copy with us. That is how your list of transfers can show names
               and rebuild a link later. The vault also holds a key pair for
               your account: we store the public half, and the private half
               only in locked form.
@@ -268,6 +268,44 @@
                 they are, the email address you invite, and when you last
                 opened it. Not its name, not what you ask for, not the notes,
                 the file names or the files.
+              </p>
+            </section>
+          {/if}
+
+          {#if FORMS_ANNOUNCED}
+            <section class="space-y-3" id="forms">
+              <h2 class="text-lg font-semibold text-foreground">Forms</h2>
+              <p class="text-muted-foreground">
+                A form is a link through which other people answer your
+                questions. Underneath it is a portal: the same key pair in
+                your vault, the same second key in the link, and the same
+                sharing with one other account.
+              </p>
+              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                <li>Your questions, their options and your texts are encrypted in your browser and stored only in locked form. The key that unlocks them for a visitor is in the link's fragment, which never reaches us</li>
+                <li>The visitor's browser writes the answers into one small file and encrypts it with a fresh key, locked so only the form's private key can open it. Files given as answers are encrypted the same way</li>
+                <li>The answers file is padded to a multiple of 1 KiB, so its size says little about how much was written</li>
+                <li>People answering need no account. We do not ask who they are</li>
+                <li>The summary, the search and the export are made in your browser, after your vault has opened the answers</li>
+                <li>Responses are deleted automatically after the period your plan sets, and earlier if you delete them</li>
+              </ul>
+              <p class="text-muted-foreground">
+                <strong>What a form cannot promise.</strong> Because we cannot
+                read a form, our server cannot check a response against it.
+                Required questions and the wording of each question are
+                handled by the visitor's browser, and each answer arrives with
+                the question as that browser showed it. Someone who tampers
+                with their own browser can send different wording or skip a
+                required question. The form's page marks an answer whose
+                wording differs from the form's.
+              </p>
+              <p class="text-muted-foreground">
+                <strong>What we can see about a form:</strong> that it is a
+                form and who owns it, whether it is switched on, its closing
+                date if it has one, when responses arrive, how many files
+                they hold and how large they are. Not its name, not the
+                questions or their options, not the answers, the file names
+                or the files.
               </p>
             </section>
           {/if}

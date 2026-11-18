@@ -22,6 +22,7 @@ export { PORTAL_TITLE_MAX };
 
 export interface MyPortal {
   id: string;
+  kind: "portal" | "form";
   role: "owner" | "member";
   isDisabled: boolean;
   /** The owner's closing date, if any. */
@@ -47,6 +48,8 @@ export interface MyPortal {
 
 export interface MyPortals {
   maxPortals: number;
+  maxForms: number;
+  /** Portals and forms together; filter on `kind`. */
   portals: MyPortal[];
 }
 
@@ -65,8 +68,10 @@ async function readRow(
             : null,
         }
       : null;
+  const kind: MyPortal["kind"] = row.kind === "form" ? "form" : "portal";
   const base = {
     id: row.id,
+    kind,
     role: row.role,
     isDisabled: row.isDisabled,
     closesAt: row.closesAt ?? null,
@@ -98,7 +103,7 @@ async function readRow(
     ...base,
     state: "open",
     title: info.title,
-    link: portalLink(origin, row.id, keys.linkKey),
+    link: portalLink(origin, row.id, keys.linkKey, kind),
   };
 }
 
@@ -110,7 +115,7 @@ export async function loadMyPortals(userId: string, origin: string): Promise<MyP
   const portals = await Promise.all(
     res.portals.map((row) => readRow(row, userId, derivationKey, origin)),
   );
-  return { maxPortals: res.maxPortals, portals };
+  return { maxPortals: res.maxPortals, maxForms: res.maxForms ?? 0, portals };
 }
 
 export type CreatePortalResult =
@@ -131,6 +136,7 @@ export async function createMyPortal(
   await ensureUserKeypair(userId);
 
   const password = settings.hasPassword ? settings.newPassword : "";
+  const kind: MyPortal["kind"] = settings.questions && settings.questions.length > 0 ? "form" : "portal";
   const made = await createPortalKeys(title.trim(), { userId, derivationKey }, settings.lang ?? undefined, {
     checklist: settings.checklist,
     message: settings.message,
@@ -138,12 +144,14 @@ export async function createMyPortal(
     fieldLabel: settings.fieldLabel,
     ...(settings.logo ? { logo: settings.logo } : {}),
     twoWay: settings.twoWay,
+    ...(kind === "form" ? { questions: settings.questions } : {}),
   });
   const created = await api.createPortal({
     id: made.id,
     publicBundle: bytesToBase64Url(made.publicBundle),
     sealedKeys: bytesToBase64Url(made.sealedKeys),
     depositToken: bytesToBase64Url(made.depositToken),
+    ...(kind === "form" ? { kind } : {}),
     ...(settings.closesAt ? { closesAt: settings.closesAt } : {}),
     ...(settings.notifyOnDelivery ? { notifyOnDelivery: true } : {}),
     ...(password
@@ -154,6 +162,7 @@ export async function createMyPortal(
     ok: true,
     portal: {
       id: made.id,
+      kind,
       role: "owner",
       isDisabled: false,
       closesAt: settings.closesAt,
@@ -165,7 +174,7 @@ export async function createMyPortal(
       lastDeliveryAt: null,
       state: "open",
       title: title.trim(),
-      link: portalLink(origin, made.id, made.linkKey),
+      link: portalLink(origin, made.id, made.linkKey, kind),
     },
   };
 }

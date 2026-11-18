@@ -11,6 +11,8 @@ import { uploadEncryptedStreamMultipart } from "$lib/upload/multipart";
 import { runFiles } from "$lib/upload/pool";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
 import type { Locale } from "$lib/i18n/locale";
+import { ANSWERS_FILE_NAME, ANSWERS_MIME_TYPE, encodeAnswers, type FormAnswer } from "$lib/form/answers";
+import type { Question } from "$lib/form/questions";
 import {
   accessTokenFor,
   depositTokenFor,
@@ -54,6 +56,9 @@ export interface OpenedPortal {
   /** Files the owner sent back, when the portal works both ways. */
   twoWay: boolean;
   returns: PortalReturn[];
+  /** "form" when the page asks questions; files may then answer some of them. */
+  kind: "portal" | "form";
+  questions: Question[];
 }
 
 export type OpenPortalResult =
@@ -123,6 +128,9 @@ export async function openPortalFromLink(
       logo: info.logo ?? null,
       twoWay: info.twoWay === true,
       returns: info.returns ?? [],
+      // The bundle decides: the server cannot turn a portal into a form or back.
+      kind: info.questions ? "form" : "portal",
+      questions: info.questions ?? [],
     },
   };
 }
@@ -177,7 +185,7 @@ export function decodeDepositNote(stored: string): { note: string | null; answer
 
 export interface DepositFileInput {
   file: File;
-  /** The checklist item this file answers, if any. */
+  /** The checklist item or form question this file answers, if any. */
   itemId?: string | null;
 }
 
@@ -246,7 +254,13 @@ export async function sendDeposit(
   portal: OpenedPortal,
   entries: DepositFileInput[],
   note: string,
-  options: { signal?: AbortSignal; onProgress?: FileProgress; answer?: DepositAnswer | null } = {},
+  options: {
+    signal?: AbortSignal;
+    onProgress?: FileProgress;
+    answer?: DepositAnswer | null;
+    /** A form's answers, sent as one more file after the visitor's own. */
+    answers?: FormAnswer[] | null;
+  } = {},
 ): Promise<{ transferId: string; sentAt: Date }> {
   const { signal, onProgress } = options;
   const files = entries.map((e) => e.file);
@@ -279,20 +293,24 @@ export async function sendDeposit(
   try {
     // Which files are waiting for the connection; any one is enough to say so.
     const waiting = new Set<number>();
+    const uploads = options.answers
+      ? [...files, new File([encodeAnswers(options.answers) as BlobPart], "answers.json")]
+      : files;
     await runFiles(
-      files,
+      uploads,
       (file) => file.size,
       async (file, i, fileSignal) => {
+        const isAnswers = i >= entries.length;
         try {
           const { encryptedName, iv } = await encryptFilename(
-            encodeDepositFileName(file.name, entries[i].itemId ?? null),
+            isAnswers ? ANSWERS_FILE_NAME : encodeDepositFileName(file.name, entries[i].itemId ?? null),
             key,
           );
           const encryptor = encryptFileStream(file, key);
-          onProgress?.(i, "uploading", 0);
+          if (!isAnswers) onProgress?.(i, "uploading", 0);
           const init = await api.initMultipartUpload({
             transferId,
-            contentType: file.type || "application/octet-stream",
+            contentType: isAnswers ? ANSWERS_MIME_TYPE : file.type || "application/octet-stream",
             encryptedName,
             encryptedNameIv: iv,
             fileIv: encryptor.ivB64,
@@ -309,16 +327,16 @@ export async function sendDeposit(
             onProgress: (p) => {
               if (p.stalled) waiting.add(i);
               else waiting.delete(i);
-              onProgress?.(i, "uploading", p.percent, waiting.size > 0);
+              if (!isAnswers) onProgress?.(i, "uploading", p.percent, waiting.size > 0);
             },
           });
           waiting.delete(i);
-          onProgress?.(i, "complete", 100, waiting.size > 0);
+          if (!isAnswers) onProgress?.(i, "complete", 100, waiting.size > 0);
         } catch (err) {
           waiting.delete(i);
           if ((err as DOMException)?.name === "AbortError") throw err;
-          onProgress?.(i, "error", 0);
-          throw new DepositError(codeFor(err), file.name);
+          if (!isAnswers) onProgress?.(i, "error", 0);
+          throw new DepositError(codeFor(err), isAnswers ? null : file.name);
         }
       },
       signal,

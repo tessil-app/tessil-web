@@ -26,7 +26,7 @@
     "2 GB a month",
     "20 transfers a day",
     "Expiry up to 72 hours",
-    "A dashboard of what you've sent, plus passkeys and encrypted titles",
+    "A list of what you've sent, plus passkeys and encrypted titles",
   ];
 
   const sectionClass = "space-y-3";

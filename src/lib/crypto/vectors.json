@@ -187,5 +187,130 @@
   "plaintext": "YSBzbWFsbCBzZWNyZXQ",
   "anonymous": "AQTknbjGLVxfbNkkZ5Mlx6CyeLNmSDIUOc7s-uL2zmCfUvPHIRdM8BWjYiD_AzwqQYqTb4_8qq4cbIRFKeGt8WAnEg4ObZhJ3bLKAlJxK2-rwyA35fNa20b7KfZO5Fl_",
   "authenticated": "AgRP2XyC3j0GYHe2SRCim5JZBaNpErFF-5Ad-UrNr4b9_Fy-O0eqNvdeWZTliKlOktyX1ZUiS48-cSyyxnyQFRqSxSP-dBBffpmzuMwrZr3rmrNRRoQn4K9z2OHWLUjA"
+ },
+ "form": {
+  "owner": {
+   "userId": "owner-user-id-0000001",
+   "vaultKey": "lkgarNlL7V6ce1nJvz72b9s1Vom6oc-UWkkC-6Rgxy8",
+   "privateKeyPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgJdQB8MOTBn4MizJscWzmSas-mf49v_yHNK6K2InSpnihRANCAASUmOticJ-4kxNa-GDFW5IuYWUZDCZZ3wvnr66PpnWTS-4Nx2JY5AQdrWJQnTj6a9WqSQDFvdtpzSBgqvtroiGr",
+   "publicKey": "BJSY62Jwn7iTE1r4YMVbki5hZRkMJlnfC-evro-mdZNL7g3HYljkBB2tYlCdOPpr1apJAMW922nNIGCq-2uiIas"
+  },
+  "formId": "-GwK1FxEmbLEbak-HKusQ",
+  "linkKey": "foaoXOeon2KyrQgHV5sFo6EB2CMzFJoW0k5bAoOl5QM",
+  "bundle": "AdizMnzq3ewm5wGOE6dFShYt8uHbSY3SSnfxVjwyx3Kp43GlSz1dxgsPp9kbZ3U0dqWYFMYpQHxRmhrzfeBXTH8avy1gu94JT29eBh0RUYIkH9y5scHVP--xFV_05pQIP1rFEBj10_A-dmtv7cjc_WAhFx6woUM1tSg-AAuvEqzt13JuHOdgzksi4bm1KHzABI7iHFZzR8B9h-9xoruqp7yTgIwj4obnvaAKQsAhM5o27KqKMsrj3uwc92VDmm1Yi42yAfZAtDIlr9qElwB1tUFxaGUPbX7jB0Tv199rU_TtJ1f_VVyluTH6BC-B83HzncFcj34HM-5flctDZ12TRkX75AL329DOkCoPMNZZ-foUD-C83TLDCClIqSv2cKkubIYDm4-Kjymv-XpqtluYfJUeS67FiZZFE8AzQkPg8uuxH1CUlCT8FUv_Y9UqqkK5oA0FVkhcF5iIaP7MzOT0I0Ncczn_5VTff5ta1AU-LIz1ZFeNgXPBSDb-YpNsF2n6Hd97ix89urXkLjTuVBVA2DH3jry0IZ7ixoZ92jLfTDD5Xx1aeemAbffhFnY7-Y7dEd0yz-pJyqTzj7r24E5KYVmWMYY_30E5ndbUkmEmK7E6Yv-WwqPM3wGgnDk7475Mu4tGV7hTMV_aouDlcoAqTnKZpky2d6exra7sfaBa-HgiG4btecmmuMmnJQ06IbYqxQXgxJGeJBiK9Xm6zYmlmqo9-dWv2YC3pB8M5IhGJydCmzyfFxgLOUzAxW4SNZsNYSbPAPg8FWRfdoADcyIrPadGPfHUCl6ZYcKBZg5EgDuZZfm6hSsm35Esk3Zk2HmLzaJGUp1MwAidk_WybsBr2dMLH2r3cQyHBflJzrnZBvCuq0uCAhmeSc04Nk-WLC2w1fqUn4buS6-XJ3Fo7sYpMrnNZRVQM5pV7DMZER8Ee0eAbuwR5T7_g6-qkaCEWgRQIreI7lHEBlAs9iqIWV9Cpa64-HQz3YnAW1NNfGrBDhMFZSN06ZqYJlZYHsZOYMvqc3Ru5l2rZ4FyH0hsMWP6l8yKZtF45qlKgIH3ons",
+  "questions": [
+   {
+    "id": "name01",
+    "type": "short",
+    "label": "Naam",
+    "required": true
+   },
+   {
+    "id": "about1",
+    "type": "long",
+    "label": "Waar gaat het over?",
+    "hint": "Een paar regels"
+   },
+   {
+    "id": "pick01",
+    "type": "choice",
+    "label": "Soort klant",
+    "options": [
+     "Particulier",
+     "Zakelijk"
+    ],
+    "required": true
+   },
+   {
+    "id": "many01",
+    "type": "choices",
+    "label": "Wat heb je al?",
+    "options": [
+     "ID",
+     "Loonstrook",
+     "Contract"
+    ]
+   },
+   {
+    "id": "yes001",
+    "type": "yesno",
+    "label": "Vorig jaar aangifte gedaan?"
+   },
+   {
+    "id": "date01",
+    "type": "date",
+    "label": "Geboortedatum"
+   },
+   {
+    "id": "file01",
+    "type": "file",
+    "label": "Kopie van je ID",
+    "required": true
+   }
+  ],
+  "keptKeys": "SwHl8xqFaAEBOnZGaRT0Exr3-AYha8fQdBtqb2FNOVVejB76Xd6KXbWPAPd570C8WoRO-qkD9acCqjWH_uNIoqysq4hDDAOq4OY068qbNEnJnt1KJe61zA_Zlzs-nkCOUiGPiRYelWplC_tUHlACm5__XJLnnfl_nszj08XqEKvQeuHvoCdXv4qyU76ssAYfGZLSseqrQIw0xIYdyRz3BLyDFE5s9Efs43DQhf9qQNyLheBztPmjcFuUz0NQCvn6PEtkoBNunlk",
+  "response": {
+   "transferId": "Uakgb_J5m9g-0JDMbcJqL",
+   "key": "53Y_cHNGzEx9SaftjdyfRyatptxxzLeiZxb18egP9eA",
+   "sealedKey": "AQSM8EmGstYmS2ps5QGPOLsMYISMHbPi3y4Ukw81wCYpYU8TXQ2ec6vAozbTAu3g8Ob1WFLA4xyestLKcMx6XTfj7qTCNHxiqXYay36d2bm-2msHRWjFEhEuecMwdnfcfqJdGzFIwyY2vbpmT7YRNJ9Z",
+   "answers": [
+    {
+     "id": "name01",
+     "type": "short",
+     "label": "Naam",
+     "value": "Anna de Vries"
+    },
+    {
+     "id": "about1",
+     "type": "long",
+     "label": "Waar gaat het over?",
+     "value": "Huurgeschil\nmet de verhuurder"
+    },
+    {
+     "id": "pick01",
+     "type": "choice",
+     "label": "Soort klant",
+     "value": "Zakelijk"
+    },
+    {
+     "id": "many01",
+     "type": "choices",
+     "label": "Wat heb je al?",
+     "value": [
+      "ID",
+      "Contract"
+     ]
+    },
+    {
+     "id": "yes001",
+     "type": "yesno",
+     "label": "Vorig jaar aangifte gedaan?",
+     "value": true
+    },
+    {
+     "id": "date01",
+     "type": "date",
+     "label": "Geboortedatum",
+     "value": "1990-04-01"
+    },
+    {
+     "id": "file01",
+     "type": "file",
+     "label": "Kopie van je ID",
+     "value": [
+      "paspoort.jpg"
+     ]
+    }
+   ],
+   "answersFile": "VFNMMQEAAAD4pQG4tyvMMwAAEAC4u-m9j2_vI5Aw_v_SNH383jKJGF7DaRuVAiBMv7xaK1t3Y69ThCI0K0qX2vsheY5LJFdtZAaqIEGz9bm1izb_1ox9ipx-_wpSQwy40Sqe8q4FIPfeD09mkT7e4w7mMhmElH_L6adUuO6Flr4sfGZNNHFWIlbNlTSKDszZYmOZ3PZfH8H11u5PcnVimA-sWpWJXaqrcZor0IGm0fVLrOfhMT9Hgg_U2bOMTZK8aS2-AU8BxKi6a21FOZldjNJYcYn2RkYGniQR1dN7I4W7eyC_rGhv-K9PM2-rmRM5AE7Pfz1s4Uu87A78dLOZTg_WDImdS5zleq2yE2mKNE2-habwbQy_JMcKS-uVVbNMfdcmhW-ihXGpAZg7bxZdm9ybOv0Tuc5AeEDLAZpXxvaIcWEofEDP33LRcLbhmus1E6lKWve4HVHAkYGQoTwDjvJVck2SkoMgKSYmdSzOPANhOK0OSmPFijgycw5nNNkjDMcAh928FZsFG4E3a2sAJFO7hCTPCclhQVJSEPBVCP6WBUcWXk0Nz1PmHXeRf6MI7gMZAc9-60fZ1mGUOoEOi2BfuZlxzwdu-g-bsw-Ib6-kU70z4NZK_E0B2bYA_XU7GHGf2szmm84YcgVGkdCYwLbZsc8c7RIf6p2J05bX_-5CRIIUWhWg6URkIN7P0UAAqNIMTrHzJPwxNY70XFwKKjQAfBFOsIM5yQ7ldnbhIrz107dG9xbMipVN1efw6XIIh8rHBn0J1rPQ8Om9j4aXz7l0YeA5vSzzZAjWqlQ_Ab7vFurwW14goN_tV1j2JCjaX1he48klGKd7hzWyX-P_lH5Kqp3WeaBw0IUkBg7MNNnoTAJnTkVQOy6Z0tj2nRS18gaIRp9_xounE19JOf27eECg8Vxi5AcoIxqJZQ-DAcym3x2-INFOkzdp6AhsWp-Dm2JkUMdNZbgMdRlh8nRVS8qN-OsGFvjnCUIlgwnz4CpXY5Rf2RlRjVcLBY1DixIa7aTaxPRAjXCOfQex9v6H3kvTxr6pBv7vN2Dp5csBRLiHZp7z8Q5xFwNw8SvgfybQthHarIm-vP4Vofru0yhnDlvT0z16rA65OtEZVtjXSSn8YYTeXCVf3BmSLenLZmL-qhaAL6dL5PUKEBYTpCULvUeLkn2xgU8Oe2KO-Ewh9a2J6iJNDbPgCkd_GcZ40erxd6NvuuUEYyqrlG1J2a3i55nG1P7-_ry0eRLiYp8B_kB6bebDuwGYtMAswmEgF1hhQGOn7msAy_W3sSGCJd1Ksa_NSXHryyC_6PaNzqTIQJwSWUgnulVCMxnT9waKo-_zA-jXyfCBE3uiaEWAEB_QWFhzL-fcTmy6wW8IIwIRpJKtzuzNAk4B28_4lROPp6WAtjhXlw",
+   "answersName": {
+    "encryptedName": "E5vuW2uLfkEQZHuVVeSTbsqxd2dX1LonE5H5IH4vlDs5uUaR05Kskrz432YR1jGB",
+    "iv": "eVahhgth7HcMCW77"
+   },
+   "fileName": {
+    "encryptedName": "FnRDkPbG4xgKBORKvGNwEQcvkQVuBYSWYt3fnHrvOiVz1Avmg5DxlK1i8yAlBowZ",
+    "iv": "9vR6r0SiYZ124RWE"
+   }
+  }
  }
 }

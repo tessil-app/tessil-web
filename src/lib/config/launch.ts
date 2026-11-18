@@ -5,3 +5,7 @@ export const ACCESS_KEYS_ANNOUNCED = import.meta.env.VITE_ACCESS_KEYS_ANNOUNCED 
 // Portals are announced on the public pages only once the paid plans can
 // be bought. Until then the homepage shows its new layout without them.
 export const PORTALS_ANNOUNCED = import.meta.env.VITE_PORTALS_ANNOUNCED === "true";
+
+// Forms are reachable at /dashboard/forms before they are announced; the
+// header links to them only once this is set.
+export const FORMS_ANNOUNCED = import.meta.env.VITE_FORMS_ANNOUNCED === "true";

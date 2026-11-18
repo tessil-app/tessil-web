@@ -1,7 +1,7 @@
 <script lang="ts">
   import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import { PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
 </script>
 
 <Seo
@@ -33,7 +33,7 @@
             {#if PORTALS_ANNOUNCED}
               <p class="text-muted-foreground">
                 Sending files is free. It works without an account; signing in adds
-                a dashboard and longer-lived transfers.
+                a list of what you sent and longer-lived transfers.
               </p>
               <p class="text-muted-foreground">
                 Paid plans add portals: links through which other people send
@@ -43,7 +43,7 @@
             {:else}
               <p class="text-muted-foreground">
                 Tessil is free to use. It works without an account; signing in adds
-                a dashboard and longer-lived transfers. There is no paid plan at
+                a list of what you sent and longer-lived transfers. There is no paid plan at
                 this time.
               </p>
             {/if}
@@ -71,6 +71,32 @@
                 to them go to the person who gave you the link.
               </p>
             </section>
+
+            {#if FORMS_ANNOUNCED}
+              <section class="space-y-3">
+                <h2 class="text-xl font-semibold text-foreground">Forms</h2>
+                <p class="text-muted-foreground">
+                  If you own a form, you decide what you ask, who gets its link,
+                  and what you do with the answers. You are responsible for
+                  having a lawful reason to collect them, for asking no more
+                  than you need, and for telling the people who answer how you
+                  will use what they give you. We store it for you in a form we
+                  cannot read.
+                </p>
+                <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
+                  <li>Responses are deleted automatically after the period your plan sets. Export what you need to keep; we cannot restore it afterwards</li>
+                  <li>If you lose every way into your vault, we cannot open your forms for you</li>
+                  <li>We cannot check a response against your form. Do not rely on a response alone as proof of what someone was asked</li>
+                  <li>Do not use a form to collect content these terms prohibit, or to pose as someone else. We may switch off a form that is reported for abuse</li>
+                  <li>If your plan ends, your forms stop accepting responses. What they already hold stays until it expires</li>
+                </ul>
+                <p class="text-muted-foreground">
+                  If you fill in someone's form, you are answering that person,
+                  not us. Questions about what happens to your answers go to the
+                  person who gave you the link.
+                </p>
+              </section>
+            {/if}
 
             <section class="space-y-3" id="billing">
               <h2 class="text-xl font-semibold text-foreground">Paid plans and billing</h2>
