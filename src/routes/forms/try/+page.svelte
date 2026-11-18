@@ -6,6 +6,7 @@
   import { goto } from "$app/navigation";
   import FormEditor from "$lib/components/form/FormEditor.svelte";
   import Seo from "$lib/components/Seo.svelte";
+  import { FORM_QUESTIONS_PRO } from "$lib/form/questions";
   import { keepTryout, readTryout } from "$lib/form/tryout";
   import { DEFAULT_LOCALE } from "$lib/i18n/locale";
   import type { PortalSettings } from "$lib/portal/keys";
@@ -50,4 +51,4 @@
 
 <Seo title="Try the form editor - Tessil" robots="noindex" />
 
-<FormEditor {initial} mode="create" onSave={create} cancelHref="/forms" questionLimit={10} />
+<FormEditor {initial} mode="create" onSave={create} cancelHref="/forms" questionLimit={FORM_QUESTIONS_PRO} />

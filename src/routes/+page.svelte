@@ -78,6 +78,7 @@
           {
             id: "portals" as const,
             name: "Portals",
+            fresh: true,
             line: "A link where people send you files. Only you can open them.",
             href: "/portals",
             link: "Meet portals",

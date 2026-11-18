@@ -24,9 +24,12 @@ export const QUESTION_HINT_MAX = 300;
 export const QUESTION_OPTIONS_MAX = 20;
 export const QUESTION_OPTION_MAX = 100;
 
+/** Questions per form on Pro. Max has the most any form may hold. */
+export const FORM_QUESTIONS_PRO = 15;
+
 /** Questions per form on a plan. Kept in the interface: the server cannot read the bundle. */
 export function questionLimit(tier: string | null | undefined): number {
-  return tier === "max" ? FORM_QUESTIONS_MAX : 10;
+  return tier === "max" ? FORM_QUESTIONS_MAX : FORM_QUESTIONS_PRO;
 }
 
 export const QUESTION_ID = /^[a-z0-9]{6}$/;

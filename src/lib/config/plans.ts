@@ -43,7 +43,7 @@ export const PLANS: Plan[] = [
     lead: "Everything in Free, and:",
     features: [
       "3 portals, each with its own checklist and texts",
-      ...(FORMS_ANNOUNCED ? ["3 forms of up to 10 questions"] : []),
+      ...(FORMS_ANNOUNCED ? ["3 forms of up to 15 questions"] : []),
       "20 GB of storage",
       "Transfers and portal files kept up to 30 days",
       "Send up to 5 GB per file",
@@ -152,7 +152,7 @@ export const COMPARISON: ComparisonGroup[] = [
           title: "Asking through forms",
           rows: [
             { label: "Forms", values: { free: false, pro: "3", max: "10" } },
-            { label: "Questions per form", values: { free: false, pro: "10", max: "50" } },
+            { label: "Questions per form", values: { free: false, pro: "15", max: "50" } },
             {
               label: "Kinds of question",
               note: "Short and long text, one choice, several choices, yes or no, date, file.",

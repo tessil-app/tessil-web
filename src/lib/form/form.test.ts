@@ -58,7 +58,7 @@ describe("questions", () => {
   it("caps the count and gives Max more than Pro", () => {
     const many = Array.from({ length: 80 }, (_, i) => ({ id: `q${String(i).padStart(5, "0")}`, type: "short", label: "Q" }));
     expect(cleanQuestions(many)).toHaveLength(FORM_QUESTIONS_MAX);
-    expect(questionLimit("pro")).toBe(10);
+    expect(questionLimit("pro")).toBe(15);
     expect(questionLimit("max")).toBe(50);
   });
 });

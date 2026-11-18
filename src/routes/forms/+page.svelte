@@ -364,7 +364,7 @@
       </h2>
       <p class="max-w-lg text-lg text-muted-foreground">
         Build one now, without an account. Publishing it needs a paid plan: 3 forms of up to
-        10 questions on Pro, 10 forms of up to 50 on Max.
+        15 questions on Pro, 10 forms of up to 50 on Max.
       </p>
       <div class="flex flex-wrap items-center justify-center gap-3">
         <Button href="/forms/try" fullWidth={false}>Try the editor</Button>
