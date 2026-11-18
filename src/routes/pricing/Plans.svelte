@@ -2,7 +2,7 @@
   // The pricing page once the paid plans are on sale.
 
   import { goto } from "$app/navigation";
-  import { page } from "$app/state";
+  import { onMount } from "svelte";
   import Alert from "$lib/components/Alert.svelte";
   import Badge from "$lib/components/Badge.svelte";
   import PlanComparison from "$lib/components/PlanComparison.svelte";
@@ -18,8 +18,12 @@
   import { auth } from "$lib/stores/auth.svelte";
 
   let cycle = $state<Cycle>("monthly");
-  // Arriving from the try-out editor with a form to publish.
-  const keptForm = $derived(FORMS_ANNOUNCED && page.url.searchParams.get("kept") === "form");
+  // Arriving from the try-out editor with a form to publish. Read in the
+  // browser only: this page is prerendered, where an address has no query.
+  let keptForm = $state(false);
+  onMount(() => {
+    keptForm = FORMS_ANNOUNCED && new URLSearchParams(window.location.search).get("kept") === "form";
+  });
   const cycleOptions: { value: Cycle; label: string }[] = [
     { value: "monthly", label: "Monthly" },
     { value: "annual", label: "Yearly" },
