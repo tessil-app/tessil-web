@@ -29,7 +29,7 @@
   import IconTrayRegular from "phosphor-icons-svelte/IconTrayRegular.svelte";
   import IconClipboardTextRegular from "phosphor-icons-svelte/IconClipboardTextRegular.svelte";
   import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
-  import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
   import IconLockOpenRegular from "phosphor-icons-svelte/IconLockOpenRegular.svelte";
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
@@ -101,6 +101,7 @@
   const publicLinks = [
     ...(PORTALS_ANNOUNCED ? [{ href: "/portals", label: "Portals" }] : []),
     ...(FORMS_ANNOUNCED ? [{ href: "/forms", label: "Forms" }] : []),
+    ...(ACCESS_KEYS_ANNOUNCED ? [{ href: "/cli", label: "CLI" }] : []),
     { href: "/pricing", label: "Pricing" },
     { href: "/security", label: "Security" },
   ];
