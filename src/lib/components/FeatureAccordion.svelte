@@ -29,7 +29,8 @@
   let { features, class: className }: Props = $props();
 
   // The newest thing starts open.
-  let open = $state(untrack(() => Math.max(0, features.findLastIndex((f) => f.fresh))));
+  // Written without findLastIndex, which older Safari does not have.
+  let open = $state(untrack(() => Math.max(0, features.map((f) => f.fresh === true).lastIndexOf(true))));
 
   // Widths of each name and tag, to place the tag after the name when open
   // and in the middle of the strip when folded. Guessed until measured.

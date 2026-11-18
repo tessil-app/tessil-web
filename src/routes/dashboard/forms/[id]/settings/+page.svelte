@@ -27,12 +27,15 @@
 
   let phase = $state<Phase>("loading");
   let form = $state<OpenedMemberPortal | null>(null);
-  let canBrand = $state(false);
+  // From the account as loaded; the editor reads this once, when it opens.
+  let canBrand = $state(auth.user?.tier === "max");
   let limit = $state(questionLimit(auth.user?.tier));
   let hasLoaded = $state(false);
 
   async function load() {
     if (!auth.user) return;
+    canBrand = auth.user.tier === "max";
+    limit = questionLimit(auth.user.tier);
     void api
       .getMyUsage()
       .then((u) => {

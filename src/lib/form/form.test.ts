@@ -154,19 +154,20 @@ describe("answers", () => {
     const odd = decodeAnswers(
       new TextEncoder().encode(JSON.stringify({ v: 1, answers: [{ id: "a", type: "short", label: "L", value: 5 }, null] })),
     );
-    expect(odd).toEqual([{ id: "a", type: "short", label: "L", value: null }]);
+    // An ID no question can have is not kept.
+    expect(odd).toEqual([]);
     const twice = decodeAnswers(
       new TextEncoder().encode(
         JSON.stringify({
           v: 1,
           answers: [
-            { id: "a", type: "short", label: "L", value: "first" },
-            { id: "a", type: "short", label: "L", value: "second" },
+            { id: "abc123", type: "short", label: "L", value: "first" },
+            { id: "abc123", type: "short", label: "L", value: "second" },
           ],
         }),
       ),
     );
-    expect(twice).toEqual([{ id: "a", type: "short", label: "L", value: "first" }]);
+    expect(twice).toEqual([{ id: "abc123", type: "short", label: "L", value: "first" }]);
   });
 
   it("open with the response's key after streaming encryption", async () => {

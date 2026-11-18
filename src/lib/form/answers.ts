@@ -3,7 +3,14 @@
 // can have. See docs/adr/0016-encrypted-forms.md.
 
 import { streamingDecrypt } from "$lib/crypto/streaming";
-import { QUESTION_OPTION_MAX, type Question, type QuestionType } from "./questions";
+import {
+  FORM_QUESTIONS_MAX,
+  QUESTION_ID,
+  QUESTION_OPTION_MAX,
+  QUESTION_OPTIONS_MAX,
+  type Question,
+  type QuestionType,
+} from "./questions";
 
 /** Real names have the separator stripped (`encodeDepositFileName`), so none starts with it. */
 export const ANSWERS_FILE_NAME = "\u001fanswers.json";
@@ -66,7 +73,8 @@ function cleanValue(type: QuestionType, raw: unknown, options?: string[]): Answe
         .filter((v): v is string => typeof v === "string")
         .map((v) => v.trim().slice(0, type === "file" ? 255 : QUESTION_OPTION_MAX))
         .filter((v) => v && (!options || options.includes(v)));
-      const unique = [...new Set(list)].slice(0, 100);
+      // As many as a question can offer; files have no such list, so a generous count.
+      const unique = [...new Set(list)].slice(0, type === "file" ? 100 : QUESTION_OPTIONS_MAX);
       return unique.length > 0 ? unique : null;
     }
   }
@@ -113,13 +121,16 @@ export function decodeAnswers(bytes: Uint8Array): FormAnswer[] | null {
   }
   if (parsed?.v !== ANSWERS_VERSION || !Array.isArray(parsed.answers)) return null;
   const out: FormAnswer[] = [];
-  for (const entry of parsed.answers.slice(0, 100)) {
+  // A form holds at most this many questions; twice that leaves room for ones since removed.
+  for (const entry of parsed.answers.slice(0, FORM_QUESTIONS_MAX * 2)) {
     const a = entry as Partial<Record<keyof FormAnswer, unknown>> | null;
     const type = (["short", "long", "choice", "choices", "yesno", "date", "file"] as const).find(
       (t) => t === a?.type,
     );
     if (!type || typeof a?.id !== "string" || typeof a.label !== "string") continue;
-    const id = a.id.slice(0, 16);
+    // Only an ID a question can have; anything else is not from this code.
+    if (!QUESTION_ID.test(a.id)) continue;
+    const id = a.id;
     // One answer per question; a repeat is not something this code writes.
     if (out.some((o) => o.id === id)) continue;
     out.push({
@@ -182,7 +193,10 @@ export function answersCsv(questions: Question[], responses: CsvResponse[]): str
   const columns: { id: string; label: string }[] = questions.map((q) => ({ id: q.id, label: q.label }));
   for (const r of responses) {
     for (const a of r.answers) {
-      if (!columns.some((c) => c.id === a.id)) columns.push({ id: a.id, label: a.label });
+      // Columns for questions since removed, up to as many as a form can hold.
+      if (!columns.some((c) => c.id === a.id) && columns.length < questions.length + FORM_QUESTIONS_MAX) {
+        columns.push({ id: a.id, label: a.label });
+      }
     }
   }
   const lines = [["Reference", "Received", ...columns.map((c) => c.label)]];

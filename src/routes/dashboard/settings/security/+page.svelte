@@ -15,7 +15,6 @@
   import IconPlusRegular from "phosphor-icons-svelte/IconPlusRegular.svelte";
   import { api, type PasskeySummary } from "$lib/api/client";
   import { goto } from "$app/navigation";
-  import { ACCESS_KEYS_ANNOUNCED } from "$lib/config/launch";
   import { auth } from "$lib/stores/auth.svelte";
   import {
     enrollPasskey,
@@ -525,7 +524,7 @@
     <Frame.Title class="text-base">Signed-in devices</Frame.Title>
     <Frame.Description class="mt-1 block">
       Lost a device, or signed in somewhere you no longer trust? This signs your account out
-      everywhere, this browser included{ACCESS_KEYS_ANNOUNCED ? ", and ends every access key" : ""}.
+      everywhere, this browser included, and ends every access key a program was paired with.
     </Frame.Description>
   </Frame.Header>
   <Frame.Panel>
@@ -545,9 +544,7 @@
 <Modal
   open={confirmingSignOut}
   title="Sign out everywhere?"
-  description={ACCESS_KEYS_ANNOUNCED
-    ? "Every browser and device is signed out, this one too, and every access key stops working. Programs using a key have to be paired again. Your files, portals and vault are not touched."
-    : "Every browser and device is signed out, this one too. Your files, portals and vault are not touched."}
+  description="Every browser and device is signed out, this one too, and every access key stops working. A program using a key, such as the tessil tool, has to be paired again. Your files, portals and vault are not touched."
   onClose={() => {
     if (!signingOut) confirmingSignOut = false;
   }}

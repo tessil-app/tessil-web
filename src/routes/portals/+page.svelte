@@ -40,7 +40,7 @@
     },
     {
       title: "It arrives for you alone",
-      text: "You open it with the key in your vault. After 30 days it is gone, automatically, so download what you want to keep.",
+      text: "You open it with the key in your vault. After 30 days, or 90 on Max, it is gone automatically, so download what you want to keep.",
     },
   ];
 
@@ -143,7 +143,7 @@
 
 <Seo
   title="Portals - Tessil"
-  description="A link where people send you files that only you can open. Encrypted in their browser, deleted after 30 days, no account needed to send."
+  description="A link where people send you files that only you can open. Encrypted in their browser, deleted automatically after 30 days, or 90 on the larger plan, no account needed to send."
   path="/portals"
 />
 
@@ -234,7 +234,7 @@
               <span class="text-white/50">just now</span>
             </p>
             <p class="truncate text-white/85">{passed.name}</p>
-            <p class="text-white/50">{passed.size}, deleted in 30 days</p>
+            <p class="text-white/50">{passed.size}, deleted after 30 days, or 90 on Max</p>
           </div>
           <p class="mt-2 text-sm text-white/50">Opened with the key in your vault, which we never have.</p>
         {/if}

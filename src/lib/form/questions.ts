@@ -29,7 +29,7 @@ export function questionLimit(tier: string | null | undefined): number {
   return tier === "max" ? FORM_QUESTIONS_MAX : 10;
 }
 
-const QUESTION_ID = /^[a-z0-9]{6}$/;
+export const QUESTION_ID = /^[a-z0-9]{6}$/;
 
 export function newQuestionId(): string {
   const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";

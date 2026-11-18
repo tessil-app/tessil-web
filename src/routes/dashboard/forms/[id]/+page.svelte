@@ -265,6 +265,9 @@
   }
 
   let exporting = $state(false);
+  // Responses whose answers did not load or open: they would pass for empty ones.
+  const unreadAnswers = $derived(responses.filter((r) => r.answersUnreadable).length);
+  let exportNote = $state<string | null>(null);
 
   /** Loads every older response. Throws when a page does not come. */
   async function loadAll() {
@@ -324,6 +327,10 @@
       a.download = `tessil-${form.title.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").toLowerCase() || "form"}.csv`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      exportNote =
+        unreadAnswers > 0
+          ? `${unreadAnswers} ${unreadAnswers === 1 ? "response has" : "responses have"} an empty row in this export, because the answers could not be opened. Reload the page and export again to retry.`
+          : null;
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : "Couldn't make the export.";
     } finally {
@@ -440,6 +447,10 @@
         <Alert tone="destructive">{errorMessage}</Alert>
       {/if}
 
+      {#if exportNote}
+        <Alert tone="warning" onClose={() => (exportNote = null)}>{exportNote}</Alert>
+      {/if}
+
       {#if readyInvite}
         <Notice>
           {readyInvite.email} has signed in and is ready. Give them access to share this form.
@@ -482,6 +493,13 @@
         {:else if nextCursor}
           <Alert tone="warning">
             Older responses are not loaded, so this counts the newest {responses.length} only.
+          </Alert>
+        {/if}
+        {#if unreadAnswers > 0}
+          <Alert tone="warning">
+            The answers of {unreadAnswers}
+            {unreadAnswers === 1 ? "response" : "responses"} could not be opened, so
+            {unreadAnswers === 1 ? "it counts" : "they count"} as not answered here. Reload the page to try again.
           </Alert>
         {/if}
         <ResponseSummary {summaries} total={responses.length} onPick={pick} onOpen={(id) => (openId = id)} />

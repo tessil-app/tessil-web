@@ -82,6 +82,37 @@ describe("the summary of a form", () => {
     expect(pickedOption(null, "yes001", true)).toBe(false);
   });
 
+  it("does not count an answer of another kind than its question", () => {
+    const odd = response(1, {});
+    // A sender claims text where the form asks yes or no, and a list where it asks one choice.
+    odd.answers[3] = { id: "yes001", type: "short", label: "x", value: "true" };
+    odd.answers[1] = { id: "pick01", type: "choices", label: "x", value: ["Private", "Made up"] };
+    const all = summarise(QUESTIONS, [odd]);
+    expect(all[3].options.map((o) => [o.value, o.count])).toEqual([
+      [true, 0],
+      [false, 0],
+    ]);
+    expect(all[1].options.map((o) => o.count)).toEqual([0, 0]);
+    expect(all[1].answered).toBe(0);
+  });
+
+  it("keeps what a sender can add within bounds", () => {
+    // Fifty made-up options on a real question, and two hundred made-up questions.
+    const flood = Array.from({ length: 10 }, (_, n) =>
+      response(n + 1, { many01: Array.from({ length: 20 }, (_, i) => `made up ${n}-${i}`) }, [
+        ...Array.from({ length: 20 }, (_, i) => ({
+          id: `x${String(n).padStart(2, "0")}${String(i).padStart(3, "0")}`,
+          type: "yesno" as const,
+          label: "Made up",
+          value: true,
+        })),
+      ]),
+    );
+    const all = summarise(QUESTIONS, flood);
+    expect(all.length).toBeLessThanOrEqual(QUESTIONS.length + 50);
+    expect(all[2].options.filter((o) => !o.current).length).toBeLessThanOrEqual(20);
+  });
+
   it("rounds shares and survives no responses", () => {
     expect(share(1, 3)).toBe(33);
     expect(share(0, 0)).toBe(0);

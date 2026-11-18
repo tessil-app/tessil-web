@@ -153,7 +153,6 @@ export class FormDraft {
   dirty = $derived(JSON.stringify(this.settings) !== this.baseline);
   get canSave() {
     return (
-      this.settings.title.length > 0 &&
       (this.mode === "create" || this.dirty) &&
       !this.isSaving &&
       !this.passwordMissing &&
@@ -261,6 +260,11 @@ export class FormDraft {
   async save(): Promise<{ firstProblem: string | null } | void> {
     if (!this.canSave) return;
     this.triedSave = true;
+    if (this.settings.title.length === 0) {
+      this.saveError = "Give the form a name first.";
+      return { firstProblem: "start" };
+    }
+    this.saveError = null;
     if (!this.formReady) {
       return { firstProblem: this.questions.find((q) => problemOf(q) !== null)?.id ?? null };
     }

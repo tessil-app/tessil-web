@@ -258,7 +258,7 @@
               {/if}
               <li>
                 <strong>Account record:</strong> Retained as long as your account exists. Deleted immediately and
-                irreversibly when you delete your account from the dashboard.
+                irreversibly when you delete your account from your settings.
               </li>
               <li>
                 <strong>Sign-in tokens (magic links):</strong> Valid for 15 minutes, single-use, then deleted.

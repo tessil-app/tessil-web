@@ -294,8 +294,8 @@
             {@const email = auth.user.email}
             <a
               href="/dashboard"
-              aria-current={isActive("/dashboard", true) ? "page" : undefined}
-              class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard", true) ? navLinkActive : navLinkInactive)}
+              aria-current={(isActive("/dashboard", true) || isActive("/dashboard/new")) ? "page" : undefined}
+              class={cn(navLinkBase, "hidden sm:inline-flex", (isActive("/dashboard", true) || isActive("/dashboard/new")) ? navLinkActive : navLinkInactive)}
             >
               Transfers
             </a>
@@ -351,7 +351,7 @@
                 <DropdownMenuItem
                   href="/dashboard"
                   onSelect={() => { goto("/dashboard"); close(); }}
-                  class={cn("sm:hidden", isActive("/dashboard", true) && "bg-accent")}
+                  class={cn("sm:hidden", (isActive("/dashboard", true) || isActive("/dashboard/new")) && "bg-accent")}
                 >
                   <IconListRegular class="size-4 opacity-70" />
                   Transfers

@@ -1,12 +1,14 @@
 // The form someone builds on /forms/try before they have an account or a
 // plan. It waits in this browser until they can create it for real.
 
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "$lib/i18n/locale";
 import { cleanQuestions, type Question } from "./questions";
 
 const KEY = "tessil:form-tryout";
 
 export interface TryoutDraft {
   title: string;
+  lang: Locale;
   message: string;
   thanks: string;
   questions: Question[];
@@ -27,6 +29,7 @@ export function readTryout(): TryoutDraft | null {
     if (!raw || questions.length === 0) return null;
     return {
       title: typeof raw.title === "string" ? raw.title : "",
+      lang: LOCALES.find((l) => l === raw.lang) ?? DEFAULT_LOCALE,
       message: typeof raw.message === "string" ? raw.message : "",
       thanks: typeof raw.thanks === "string" ? raw.thanks : "",
       questions,

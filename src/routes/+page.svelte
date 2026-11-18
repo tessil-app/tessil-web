@@ -132,7 +132,8 @@
     return { destroy: () => observer.disconnect() };
   }
 
-  const newest = features.findLast((f) => f.fresh) ?? null;
+  // Written without findLast, which older Safari does not have.
+  const newest = [...features].reverse().find((f) => f.fresh) ?? null;
 
   const steps: { title: string; body: string; link?: { href: string; label: string } }[] = [
     {
@@ -148,7 +149,7 @@
     {
       title: "Gone when it should be",
       body: PORTALS_ANNOUNCED
-        ? "Transfers expire in hours or days. What arrives in a portal is deleted after 30 days."
+        ? "Transfers expire in hours or days. What arrives in a portal is deleted after 30 days, or 90 on Max."
         : "Transfers expire in hours or days, and the files are deleted with them.",
     },
     {
@@ -345,7 +346,7 @@
             can be opened by you and nobody else, us included.
           </p>
           <ul class="space-y-2.5 text-sm text-foreground">
-            {#each ["A checklist that shows what is still missing", "Works on a phone, no account for the sender", "Deleted automatically after 30 days"] as point (point)}
+            {#each ["A checklist that shows what is still missing", "Works on a phone, no account for the sender", "Deleted automatically after 30 days, or 90 on Max"] as point (point)}
               <li class="flex items-center gap-2.5">
                 <IconCheckRegular class="size-4 shrink-0 text-primary" />
                 {point}

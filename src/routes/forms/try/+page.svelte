@@ -15,7 +15,7 @@
 
   const initial: PortalSettings = {
     title: kept?.title ?? "New client intake",
-    lang: DEFAULT_LOCALE,
+    lang: kept?.lang ?? DEFAULT_LOCALE,
     checklist: [],
     message: kept?.message ?? "A few questions before our first call. It takes about two minutes.",
     thanks: kept?.thanks ?? "Thank you. We will be in touch within two working days.",
@@ -39,11 +39,12 @@
   async function create(settings: PortalSettings) {
     keepTryout({
       title: settings.title,
+      lang: settings.lang ?? DEFAULT_LOCALE,
       message: settings.message,
       thanks: settings.thanks,
       questions: settings.questions ?? [],
     });
-    await goto(auth.user ? "/dashboard/forms/new" : "/pricing");
+    await goto(auth.user ? "/dashboard/forms/new" : "/pricing?kept=form");
   }
 </script>
 

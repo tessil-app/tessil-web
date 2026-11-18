@@ -2,7 +2,7 @@
 // works on answers already decrypted in the browser.
 
 import type { AnswerValue, FormAnswer } from "./answers";
-import type { Question, QuestionType } from "./questions";
+import { FORM_QUESTIONS_MAX, QUESTION_OPTIONS_MAX, type Question, type QuestionType } from "./questions";
 
 export interface SummaryResponse {
   id: string;
@@ -74,7 +74,11 @@ export function summarise(questions: Question[], responses: SummaryResponse[]): 
   for (const response of newestFirst) {
     for (const answer of response.answers ?? []) {
       let s = byId.get(answer.id);
+      // Answers come from the sender's browser: one of another kind than its
+      // question is not counted, and removed questions are kept to a form's worth.
+      if (s && s.type !== answer.type) continue;
       if (!s) {
+        if (out.length >= questions.length + FORM_QUESTIONS_MAX) continue;
         s = {
           id: answer.id,
           type: answer.type,
@@ -96,9 +100,13 @@ export function summarise(questions: Question[], responses: SummaryResponse[]): 
         s.files += Array.isArray(v) ? v.length : 1;
       } else if (counted(s.type)) {
         for (const value of Array.isArray(v) ? v : [v]) {
+          // Yes or no holds only yes and no; a choice holds text.
+          if ((s.type === "yesno") !== (typeof value === "boolean")) continue;
           const option = s.options.find((o) => o.value === value);
           if (option) option.count += 1;
-          else s.options.push({ value, count: 1, current: false });
+          else if (s.options.filter((o) => !o.current).length < QUESTION_OPTIONS_MAX) {
+            s.options.push({ value, count: 1, current: false });
+          }
         }
       } else if (s.latest.length < SUMMARY_LATEST) {
         s.latest.push({ responseId: response.id, text: Array.isArray(v) ? v.join(", ") : String(v) });

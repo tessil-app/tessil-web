@@ -218,7 +218,8 @@ async function openDeposit(
       ["decrypt"],
     );
     // The first small file of the answers type, which is the one the server links to.
-    const answersFile = row.files.find(isAnswersFile) ?? null;
+    // Only on a form: a portal's delivery has no answers, whatever a file calls itself.
+    const answersFile = portal.kind === "form" ? (row.files.find(isAnswersFile) ?? null) : null;
     const answersPromise =
       row.answersUrl && answersFile ? readAnswers(row.answersUrl, key) : Promise.resolve(null);
     const all = await Promise.all(

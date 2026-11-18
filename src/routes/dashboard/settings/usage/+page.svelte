@@ -61,10 +61,11 @@
   /** "on 1 December" for a day further off, "today at 01:00" or "tomorrow at 01:00" when near. */
   function resets(iso: string): string {
     const at = new Date(iso);
-    const days = Math.floor((at.getTime() - Date.now()) / 86_400_000);
-    if (days >= 2) return `on ${dayFmt.format(at)}`;
-    const sameDay = at.toDateString() === new Date().toDateString();
-    return `${sameDay ? "today" : "tomorrow"} at ${timeFmt.format(at)}`;
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    if (at.toDateString() === now.toDateString()) return `today at ${timeFmt.format(at)}`;
+    if (at.toDateString() === next.toDateString()) return `tomorrow at ${timeFmt.format(at)}`;
+    return `on ${dayFmt.format(at)}`;
   }
 
   const planName = $derived(PLANS.find((p) => p.id === usage?.tier)?.name ?? "Free");

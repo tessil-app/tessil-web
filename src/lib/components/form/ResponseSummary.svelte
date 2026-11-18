@@ -42,7 +42,7 @@
 
       {#if s.options.length > 0}
         <ul class="space-y-1.5">
-          {#each s.options as option (String(option.value))}
+          {#each s.options as option (`${typeof option.value}:${option.value}`)}
             {@const percent = share(option.count, total)}
             <li>
               <button

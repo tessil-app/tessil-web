@@ -30,11 +30,12 @@
   import { onDestroy } from "svelte";
 
   // "choose": the account has templates, so it picks one or starts empty first.
-  type Phase = "loading" | "no_plan" | "full" | "locked" | "choose" | "ready";
+  type Phase = "loading" | "no_plan" | "full" | "locked" | "missing" | "choose" | "ready";
 
   let phase = $state<Phase>("loading");
   let maxForms = $state(0);
-  let canBrand = $state(false);
+  // From the account as loaded; the editor reads this once, when it opens.
+  let canBrand = $state(auth.user?.tier === "max");
   let limit = $state(questionLimit(auth.user?.tier));
   let hasLoaded = $state(false);
 
@@ -108,10 +109,17 @@
   async function prefill(userId: string): Promise<boolean> {
     // A form built on /forms/try before there was an account or a plan.
     const tried = copyFrom ? null : readTryout();
-    if (tried) initial = { ...initial, ...tried };
+    if (tried) {
+      initial = { ...initial, ...tried };
+      // Taken over by the editor now; left in place it would come back on every visit.
+      forgetTryout();
+    }
     if (!copyFrom) return tried !== null;
     const opened = await openMemberPortal(userId, copyFrom, window.location.origin).catch(() => null);
-    if (!opened?.ok) return true;
+    if (!opened?.ok) {
+      phase = "missing";
+      return false;
+    }
     const from = opened.portal;
     initial = {
       ...initial,
@@ -128,6 +136,8 @@
 
   async function load() {
     if (!auth.user) return;
+    canBrand = auth.user.tier === "max";
+    limit = questionLimit(auth.user.tier);
     void api
       .getMyUsage()
       .then((u) => {
@@ -143,6 +153,7 @@
       else if (owned >= maxForms) phase = "full";
       else if (auth.needsVaultSetup || !(await isUnlocked(auth.user.id))) phase = "locked";
       else if (await prefill(auth.user.id)) phase = "ready";
+      else if ((phase as Phase) === "missing") return;
       else {
         // Templates are a help, not a need: without them the editor opens empty.
         const found = await loadTemplates(auth.user.id).catch(() => null);
@@ -195,7 +206,6 @@
       unlockPrompt.request();
       throw new Error("Your vault is locked. Unlock it and try again.");
     }
-    forgetTryout();
     await goto(`/dashboard/forms/${result.portal.id}`);
   }
 </script>
@@ -276,6 +286,13 @@
           </p>
         {/if}
       </div>
+    {:else if phase === "missing"}
+      <EmptyState title="That form could not be copied">
+        <p>It may have been deleted, or its keys did not open with your vault.</p>
+        {#snippet actions()}
+          <Button href="/dashboard/forms" fullWidth={false}>Back to your forms</Button>
+        {/snippet}
+      </EmptyState>
     {:else if phase === "no_plan"}
       <EmptyState title="Forms are part of the paid plans">
         <p>
