@@ -27,8 +27,9 @@
   import IconGearRegular from "phosphor-icons-svelte/IconGearRegular.svelte";
   import IconListRegular from "phosphor-icons-svelte/IconListRegular.svelte";
   import IconTrayRegular from "phosphor-icons-svelte/IconTrayRegular.svelte";
+  import IconClipboardTextRegular from "phosphor-icons-svelte/IconClipboardTextRegular.svelte";
   import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
-  import { ACCESS_KEYS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
   import IconLockOpenRegular from "phosphor-icons-svelte/IconLockOpenRegular.svelte";
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
@@ -93,11 +94,13 @@
   const showPortals = $derived(
     auth.user?.tier === "pro" || auth.user?.tier === "max" || hasSharedPortals,
   );
+  const showForms = $derived(FORMS_ANNOUNCED && showPortals);
 
   // Signed-out visitors get the pages that help them decide. Signed-in
   // people get their own pages instead; these stay in the footer for them.
   const publicLinks = [
     ...(PORTALS_ANNOUNCED ? [{ href: "/portals", label: "Portals" }] : []),
+    ...(FORMS_ANNOUNCED ? [{ href: "/forms", label: "Forms" }] : []),
     ...(ACCESS_KEYS_ANNOUNCED ? [{ href: "/cli", label: "CLI" }] : []),
     { href: "/pricing", label: "Pricing" },
     { href: "/security", label: "Security" },
@@ -292,10 +295,10 @@
             {@const email = auth.user.email}
             <a
               href="/dashboard"
-              aria-current={isActive("/dashboard", true) ? "page" : undefined}
-              class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard", true) ? navLinkActive : navLinkInactive)}
+              aria-current={(isActive("/dashboard", true) || isActive("/dashboard/new")) ? "page" : undefined}
+              class={cn(navLinkBase, "hidden sm:inline-flex", (isActive("/dashboard", true) || isActive("/dashboard/new")) ? navLinkActive : navLinkInactive)}
             >
-              Dashboard
+              Transfers
             </a>
             {#if showPortals}
               <a
@@ -304,6 +307,15 @@
                 class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard/portals") ? navLinkActive : navLinkInactive)}
               >
                 Portals
+              </a>
+            {/if}
+            {#if showForms}
+              <a
+                href="/dashboard/forms"
+                aria-current={isActive("/dashboard/forms") ? "page" : undefined}
+                class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard/forms") ? navLinkActive : navLinkInactive)}
+              >
+                Forms
               </a>
             {/if}
             <DropdownMenu
@@ -340,10 +352,10 @@
                 <DropdownMenuItem
                   href="/dashboard"
                   onSelect={() => { goto("/dashboard"); close(); }}
-                  class={cn("sm:hidden", isActive("/dashboard", true) && "bg-accent")}
+                  class={cn("sm:hidden", (isActive("/dashboard", true) || isActive("/dashboard/new")) && "bg-accent")}
                 >
                   <IconListRegular class="size-4 opacity-70" />
-                  Dashboard
+                  Transfers
                 </DropdownMenuItem>
                 {#if showPortals}
                   <DropdownMenuItem
@@ -353,6 +365,16 @@
                   >
                     <IconTrayRegular class="size-4 opacity-70" />
                     Portals
+                  </DropdownMenuItem>
+                {/if}
+                {#if showForms}
+                  <DropdownMenuItem
+                    href="/dashboard/forms"
+                    onSelect={() => { goto("/dashboard/forms"); close(); }}
+                    class={cn("sm:hidden", isActive("/dashboard/forms") && "bg-accent")}
+                  >
+                    <IconClipboardTextRegular class="size-4 opacity-70" />
+                    Forms
                   </DropdownMenuItem>
                 {/if}
                 <div class="my-1 h-px bg-border sm:hidden" role="separator"></div>

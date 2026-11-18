@@ -505,7 +505,8 @@
               onchange={() => togglePortal(portal)}
               disabled={togglingPortal !== null || (portal.state !== "open" && !granted.has(portal.id))}
             >
-              {portal.title ?? "Locked portal"}
+              {portal.title ?? (portal.kind === "form" ? "Locked form" : "Locked portal")}
+              {#if portal.kind === "form"}<span class="text-muted-foreground"> · form</span>{/if}
               {#if togglingPortal === portal.id}
                 <span class="text-muted-foreground"> · saving…</span>
               {/if}

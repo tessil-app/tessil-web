@@ -73,6 +73,8 @@ export interface TransferMetadata {
 
 export interface PortalRow {
   id: string;
+  /** Absent from an older server, which only had portals. */
+  kind?: "portal" | "form";
   role: "owner" | "member";
   /** Encrypted under the link key; holds the title and public key. */
   publicBundle: string;
@@ -119,6 +121,8 @@ export interface DepositRow {
   encryptedTitle: string | null;
   encryptedTitleIv: string | null;
   files: FileInfo[];
+  /** A short-lived link to a form response's answers file. */
+  answersUrl?: string;
 }
 
 export interface ListDepositsResponse {
@@ -134,6 +138,7 @@ export interface PortalPublic {
   locked?: true;
   publicBundle: string;
   keyVersion: number;
+  kind?: "portal" | "form";
   /** False when the owner switched it off or left the paid plans. */
   accepting: boolean;
   /** The owner's closing date, passed or not. */
@@ -145,6 +150,9 @@ export interface PortalPublic {
 export interface ListPortalsResponse {
   /** 0 on plans without portals. */
   maxPortals: number;
+  /** Absent from an older server. */
+  maxForms?: number;
+  /** Portals and forms together; `kind` tells them apart. */
   portals: PortalRow[];
 }
 
@@ -589,7 +597,7 @@ export class ApiClient {
     return this.request("/api/auth/logout", { method: "POST" });
   }
 
-  async logoutAll(): Promise<{ ok: true; sessionsRevoked: number }> {
+  async logoutAll(): Promise<{ ok: true; sessionsRevoked: number; devicesRevoked?: number }> {
     return this.request("/api/auth/logout-all", { method: "POST" });
   }
 
@@ -803,6 +811,7 @@ export class ApiClient {
     closesAt?: string | null;
     notifyOnDelivery?: boolean;
     accessToken?: string | null;
+    kind?: "portal" | "form";
   }): Promise<{ id: string; createdAt: string }> {
     return this.request("/api/portals", { method: "POST", body: JSON.stringify(body) });
   }
@@ -930,6 +939,21 @@ export class ApiClient {
   /** The owner removes their guest, or a guest leaves. */
   removePortalMember(portalId: string, userId: string): Promise<void> {
     return this.deletePortalPart(portalId, `members/${encodeURIComponent(userId)}`);
+  }
+
+  // ─── Form templates ───────────────────────────────────────────────
+
+  /** Each template is one blob only the owner's vault opens. */
+  async listFormTemplates(): Promise<{ max: number; templates: { id: string; ciphertext: string; createdAt: string }[] }> {
+    return this.request("/api/form-templates");
+  }
+
+  async createFormTemplate(body: { id: string; ciphertext: string }): Promise<{ id: string; createdAt: string }> {
+    return this.request("/api/form-templates", { method: "POST", body: JSON.stringify(body) });
+  }
+
+  async deleteFormTemplate(id: string): Promise<{ ok: true }> {
+    return this.request(`/api/form-templates/${encodeURIComponent(id)}`, { method: "DELETE" });
   }
 
   async deletePortal(id: string): Promise<void> {

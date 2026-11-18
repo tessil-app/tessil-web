@@ -36,6 +36,13 @@
   const onPaidPlan = $derived(status !== null && status.tier !== "free");
   const paid = $derived(onPaidPlan && sub !== null && sub.canceledAt === null);
   const planName = $derived(PLANS.find((p) => p.id === status?.tier)?.name ?? "Free");
+  // The other paid plan, when this one is running and can be changed.
+  const other = $derived.by<{ name: string; up: boolean } | null>(() => {
+    if (!paid || !sub || sub.status === "past_due" || sub.cancelAtPeriodEnd) return null;
+    if (status?.tier === "pro") return { name: "Max", up: true };
+    if (status?.tier === "max") return { name: "Pro", up: false };
+    return null;
+  });
   const visible = $derived(onPaidPlan || PORTALS_ANNOUNCED || arrival !== null);
 
   const body = $derived.by(() => {
@@ -53,7 +60,7 @@
     if (sub.cancelAtPeriodEnd) {
       return `${planName}. Ends on ${date} and does not renew.`;
     }
-    return `${planName}. Renews on ${date}. Change it, update your card or cancel at any time.`;
+    return `${planName}. Renews on ${date}. Changing plan, updating your card and cancelling happen at Polar, our payment provider.`;
   });
 
   onMount(() => {
@@ -94,14 +101,23 @@
   <DividerRow title="Plan" {body}>
     {#snippet actions()}
       {#if paid}
+        <!-- Both lead to the payment provider's page, where the change is made and priced. -->
+        {#if other}
+          <Button variant={other.up ? "primary" : "secondary"} fullWidth={false} onclick={manage} disabled={opening}>
+            {other.up ? "Upgrade to" : "Downgrade to"} {other.name}
+          </Button>
+        {/if}
         <Button variant="secondary" fullWidth={false} onclick={manage} disabled={opening}>
           {#if opening}
             <Spinner aria-hidden="true" />
           {/if}
           Manage plan
         </Button>
-      {:else if status && !onPaidPlan && PORTALS_ANNOUNCED && arrival === null}
+      {:else if status && onPaidPlan}
+        <!-- A plan given by hand: nothing to manage, but the plans can be looked at. -->
         <Button variant="secondary" fullWidth={false} href="/pricing">See plans</Button>
+      {:else if status && PORTALS_ANNOUNCED && arrival === null}
+        <Button fullWidth={false} href="/pricing">Upgrade</Button>
       {/if}
     {/snippet}
 

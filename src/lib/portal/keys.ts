@@ -13,6 +13,7 @@
 
 import { openSealed, sealTo, type RecipientKeypair } from "$lib/crypto/seal";
 import { base64UrlToBytes, bytesToBase64Url } from "$lib/crypto/base64url";
+import { cleanQuestions, type Question } from "$lib/form/questions";
 import { LOCALES, type Locale } from "$lib/i18n/locale";
 import { openVaultItem, sealVaultItem } from "$lib/vault/keypair";
 
@@ -29,8 +30,9 @@ export const PORTAL_TITLE_MAX = 80;
 export const PORTAL_MESSAGE_MAX = 600;
 export const PORTAL_THANKS_MAX = 300;
 export const PORTAL_FIELD_LABEL_MAX = 40;
-// The server refuses a larger bundle.
+// The server refuses a larger bundle. Forms get more room for their questions.
 const BUNDLE_MAX_BYTES = 32 * 1024;
+const FORM_BUNDLE_MAX_BYTES = 64 * 1024;
 
 export const PORTAL_RETURNS_MAX = 20;
 
@@ -188,6 +190,8 @@ export interface PortalPublicInfo {
   /** The owner can send files back; the page shows them to every visitor. */
   twoWay?: boolean;
   returns?: PortalReturn[];
+  /** A form's questions. Present only on forms. */
+  questions?: Question[];
 }
 
 /**
@@ -206,6 +210,8 @@ export interface PortalSettings {
   twoWay: boolean;
   /** Kept as it is by the settings form; changed where files are sent back. */
   returns: PortalReturn[];
+  /** A form's questions; absent or empty on a portal. */
+  questions?: Question[];
   /** When new deliveries stop, as an ISO moment. Null: no closing date. */
   closesAt: string | null;
   /** Email the members when files arrive. */
@@ -234,6 +240,7 @@ export function settingsOf(
     logo: info.logo ?? null,
     twoWay: info.twoWay === true,
     returns: info.returns ?? [],
+    questions: info.questions ?? [],
   };
 }
 
@@ -317,13 +324,15 @@ export async function sealPortalBundle(
     ...(cleanLogo(info.logo) ? { logo: cleanLogo(info.logo) } : {}),
     ...(info.twoWay ? { twoWay: true } : {}),
     ...(cleanReturns(info.returns).length > 0 ? { returns: cleanReturns(info.returns) } : {}),
+    ...(cleanQuestions(info.questions).length > 0 ? { form: { questions: cleanQuestions(info.questions) } } : {}),
   });
   // Padded with spaces so the stored size does not give away the title's length.
   const raw = encoder.encode(json);
   const padded = new Uint8Array(Math.ceil(raw.length / BUNDLE_PAD) * BUNDLE_PAD).fill(0x20);
   padded.set(raw);
   // version + iv + ciphertext + tag
-  if (1 + IV_BYTES + padded.length + 16 > BUNDLE_MAX_BYTES) throw new PortalBundleTooLargeError();
+  const max = info.questions && info.questions.length > 0 ? FORM_BUNDLE_MAX_BYTES : BUNDLE_MAX_BYTES;
+  if (1 + IV_BYTES + padded.length + 16 > max) throw new PortalBundleTooLargeError();
 
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const ciphertext = await crypto.subtle.encrypt(
@@ -371,6 +380,7 @@ export async function openPortalBundle(
       logo?: unknown;
       twoWay?: unknown;
       returns?: unknown;
+      form?: { questions?: unknown };
     };
     if (
       typeof parsed.publicKey !== "string" ||
@@ -399,6 +409,9 @@ export async function openPortalBundle(
       ...(cleanLogo(parsed.logo) ? { logo: cleanLogo(parsed.logo)! } : {}),
       ...(parsed.twoWay === true ? { twoWay: true } : {}),
       ...(cleanReturns(parsed.returns).length > 0 ? { returns: cleanReturns(parsed.returns) } : {}),
+      ...(cleanQuestions(parsed.form?.questions).length > 0
+        ? { questions: cleanQuestions(parsed.form?.questions) }
+        : {}),
     };
   } catch {
     return null;
@@ -633,7 +646,10 @@ export async function createPortalKeys(
   title: string,
   owner: MemberVault,
   lang?: Locale,
-  extras: Pick<PortalPublicInfo, "checklist" | "message" | "thanks" | "fieldLabel" | "logo" | "twoWay"> = {},
+  extras: Pick<
+    PortalPublicInfo,
+    "checklist" | "message" | "thanks" | "fieldLabel" | "logo" | "twoWay" | "questions"
+  > = {},
 ): Promise<NewPortal> {
   const id = newPortalId();
   const keyVersion = 1;
@@ -659,8 +675,13 @@ export async function createPortalKeys(
 
 // ─── link ───────────────────────────────────────────────────────────────────
 
-export function portalLink(origin: string, portalId: string, linkKey: Uint8Array): string {
-  return `${origin}/p/${portalId}#${bytesToBase64Url(linkKey)}`;
+export function portalLink(
+  origin: string,
+  portalId: string,
+  linkKey: Uint8Array,
+  kind: "portal" | "form" = "portal",
+): string {
+  return `${origin}/${kind === "form" ? "f" : "p"}/${portalId}#${bytesToBase64Url(linkKey)}`;
 }
 
 /** The link key from a URL fragment, or null if it is not one. */

@@ -61,7 +61,7 @@
     try {
       vaultUnlocked = await isUnlocked(auth.user.id);
       const res = await loadMyPortals(auth.user.id, window.location.origin);
-      portals = res.portals;
+      portals = res.portals.filter((p) => p.kind === "portal");
       maxPortals = res.maxPortals;
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : "Couldn't load your portals.";

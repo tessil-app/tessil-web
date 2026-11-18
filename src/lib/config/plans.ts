@@ -3,7 +3,7 @@
 // PLAN_* settings); change both together. Prices are charged by Polar,
 // so these numbers must match the products there.
 
-import { ACCESS_KEYS_ANNOUNCED } from "./launch";
+import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED } from "./launch";
 
 export type PlanId = "free" | "pro" | "max";
 export type Cycle = "monthly" | "annual";
@@ -31,7 +31,7 @@ export const PLANS: Plan[] = [
       "Send up to 1 GB per transfer",
       "2 GB a month, 20 transfers a day",
       "Links that last up to 3 days",
-      "A dashboard of what you sent",
+      "A list of what you sent",
       "Can be invited to someone's portal",
     ],
   },
@@ -43,6 +43,7 @@ export const PLANS: Plan[] = [
     lead: "Everything in Free, and:",
     features: [
       "3 portals, each with its own checklist and texts",
+      ...(FORMS_ANNOUNCED ? ["3 forms of up to 15 questions"] : []),
       "20 GB of storage",
       "Transfers and portal files kept up to 30 days",
       "Send up to 5 GB per file",
@@ -57,6 +58,7 @@ export const PLANS: Plan[] = [
     lead: "Everything in Pro, and:",
     features: [
       "10 portals",
+      ...(FORMS_ANNOUNCED ? ["10 forms of up to 50 questions"] : []),
       "100 GB of storage",
       "Transfers and portal files kept up to 90 days",
       "Your logo, a password and files going back",
@@ -102,7 +104,7 @@ export const COMPARISON: ComparisonGroup[] = [
       },
       { label: "Transfers per day", values: { free: "20", pro: "100", max: "100" } },
       { label: "Password and download limit on a link", values: all(true) },
-      { label: "Dashboard of what you sent", values: all(true) },
+      { label: "List of what you sent", values: all(true) },
     ],
   },
   {
@@ -142,6 +144,36 @@ export const COMPARISON: ComparisonGroup[] = [
       { label: "Password on a portal", values: maxOnly },
     ],
   },
+  // Shown once forms are announced. Counts mirror PLAN_*_MAX_FORMS in the API
+  // and questionLimit in $lib/form/questions.
+  ...(FORMS_ANNOUNCED
+    ? [
+        {
+          title: "Asking through forms",
+          rows: [
+            { label: "Forms", values: { free: false, pro: "3", max: "10" } },
+            { label: "Questions per form", values: { free: false, pro: "15", max: "50" } },
+            {
+              label: "Kinds of question",
+              note: "Short and long text, one choice, several choices, yes or no, date, file.",
+              values: paid,
+            },
+            {
+              label: "How long responses are kept",
+              note: "Files in responses count towards your storage.",
+              values: { free: false, pro: "30 days", max: "90 days" },
+            },
+            { label: "Summary per question and export to CSV", values: paid },
+            { label: "Confirmation for the sender, record for you", values: paid },
+            { label: "Welcome message, thank-you note and closing date", values: paid },
+            { label: "Email when someone answers", values: paid },
+            { label: "Share a form with one person", values: paid },
+            { label: "Your logo on the form", values: maxOnly },
+            { label: "Password on a form", values: maxOnly },
+          ],
+        } satisfies ComparisonGroup,
+      ]
+    : []),
   // Shown once the command-line tool is released.
   ...(ACCESS_KEYS_ANNOUNCED
     ? [

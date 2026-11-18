@@ -5,10 +5,14 @@
     progress: number;
     label?: string;
     thin?: boolean;
+    /** "warning" and "destructive" for a limit that is close or reached. */
+    tone?: "info" | "warning" | "destructive";
     class?: string;
   }
 
-  let { progress, label, thin = false, class: className }: Props = $props();
+  let { progress, label, thin = false, tone = "info", class: className }: Props = $props();
+
+  const fill = { info: "bg-info", warning: "bg-warning", destructive: "bg-destructive" } as const;
 
   const trackHeight = $derived(thin ? "h-1" : "h-2.5");
 </script>
@@ -29,7 +33,7 @@
     aria-label={label}
   >
     <div
-      class={cn("bg-info rounded-full transition-[width] duration-200 ease-out", trackHeight)}
+      class={cn("rounded-full transition-[width] duration-200 ease-out", fill[tone], trackHeight)}
       style="width: {Math.min(Math.max(progress, 0), 100)}%"
     ></div>
   </div>

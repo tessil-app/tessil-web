@@ -1,3 +1,4 @@
+import { forgetTryout } from "$lib/form/tryout";
 import { api, type MeResponse } from "$lib/api/client";
 import { clearVaultCache } from "$lib/vault/client";
 
@@ -41,8 +42,17 @@ class AuthState {
     } finally {
       // Drop K_vault so the next user on this tab doesn't inherit it.
       clearVaultCache();
+      forgetTryout();
       this.user = null;
     }
+  }
+
+  /** Ends every session of this account and every access key. Throws if the server did not confirm. */
+  async logoutEverywhere(): Promise<void> {
+    await api.logoutAll();
+    clearVaultCache();
+    forgetTryout();
+    this.user = null;
   }
 }
 
