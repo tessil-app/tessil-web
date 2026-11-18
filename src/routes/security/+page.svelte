@@ -13,7 +13,7 @@
 <ProsePage
   title="Security Overview"
   tagline="How end-to-end encryption works on Tessil, and how to report a vulnerability."
-  updated="November 13, 2026"
+  updated="November 18, 2026"
   current="security"
 >
           <section class="space-y-3">
