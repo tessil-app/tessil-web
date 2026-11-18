@@ -21,7 +21,12 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import * as Table from "$lib/components/table";
   import { api } from "$lib/api/client";
+  import { ApiError } from "$lib/api/client";
+  import TextInput from "$lib/components/TextInput.svelte";
+  import { saveTemplate, TEMPLATE_NAME_MAX } from "$lib/form/templates";
+  import { DEFAULT_LOCALE } from "$lib/i18n/locale";
   import { loadMyPortals, type MyPortal } from "$lib/portal/client";
+  import { openMemberPortal } from "$lib/portal/deposits";
   import { hasClosed } from "$lib/portal/keys";
   import { acceptShare, myFingerprint } from "$lib/portal/sharing";
   import { auth } from "$lib/stores/auth.svelte";
@@ -191,6 +196,59 @@
     }
   }
 
+  // ─── keeping a form's setup as a template ─────────────────────────────────
+  let templateOf = $state<MyPortal | null>(null);
+  let templateName = $state("");
+  let savingTemplate = $state(false);
+  let templateError = $state<string | null>(null);
+  let templateSaved = $state<string | null>(null);
+
+  function askTemplate(portal: MyPortal) {
+    templateOf = portal;
+    templateName = (portal.title ?? "").slice(0, TEMPLATE_NAME_MAX);
+    templateError = null;
+  }
+
+  async function confirmTemplate(e: Event) {
+    e.preventDefault();
+    if (!auth.user || !templateOf || savingTemplate || !templateName.trim()) return;
+    savingTemplate = true;
+    templateError = null;
+    try {
+      const opened = await openMemberPortal(auth.user.id, templateOf.id, window.location.origin);
+      if (!opened.ok) {
+        templateError =
+          opened.reason === "locked" ? "Your vault is locked. Unlock it and try again." : "This form could not be opened.";
+        return;
+      }
+      const form = opened.portal;
+      const saved = await saveTemplate(auth.user.id, {
+        name: templateName.trim(),
+        title: form.title,
+        lang: form.lang ?? DEFAULT_LOCALE,
+        message: form.message,
+        thanks: form.thanks,
+        questions: form.questions,
+        notifyOnDelivery: form.notifyOnDelivery,
+      });
+      if (!saved) {
+        templateError = "Your vault is locked. Unlock it and try again.";
+        return;
+      }
+      templateSaved = templateName.trim();
+      templateOf = null;
+    } catch (err) {
+      templateError =
+        err instanceof ApiError && err.code === "template_limit_reached"
+          ? "You have as many templates as an account can keep. Delete one when you create a form."
+          : err instanceof ApiError && err.code === "forms_require_paid_plan"
+            ? "Templates come with the plans that have forms."
+            : "Couldn't save the template. Try again.";
+    } finally {
+      savingTemplate = false;
+    }
+  }
+
   const dateFmt = new Intl.DateTimeFormat(undefined, {
     year: "numeric",
     month: "short",
@@ -223,6 +281,11 @@
     <div class="space-y-6">
       {#if errorMessage}
         <Alert tone="destructive">{errorMessage}</Alert>
+      {/if}
+      {#if templateSaved}
+        <Alert tone="success" onClose={() => (templateSaved = null)}>
+          Saved "{templateSaved}" as a template. You can pick it the next time you create a form.
+        </Alert>
       {/if}
 
       {#if auth.needsVaultSetup && maxForms > 0}
@@ -422,6 +485,14 @@
                           >
                             Duplicate
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              close();
+                              askTemplate(portal);
+                            }}
+                          >
+                            Save as template
+                          </DropdownMenuItem>
                         {/if}
                         <DropdownMenuItem
                           disabled={busyId === portal.id}
@@ -491,6 +562,42 @@
         Deleting…
       {:else}
         Delete form
+      {/if}
+    </Button>
+  {/snippet}
+</Modal>
+
+<Modal
+  open={templateOf !== null}
+  title="Save as a template"
+  description="Keeps this form's questions, texts and language to start new forms from. Responses, the link, the logo and the password are not part of it. It is encrypted like the form itself."
+  onClose={() => {
+    if (!savingTemplate) templateOf = null;
+  }}
+>
+  <form id="save-template" onsubmit={confirmTemplate} class="space-y-3" novalidate>
+    <TextInput
+      id="template-name"
+      label="Name of the template"
+      maxlength={TEMPLATE_NAME_MAX}
+      autocomplete="off"
+      bind:value={templateName}
+      disabled={savingTemplate}
+    />
+    {#if templateError}
+      <Alert tone="destructive">{templateError}</Alert>
+    {/if}
+  </form>
+  {#snippet footer()}
+    <Button type="button" variant="ghost" fullWidth={false} onclick={() => (templateOf = null)} disabled={savingTemplate}>
+      Cancel
+    </Button>
+    <Button type="submit" form="save-template" fullWidth={false} disabled={savingTemplate || !templateName.trim()}>
+      {#if savingTemplate}
+        <Spinner aria-hidden="true" />
+        Saving…
+      {:else}
+        Save template
       {/if}
     </Button>
   {/snippet}

@@ -941,6 +941,21 @@ export class ApiClient {
     return this.deletePortalPart(portalId, `members/${encodeURIComponent(userId)}`);
   }
 
+  // ─── Form templates ───────────────────────────────────────────────
+
+  /** Each template is one blob only the owner's vault opens. */
+  async listFormTemplates(): Promise<{ max: number; templates: { id: string; ciphertext: string; createdAt: string }[] }> {
+    return this.request("/api/form-templates");
+  }
+
+  async createFormTemplate(body: { id: string; ciphertext: string }): Promise<{ id: string; createdAt: string }> {
+    return this.request("/api/form-templates", { method: "POST", body: JSON.stringify(body) });
+  }
+
+  async deleteFormTemplate(id: string): Promise<{ ok: true }> {
+    return this.request(`/api/form-templates/${encodeURIComponent(id)}`, { method: "DELETE" });
+  }
+
   async deletePortal(id: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/portals/${encodeURIComponent(id)}`, {
       method: "DELETE",
