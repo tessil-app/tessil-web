@@ -13,7 +13,7 @@
 <ProsePage
   title="Privacy Policy"
   tagline="End-to-end encrypted file transfer."
-  updated="November 14, 2026"
+  updated="November 18, 2026"
   current="privacy"
 >
           <section class="space-y-3">

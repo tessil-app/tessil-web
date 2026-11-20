@@ -13,7 +13,7 @@
 <ProsePage
   title="Terms of Service"
   tagline="End-to-end encrypted file transfer."
-  updated="November 13, 2026"
+  updated="November 18, 2026"
   current="terms"
 >
           <section class="space-y-3">
