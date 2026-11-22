@@ -1,4 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { localeFromPath } from "./locale";
 import { alternatesOf, canonicalPath, hrefFor, localizedPath } from "./paths";
 import { LOCALIZED, LOCALIZED_ENTRIES } from "./routes.js";
@@ -37,5 +39,14 @@ describe("addresses in two languages", () => {
     expect(hrefFor("/", "nl")).toBe("/nl");
     expect(hrefFor("/a-page-only-in-english", "nl")).toBe("/a-page-only-in-english");
     expect(hrefFor("/", "en")).toBe("/");
+  });
+
+  it("lists every page in the sitemap in each of its languages", () => {
+    const sitemap = readFileSync(join(import.meta.dir, "../../../static/sitemap.xml"), "utf8");
+    for (const [canonical, paths] of Object.entries(LOCALIZED)) {
+      for (const path of [canonical, paths.nl]) {
+        expect(sitemap).toContain(`<loc>https://tessil.app${path}</loc>`);
+      }
+    }
   });
 });

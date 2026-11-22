@@ -10,6 +10,7 @@
 /** @type {Record<string, { nl: string }>} */
 export const LOCALIZED = {
   "/": { nl: "/nl" },
+  "/portals": { nl: "/nl/portalen" },
   "/compare/wetransfer-alternative": { nl: "/nl/vergelijken/wetransfer-alternatief" },
 };
 
