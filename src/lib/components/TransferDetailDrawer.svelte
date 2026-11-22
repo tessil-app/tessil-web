@@ -12,6 +12,9 @@
   import TextInput from "$lib/components/TextInput.svelte";
   import { encryptString } from "$lib/crypto/encrypt";
   import { formatSize } from "$lib/utils";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { HTML_LANG } from "$lib/i18n/locale";
+  import { transfersMessages } from "$lib/i18n/messages/transfers";
   import {
     importTransferKey,
     transferKeyToFragment,
@@ -121,7 +124,7 @@
       if (trimmedTitle.length > 0) {
         const raw = await unwrapTransferKey(userId, transfer.wrappedKey ?? "");
         if (!raw) {
-          titleError = "Couldn't unlock this transfer's key. Try unlocking the vault again.";
+          titleError = m.errors.key;
           return;
         }
         const transferKey = await importTransferKey(raw);
@@ -136,7 +139,7 @@
       originalTitle = trimmedTitle;
       titleInput = trimmedTitle;
     } catch (err) {
-      titleError = err instanceof Error ? err.message : "Couldn't save the title.";
+      titleError = err instanceof Error ? err.message : m.errors.save;
     } finally {
       titleSaving = false;
     }
@@ -155,13 +158,13 @@
       const raw = await unwrapTransferKey(userId, transfer.wrappedKey);
       if (!raw) {
         recoverError =
-          "Couldn't rebuild the share link - the vault couldn't decrypt this transfer.";
+          m.errors.rebuildBlind;
         return;
       }
       const fragment = transferKeyToFragment(raw);
       shareUrl = `${window.location.origin}/d/${transfer.id}#${fragment}`;
     } catch {
-      recoverError = "Couldn't rebuild the share link.";
+      recoverError = m.errors.rebuild;
     } finally {
       recovering = false;
     }
@@ -194,7 +197,7 @@
       onDeleted(transfer.id);
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Couldn't delete that transfer.";
+      const msg = err instanceof Error ? err.message : list.errors.delete;
       if (msg === "Transfer not found.") {
         // Treat as already-gone so the row clears.
         onDeleted(transfer.id);
@@ -207,37 +210,42 @@
     }
   }
 
+  const locale = $derived(appLocale());
+  const list = $derived(transfersMessages[locale]);
+  const m = $derived(list.drawer);
+
   function statusOf(t: OwnedTransferSummary): {
     label: string;
     tone: "success" | "warning" | "muted";
   } {
     const expired = new Date(t.expiresAt) < new Date();
-    if (expired) return { label: "Expired", tone: "muted" };
-    if (!t.isCompleted) return { label: "In progress", tone: "warning" };
-    return { label: "Active", tone: "success" };
+    if (expired) return { label: list.status.expired, tone: "muted" };
+    if (!t.isCompleted) return { label: list.status.inProgress, tone: "warning" };
+    return { label: list.status.active, tone: "success" };
   }
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dateFmt = $derived(
+    new Intl.DateTimeFormat(HTML_LANG[locale], {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  );
 
   function relativeExpiry(iso: string): string {
     const ms = new Date(iso).getTime() - Date.now();
-    if (ms <= 0) return "expired";
+    if (ms <= 0) return list.expired;
     const mins = Math.round(ms / 60000);
-    if (mins < 60) return `in ${mins}m`;
+    if (mins < 60) return list.inMinutes(mins);
     const hours = Math.round(mins / 60);
-    if (hours < 24) return `in ${hours}h`;
-    const days = Math.round(hours / 24);
-    return `in ${days}d`;
+    if (hours < 24) return list.inHours(hours);
+    return list.inDays(Math.round(hours / 24));
   }
 </script>
 
-<Drawer {open} {onClose} title="Transfer details">
+<Drawer {open} {onClose} title={m.title}>
   {#if transfer}
     {@const status = statusOf(transfer)}
     {@const canRecover = vaultState?.status === "unlocked"}
@@ -250,24 +258,22 @@
           for="transfer-title-input"
           class="block text-sm font-medium text-foreground"
         >
-          Transfer name
+          {m.name}
         </label>
         {#if vaultState?.status === "unlocked"}
           <TextInput
             id="transfer-title-input"
             bind:value={titleInput}
-            placeholder="Optional - give this transfer a memorable name"
+            placeholder={m.namePlaceholder}
             maxlength={TITLE_MAX + 32}
             disabled={titleSaving}
           />
           <p class="text-xs text-muted-foreground">
-            Encrypted in your browser with this transfer's key. Recipients
-            using the share link see the same name; the server only stores
-            the ciphertext.
+            {m.nameHint}
           </p>
           {#if titleOverLimit}
             <p class="text-xs text-destructive-foreground">
-              {titleInput.length} / {TITLE_MAX} - too long. Trim it down to save.
+              {m.tooLong(titleInput.length, TITLE_MAX)}
             </p>
           {/if}
           {#if titleError}
@@ -275,28 +281,25 @@
           {/if}
         {:else if vaultState?.status === "locked"}
           <p class="text-sm text-muted-foreground">
-            Unlock the vault to view or change this transfer's name.
+            {m.unlockToName}
           </p>
         {:else if vaultState?.status === "unlocking"}
-          <p class="text-sm text-muted-foreground">Unlocking…</p>
+          <p class="text-sm text-muted-foreground">{m.unlocking}</p>
         {:else if vaultState?.status === "blind-error"}
           <p class="text-sm text-muted-foreground">
-            We couldn't decrypt this transfer's metadata. The files themselves
-            stay downloadable with the original share link.
+            {m.blind}
           </p>
         {:else}
           <p class="text-sm text-muted-foreground">
-            This transfer was created without a vault wrap, so it has no
-            editable name. The download page still shows its files.
+            {m.noWrap}
           </p>
         {/if}
       </DrawerSection>
 
-      <DrawerSection title="Files">
+      <DrawerSection title={m.files}>
         {#snippet aside()}
           <span class="text-xs text-muted-foreground">
-            {transfer.fileCount}
-            {transfer.fileCount === 1 ? "file" : "files"} · {formatSize(transfer.totalBytes)}
+            {list.files(transfer.fileCount)} · {formatSize(transfer.totalBytes)}
           </span>
         {/snippet}
         {#if decryptedNames}
@@ -315,36 +318,35 @@
               {/each}
             </ul>
           {:else}
-            <p class="text-sm text-muted-foreground">No files in this transfer.</p>
+            <p class="text-sm text-muted-foreground">{m.noFilesIn}</p>
           {/if}
         {:else}
           <p class="text-sm text-muted-foreground">
-            Filenames are end-to-end encrypted. Unlock the vault to see them.
+            {m.namesEncrypted}
           </p>
         {/if}
       </DrawerSection>
 
-      <DrawerSection title="Details">
+      <DrawerSection title={m.details}>
         <DetailList>
-          <DetailItem label="Status"><Badge tone={status.tone}>{status.label}</Badge></DetailItem>
-          <DetailItem label="Created">{dateFmt.format(new Date(transfer.createdAt))}</DetailItem>
-          <DetailItem label="Expires">
+          <DetailItem label={m.status}><Badge tone={status.tone}>{status.label}</Badge></DetailItem>
+          <DetailItem label={m.created}>{dateFmt.format(new Date(transfer.createdAt))}</DetailItem>
+          <DetailItem label={m.expires}>
             {dateFmt.format(new Date(transfer.expiresAt))}
             <span class="text-muted-foreground">({relativeExpiry(transfer.expiresAt)})</span>
           </DetailItem>
-          <DetailItem label="Downloads">{transfer.downloadCount}</DetailItem>
-          <DetailItem label="Password">{transfer.hasPassword ? "Required" : "None"}</DetailItem>
+          <DetailItem label={m.downloads}>{transfer.downloadCount}</DetailItem>
+          <DetailItem label={m.password}>{transfer.hasPassword ? m.required : m.none}</DetailItem>
         </DetailList>
       </DrawerSection>
 
-      <DrawerSection title="Share link">
+      <DrawerSection title={m.shareLink}>
         {#if recoverError}
           <Alert tone="warning">{recoverError}</Alert>
         {/if}
         {#if shareUrl}
           <p class="text-xs text-muted-foreground">
-            Anyone with this link can download the files. The key after the
-            <code class="font-mono">#</code> never reaches our servers.
+            {m.anyone}
           </p>
           <input
             type="text"
@@ -355,7 +357,7 @@
           />
           <div class="flex gap-2">
             <Button variant="secondary" fullWidth={false} onclick={copyShareLink}>
-              {copied ? "Copied!" : "Copy link"}
+              {copied ? m.copied : m.copy}
             </Button>
             <Button
               variant="ghost"
@@ -365,13 +367,12 @@
                 copied = false;
               }}
             >
-              Hide
+              {m.hide}
             </Button>
           </div>
         {:else if canRecover && transfer.wrappedKey}
           <p class="text-xs text-muted-foreground">
-            Rebuild the original share link from your vault. Nothing is sent
-            to our servers - the key is derived in your browser.
+            {m.rebuildHint}
           </p>
           <Button
             variant="secondary"
@@ -381,27 +382,25 @@
           >
             {#if recovering}
               <Spinner aria-hidden="true" />
-              Rebuilding…
+              {m.rebuilding}
             {:else}
-              Get share link
+              {m.getLink}
             {/if}
           </Button>
         {:else if !transfer.wrappedKey}
           <p class="text-sm text-muted-foreground">
-            This transfer wasn't saved with a vault wrap, so the share link
-            can't be rebuilt here. The link you used at upload time is the
-            only copy.
+            {m.noWrapLink}
           </p>
         {:else}
           <p class="text-sm text-muted-foreground">
-            Unlock the vault to rebuild this transfer's share link.
+            {m.unlockToLink}
           </p>
         {/if}
       </DrawerSection>
 
       <DrawerSection
-        title="Delete"
-        description="Deleting removes the encrypted files and revokes the share link. This can't be undone."
+        title={m.delete}
+        description={m.deleteHint}
         tone="danger"
       >
         {#if deleteError}
@@ -417,9 +416,9 @@
             >
               {#if deleting}
                 <Spinner aria-hidden="true" />
-                Deleting…
+                {m.deleting}
               {:else}
-                Confirm delete
+                {m.confirm}
               {/if}
             </Button>
             <Button
@@ -428,7 +427,7 @@
               onclick={() => (confirmingDelete = false)}
               disabled={deleting}
             >
-              Cancel
+              {m.cancel}
             </Button>
           </div>
         {:else}
@@ -437,7 +436,7 @@
             fullWidth={false}
             onclick={() => (confirmingDelete = true)}
           >
-            Delete transfer
+            {list.deleteTransfer}
           </Button>
         {/if}
       </DrawerSection>
@@ -453,7 +452,7 @@
         onclick={cancelTitleEdit}
         disabled={titleSaving}
       >
-        Cancel
+        {m.cancel}
       </Button>
       <Button
         type="button"
@@ -464,14 +463,14 @@
       >
         {#if titleSaving}
           <Spinner aria-hidden="true" />
-          Saving…
+          {m.saving}
         {:else}
-          Save name
+          {m.save}
         {/if}
       </Button>
     {:else}
       <Button type="button" variant="secondary" fullWidth={false} onclick={onClose}>
-        Close
+        {m.close}
       </Button>
     {/if}
   {/snippet}

@@ -11,31 +11,35 @@
   import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
 
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { transfersMessages } from "$lib/i18n/messages/transfers";
+  const locale = $derived(appLocale());
+  const t = $derived(transfersMessages[locale]);
   const sent = $derived(uploadStore.status === "complete" && !!uploadStore.shareUrl);
 </script>
 
-<Seo title="New transfer - Tessil" robots="noindex" />
+<Seo title={t.newPage.seoTitle} robots="noindex" />
 
 <PageLayout width="5xl">
   {#if !auth.loaded}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
       <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
+      <p class="text-muted-foreground">{t.loading}</p>
     </div>
   {:else if auth.user}
     <PageHeader
-      title="New transfer"
-      tagline="Add files, set how the link behaves, and share it. Everything is encrypted in your browser first."
-      back={{ href: "/dashboard", label: "Transfers" }}
+      title={t.newPage.title}
+      tagline={t.newPage.tagline}
+      back={{ href: "/dashboard", label: t.newPage.back }}
       align="left"
     />
 
-    <SendPanel layout="page" returnTo="/dashboard/new" />
+    <SendPanel layout="page" returnTo="/dashboard/new" {locale} />
 
     {#if sent}
       <p class="mt-4 text-sm text-muted-foreground">
-        Copy the link before you leave this page.
-        <TextLink href="/dashboard">Back to your transfers</TextLink>
+        {t.newPage.copyFirst}
+        <TextLink href="/dashboard">{t.newPage.backToList}</TextLink>
       </p>
     {/if}
   {/if}

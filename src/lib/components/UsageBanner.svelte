@@ -7,11 +7,15 @@
   import type { UsageResponse } from "$lib/api/client";
   import { formatSize } from "$lib/utils";
 
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { transfersMessages } from "$lib/i18n/messages/transfers";
   interface Props {
     usage: UsageResponse | null;
   }
 
   let { usage }: Props = $props();
+
+  const words = $derived(transfersMessages[appLocale()].usage);
 
   function periodKey(iso: string): string {
     const d = new Date(iso);
@@ -43,12 +47,12 @@
     dismissed = snapshot;
   });
 
-  const tripped = $derived.by((): { threshold: Threshold; dimension: string } | null => {
+  const tripped = $derived.by((): { threshold: Threshold; dimension: "volume" | "daily" } | null => {
     if (!usage) return null;
     const monthlyPct = pct(usage.monthlyVolume.usedBytes, usage.monthlyVolume.capBytes);
     const dailyPct = pct(usage.dailyTransfers.used, usage.dailyTransfers.cap);
     const worstPct = Math.max(monthlyPct, dailyPct);
-    const dimension = monthlyPct >= dailyPct ? "monthly upload volume" : "daily transfers";
+    const dimension = monthlyPct >= dailyPct ? "volume" : "daily";
     if (worstPct >= 95) return { threshold: 95, dimension };
     if (worstPct >= 80) return { threshold: 80, dimension };
     return null;
@@ -74,10 +78,10 @@
 
   const detailText = $derived.by(() => {
     if (!usage || !tripped) return "";
-    if (tripped.dimension === "monthly upload volume") {
-      return `${formatSize(usage.monthlyVolume.usedBytes)} of ${formatSize(usage.monthlyVolume.capBytes)} used this month`;
+    if (tripped.dimension === "volume") {
+      return words.volumeDetail(formatSize(usage.monthlyVolume.usedBytes), formatSize(usage.monthlyVolume.capBytes));
     }
-    return `${usage.dailyTransfers.used} of ${usage.dailyTransfers.cap} transfers today`;
+    return words.dailyDetail(usage.dailyTransfers.used, usage.dailyTransfers.cap);
   });
 </script>
 
@@ -87,9 +91,9 @@
     onClose={dismiss}
   >
     {#if tripped.threshold === 95}
-      You're almost out of {tripped.dimension}. {detailText}.
+      {words.almostOut(words[tripped.dimension], detailText)}
     {:else}
-      You're approaching the {tripped.dimension} cap. {detailText}.
+      {words.approaching(words[tripped.dimension], detailText)}
     {/if}
   </Alert>
 {/if}
