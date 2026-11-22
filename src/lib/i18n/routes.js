@@ -18,6 +18,7 @@ export const LOCALIZED = {
   "/privacy": { nl: "/nl/privacy" },
   "/terms": { nl: "/nl/voorwaarden" },
   "/verify": { nl: "/nl/controleren" },
+  "/abuse": { nl: "/nl/misbruik" },
   "/compare/wetransfer-alternative": { nl: "/nl/vergelijken/wetransfer-alternatief" },
 };
 
