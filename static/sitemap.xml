@@ -55,6 +55,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tessil.app/what-we-store</loc>
+    <lastmod>2026-11-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://tessil.app/verify</loc>
     <lastmod>2026-07-25</lastmod>
     <changefreq>monthly</changefreq>

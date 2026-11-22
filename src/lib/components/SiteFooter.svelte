@@ -16,7 +16,8 @@
     | "security"
     | "abuse"
     | "download"
-    | "dashboard";
+    | "dashboard"
+    | "data";
 
   interface Props {
     current?: Current;
@@ -43,6 +44,7 @@
     { key: "verify", href: "/verify", label: "Verify" },
     { key: "pricing", href: "/pricing", label: "Pricing" },
     { key: "privacy", href: "/privacy", label: "Privacy" },
+    { key: "data", href: "/what-we-store", label: "What we store" },
     { key: "terms", href: "/terms", label: "Terms" },
     { key: "security", href: "/security", label: "Security" },
     { key: "abuse", href: "/abuse", label: "Abuse" },

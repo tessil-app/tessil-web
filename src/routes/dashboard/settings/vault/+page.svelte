@@ -18,6 +18,15 @@
     type VaultAccess,
   } from "$lib/vault/client";
   import { vaultFailureMessage } from "$lib/vault/messages";
+  import SegmentedControl from "$lib/components/SegmentedControl.svelte";
+  import {
+    readVaultHoldDays,
+    setVaultHoldDays,
+    subscribeToVaultState,
+    vaultOpenUntil,
+    VAULT_HOLD_DAYS,
+    type VaultHoldDays,
+  } from "$lib/vault/session";
   import { onMount } from "svelte";
   import {
     evaluatePassword,
@@ -198,7 +207,57 @@
   }
 
   const regenWords = $derived(regenNewPhrase ? regenNewPhrase.split(" ") : []);
+
+  // ─── how long the vault stays open on this device ─────────────────────────
+  let holdDays = $state<VaultHoldDays>(1);
+  let openUntil = $state<Date | null>(null);
+  const untilFmt = new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+
+  async function refreshOpenUntil() {
+    openUntil = auth.user ? await vaultOpenUntil(auth.user.id) : null;
+  }
+
+  onMount(() => {
+    holdDays = readVaultHoldDays();
+    void refreshOpenUntil();
+    return subscribeToVaultState(() => void refreshOpenUntil());
+  });
+
+  async function chooseHold(days: VaultHoldDays) {
+    holdDays = days;
+    await setVaultHoldDays(days);
+    await refreshOpenUntil();
+  }
 </script>
+
+<Frame.Root>
+  <Frame.Header>
+    <Frame.Title class="text-base">Stay unlocked on this device</Frame.Title>
+    <Frame.Description class="mt-1 block">
+      How long your vault stays open in this browser before it asks again. Anyone using
+      this device while it is open can see the names and links of what you sent, so pick
+      a short time on a shared or work computer.
+    </Frame.Description>
+  </Frame.Header>
+  <Frame.Panel>
+    <div class="space-y-3">
+      <SegmentedControl
+        label="Stay unlocked for"
+        options={VAULT_HOLD_DAYS.map((d) => ({ value: d, label: d === 1 ? "1 day" : `${d} days` }))}
+        value={holdDays}
+        onChange={(v: VaultHoldDays) => void chooseHold(v)}
+        class="max-w-sm"
+      />
+      <p class="text-sm text-muted-foreground" aria-live="polite">
+        {#if openUntil}
+          Open now, until {untilFmt.format(openUntil)}. Locking it from the account menu closes it at once.
+        {:else}
+          Locked now. The choice applies the next time you unlock it here.
+        {/if}
+      </p>
+    </div>
+  </Frame.Panel>
+</Frame.Root>
 
 <Frame.Root>
   <Frame.Header>

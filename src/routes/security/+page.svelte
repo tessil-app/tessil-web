@@ -223,7 +223,8 @@
               only in locked form.
             </p>
             <p class="text-muted-foreground">
-              The vault stays open on a device for up to 24 hours, then asks
+              The vault stays open on a device for a day by default, or 7 or 30 days if you
+              choose so for that device, then asks
               again. You can lock it from the account menu at any time, which
               drops the key from memory immediately.
             </p>

@@ -1,12 +1,28 @@
-// IDB-backed K_vault cache, 24h TTL. Stores the non-extractable CryptoKey directly so
-// the dashboard can decrypt on reload without re-prompting.
+// IDB-backed K_vault cache. Stores the non-extractable CryptoKey directly so
+// the dashboard can decrypt on reload without re-prompting. How long it is
+// kept is chosen per device: 1, 7 or 30 days, 1 by default.
 
 const DB_NAME = "tessil-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "keys";
 const KEY_ID = "kvault";
 
-const TTL_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The choices a device offers for how long the vault stays open. */
+export const VAULT_HOLD_DAYS = [1, 7, 30] as const;
+export type VaultHoldDays = (typeof VAULT_HOLD_DAYS)[number];
+const HOLD_KEY = "tessil:vault-hold-days";
+
+/** This device's choice. Not a secret: only how long, never the key. */
+export function readVaultHoldDays(): VaultHoldDays {
+  try {
+    const raw = Number(localStorage.getItem(HOLD_KEY));
+    return VAULT_HOLD_DAYS.find((d) => d === raw) ?? 1;
+  } catch {
+    return 1;
+  }
+}
 
 interface StoredVaultKey {
   key: CryptoKey;
@@ -68,7 +84,7 @@ export function subscribeToVaultState(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Both keys MUST be non-extractable; TTL is 24h. */
+/** Both keys MUST be non-extractable; kept for this device's chosen number of days. */
 export async function storeVaultKey(
   userId: string,
   key: CryptoKey,
@@ -77,7 +93,7 @@ export async function storeVaultKey(
   const entry: StoredVaultKey = {
     key,
     derivationKey,
-    expiresAt: Date.now() + TTL_MS,
+    expiresAt: Date.now() + readVaultHoldDays() * DAY_MS,
     userId,
   };
   await withStore("readwrite", (store) => store.put(entry, KEY_ID));
@@ -124,4 +140,26 @@ export async function clearVaultKey(): Promise<void> {
 export async function isVaultUnlocked(userId: string): Promise<boolean> {
   const key = await readVaultKey(userId);
   return key !== null;
+}
+
+/**
+ * Sets this device's choice, and applies it to a vault open now, counted
+ * from this moment. Shortening it can close the vault sooner; never later
+ * than chosen.
+ */
+export async function setVaultHoldDays(days: VaultHoldDays): Promise<void> {
+  try {
+    localStorage.setItem(HOLD_KEY, String(days));
+  } catch {
+    // Without storage the choice lasts until the page closes.
+  }
+  const entry = await withStore<StoredVaultKey | undefined>("readonly", (store) => store.get(KEY_ID));
+  if (!entry || Date.now() >= entry.expiresAt) return;
+  await withStore("readwrite", (store) => store.put({ ...entry, expiresAt: Date.now() + days * DAY_MS }, KEY_ID));
+}
+
+/** When an open vault on this device closes by itself, or null when it is not open. */
+export async function vaultOpenUntil(userId: string): Promise<Date | null> {
+  const entry = await readEntry(userId);
+  return entry ? new Date(entry.expiresAt) : null;
 }

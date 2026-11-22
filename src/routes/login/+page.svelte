@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TextLink from "$lib/components/TextLink.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import Alert from "$lib/components/Alert.svelte";
@@ -250,6 +251,16 @@
               {/if}
             </Button>
           </form>
+
+          <!-- What signing up costs, for those deciding whether to. -->
+          <div class="rounded-lg bg-secondary px-4 py-3 text-sm text-muted-foreground">
+            <p class="font-medium text-foreground">What an account stores</p>
+            <p class="mt-1">
+              Your email, when you signed in, and the size and dates of what you send.
+              Never your files, their names or the key that opens them.
+              <TextLink href="/what-we-store">Everything it stores</TextLink>
+            </p>
+          </div>
         </div>
       {/if}
     </Frame.Panel>

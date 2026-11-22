@@ -81,7 +81,12 @@
     { title: "Automatic expiry", body: "Everything is deleted when its time is up. Nothing piles up." },
   ];
 
-  const questions = [
+  const questions: { q: string; a: string; link?: { href: string; label: string } }[] = [
+    {
+      q: "Do I need an account, and what does it store?",
+      a: "Not to send: without an account a link lasts up to 3 days. An account, free or paid, stores your email address, when you signed in, and the size and dates of what you send. Never your files, their names or the key that opens them.",
+      link: { href: "/what-we-store", label: "Everything an account stores" },
+    },
     {
       q: "How do I cancel?",
       a: "From your account settings, at any time, in under a minute. The plan runs until the end of the period you paid for and does not renew. Nobody asks you why.",
@@ -190,7 +195,12 @@
                 {item.q}
                 <span class="shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45" aria-hidden="true">+</span>
               </summary>
-              <p class="mt-3 leading-relaxed text-muted-foreground">{item.a}</p>
+              <p class="mt-3 leading-relaxed text-muted-foreground">
+                {item.a}
+                {#if item.link}
+                  <TextLink href={item.link.href}>{item.link.label}</TextLink>
+                {/if}
+              </p>
             </details>
           {/each}
         </div>
