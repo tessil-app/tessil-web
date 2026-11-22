@@ -13,6 +13,7 @@ export const LOCALIZED = {
   "/portals": { nl: "/nl/portalen" },
   "/forms": { nl: "/nl/formulieren" },
   "/pricing": { nl: "/nl/prijzen" },
+  "/what-we-store": { nl: "/nl/wat-we-bewaren" },
   "/compare/wetransfer-alternative": { nl: "/nl/vergelijken/wetransfer-alternatief" },
 };
 

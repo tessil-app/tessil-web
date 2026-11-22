@@ -38,6 +38,8 @@ const en = {
   unlock: "Unlock",
   unlocking: "Unlocking…",
   unlockFailed: "Couldn't unlock.",
+  onThisPage: "On this page",
+  lastUpdated: (date: string) => `Last updated ${date}`,
   footer: {
     home: "Home",
     compare: "Compare",
@@ -87,6 +89,8 @@ const nl: typeof en = {
   unlock: "Ontgrendelen",
   unlocking: "Ontgrendelen…",
   unlockFailed: "Ontgrendelen lukte niet.",
+  onThisPage: "Op deze pagina",
+  lastUpdated: (date: string) => `Laatst bijgewerkt op ${date}`,
   footer: {
     home: "Home",
     compare: "Vergelijken",
