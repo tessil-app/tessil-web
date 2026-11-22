@@ -21,6 +21,8 @@
   import PasskeyUnlockButton from "$lib/components/PasskeyUnlockButton.svelte";
   import PasswordInput from "$lib/components/PasswordInput.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
+  import Select from "$lib/components/Select.svelte";
+  import { readVaultHoldDays, setVaultHoldDays, VAULT_HOLD_DAYS, type VaultHoldDays } from "$lib/vault/session";
   import Button from "$lib/components/Button.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
   import Alert from "$lib/components/Alert.svelte";
@@ -40,6 +42,15 @@
   let vaultUnlocked = $state(false);
 
   let unlockOpen = $state(false);
+  // This device's choice of how long the vault stays open, set before unlocking.
+  let holdDays = $state("1");
+  $effect(() => {
+    if (unlockOpen) holdDays = String(readVaultHoldDays());
+  });
+  $effect(() => {
+    const days = Number(holdDays) as VaultHoldDays;
+    if (unlockOpen && VAULT_HOLD_DAYS.includes(days)) void setVaultHoldDays(days);
+  });
   let unlockMode = $state<"password" | "phrase">("password");
   // A vault can exist without a password. Then the dialog offers the
   // passkey and the recovery phrase, and no password field.
@@ -499,6 +510,14 @@
           disabled={isUnlockingVault}
         />
       {/if}
+
+      <Select
+        id="nav-unlock-hold"
+        label="Stay unlocked on this device for"
+        bind:value={holdDays}
+        disabled={isUnlockingVault}
+        options={VAULT_HOLD_DAYS.map((d) => ({ value: String(d), label: d === 1 ? "1 day" : `${d} days` }))}
+      />
 
       {#if unlockError}
         <Alert tone="destructive">{unlockError}</Alert>
