@@ -27,6 +27,9 @@
   import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
   import IconWarningRegular from "phosphor-icons-svelte/IconWarningRegular.svelte";
   import { onMount } from "svelte";
+  import { uiLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { downloadMessages } from "$lib/i18n/messages/download";
   import { cubicOut } from "svelte/easing";
   import { fly } from "svelte/transition";
 
@@ -51,7 +54,9 @@
 
   let pageStatus = $state<PageStatus>("loading");
   let errorMessage = $state<string | null>(null);
-  let errorTitle = $state<string>("This link is no longer valid");
+  const locale = $derived(uiLocale($page.url.pathname));
+  const t = $derived(downloadMessages[locale]);
+  let errorTitle = $state<string>("");
   let transfer = $state<TransferMetadata | null>(null);
   let files = $state<DecryptedFileInfo[]>([]);
   let key = $state<CryptoKey | null>(null);
@@ -84,8 +89,8 @@
     try {
       const id = $page.params.id;
       if (!id) {
-        errorTitle = "This link is no longer valid";
-        errorMessage = "Invalid link: missing transfer ID.";
+        errorTitle = t.invalidTitle;
+        errorMessage = t.missingId;
         pageStatus = "error";
         return;
       }
@@ -93,8 +98,8 @@
 
       const hash = window.location.hash.slice(1);
       if (!hash) {
-        errorTitle = "This link is no longer valid";
-        errorMessage = "Invalid link: missing decryption key.";
+        errorTitle = t.invalidTitle;
+        errorMessage = t.missingKey;
         pageStatus = "error";
         return;
       }
@@ -119,18 +124,16 @@
       await decryptAndShowFiles(meta, cryptoKey);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to load files";
+        err instanceof Error ? err.message : t.loadFailed;
       const lower = message.toLowerCase();
       if (lower.includes("expired")) {
-        errorTitle = "This transfer has expired";
-        errorMessage =
-          "The sender set an expiry that has passed. Ask them for a fresh link.";
+        errorTitle = t.expiredTitle;
+        errorMessage = t.expired;
       } else if (lower.includes("not found") || lower.includes("404")) {
-        errorTitle = "This link is no longer valid";
-        errorMessage =
-          "The transfer expired, was deleted, or the link is incorrect.";
+        errorTitle = t.invalidTitle;
+        errorMessage = t.gone;
       } else {
-        errorTitle = "Unable to access files";
+        errorTitle = t.noAccessTitle;
         errorMessage = message;
       }
       pageStatus = "error";
@@ -155,8 +158,8 @@
     cryptoKey: CryptoKey
   ) {
     if (!meta.files) {
-      errorTitle = "Unable to access files";
-      errorMessage = "No files found in transfer.";
+      errorTitle = t.noAccessTitle;
+      errorMessage = t.noFiles;
       pageStatus = "error";
       return;
     }
@@ -225,20 +228,20 @@
         try {
           cryptoKey = await unwrapTransferKey(protectedFragment, derived.wrappingKey);
         } catch {
-          passwordError = "Incorrect password";
+          passwordError = t.wrongPassword;
           return;
         }
       } else if (rawFragment && isWrappedKey(rawFragment)) {
         try {
           cryptoKey = await unwrapKey(rawFragment, password);
         } catch {
-          passwordError = "Incorrect password";
+          passwordError = t.wrongPassword;
           return;
         }
       } else if (key) {
         cryptoKey = key;
       } else {
-        passwordError = "Missing decryption key";
+        passwordError = t.missingKeyShort;
         return;
       }
 
@@ -246,7 +249,7 @@
       await decryptAndShowFiles(meta, cryptoKey);
     } catch (err) {
       passwordError =
-        err instanceof Error ? err.message : "Incorrect password";
+        err instanceof Error ? err.message : t.wrongPassword;
     } finally {
       isVerifyingPassword = false;
     }
@@ -255,12 +258,12 @@
   function friendlyDownloadError(error: unknown): string {
     const raw = error instanceof Error ? error.message.toLowerCase() : "";
     if (error instanceof StreamInterruptedError) {
-      return "The download was interrupted. Delete the partial file and try again.";
+      return t.interrupted;
     }
     if (/network|connection|lost|fetch|load failed/.test(raw)) {
-      return "The connection dropped. Try again.";
+      return t.dropped;
     }
-    return "Couldn't download this file. Try again.";
+    return t.failed;
   }
 
   // Each URL request spends one of the transfer's downloads for that
@@ -386,28 +389,24 @@
     return files.reduce((s, f) => s + f.progress * f.size, 0) / totalBytes;
   });
   const isSingleFile = $derived(files.length === 1);
-  const fileCountTitle = $derived(
-    `${files.length} file${files.length !== 1 ? "s" : ""} received`
-  );
+  const fileCountTitle = $derived(t.received(files.length));
   const downloadAllLabel = $derived(
-    isSingleFile && files[0]
-      ? `Download ${files[0].name}`
-      : `Download all (${files.length})`
+    isSingleFile && files[0] ? t.downloadOne(files[0].name) : t.downloadAll(files.length),
   );
 
   const pageH1 = $derived(
     pageStatus === "ready" && decryptedTitle
       ? decryptedTitle
-      : "An encrypted transfer."
+      : t.encryptedTitle
   );
   const pageTagline = $derived(
     pageStatus === "ready" && decryptedTitle
-      ? "Decrypted in your browser. We never saw the contents."
-      : "Decrypted in your browser. We never see the contents."
+      ? t.sawNothing
+      : t.seeNothing
   );
 </script>
 
-<Seo title="Secure download - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <!-- -mt-14 pulls the image behind the sticky nav so the glass effect sees through to artwork. -->
 <section class="relative min-h-screen -mt-14 overflow-hidden">
@@ -433,15 +432,15 @@
             {#if pageStatus === "ready"}
               {fileCountTitle}
             {:else if pageStatus === "password_required"}
-              Password required
+              {t.passwordRequired}
             {:else if pageStatus === "error"}
-              Unable to access
+              {t.unableToAccess}
             {:else}
-              Encrypted transfer
+              {t.encrypted}
             {/if}
           </div>
           <p class="text-xs text-muted-foreground mt-0.5">
-            Decrypted in your browser.
+            {t.decryptedHere}
           </p>
         </div>
 
@@ -451,7 +450,7 @@
             <div
               class="flex items-center justify-center py-8 text-muted-foreground"
             >
-              <Spinner aria-label="Loading transfer" />
+              <Spinner aria-label={t.loading} />
             </div>
           {:else if pageStatus === "password_required"}
             <form
@@ -462,12 +461,12 @@
               class="space-y-4"
             >
               <p class="text-sm text-muted-foreground">
-                The sender added a password. Ask them for it if you don't have it.
+                {t.passwordHint}
               </p>
               <PasswordInput
                 id="transfer-password"
-                label="Password"
-                placeholder="Enter the password"
+                label={t.password}
+                placeholder={t.passwordPlaceholder}
                 bind:value={password}
                 disabled={isVerifyingPassword}
                 error={passwordError ?? undefined}
@@ -490,16 +489,16 @@
               <div class="flex flex-1 flex-col items-center justify-center text-center gap-3 py-4">
                 <CircularProgress
                   percent={overallDownloadProgress}
-                  sublabel="Downloading…"
+                  sublabel={t.downloading}
                 />
                 <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
                   {#if downloadSpeed}
                     <p class="tabular-nums">
-                      {formatSpeed(downloadSpeed)}{#if downloadEta} · {formatEta(downloadEta)} left{/if}
+                      {formatSpeed(downloadSpeed)}{#if downloadEta} · {t.left(formatEta(downloadEta))}{/if}
                     </p>
                   {/if}
                   {#if files.length > 1 && downloadingIndex >= 0}
-                    <p>File {downloadingIndex + 1} of {files.length}</p>
+                    <p>{t.fileOf(downloadingIndex + 1, files.length)}</p>
                   {/if}
                 </div>
               </div>
@@ -534,9 +533,9 @@
             >
               {#if isVerifyingPassword}
                 <Spinner class="size-4" />
-                Verifying…
+                {t.verifying}
               {:else}
-                Unlock
+                {t.unlock}
               {/if}
             </Button>
           </div>
@@ -545,12 +544,12 @@
             {#if allComplete}
               <Button variant="primary" fullWidth={false} class="flex-1" disabled>
                 <IconCheckRegular class="size-4" />
-                Downloaded
+                {t.downloaded}
               </Button>
             {:else if downloadAllInProgress || anyDownloading}
               <Button variant="primary" fullWidth={false} class="flex-1" disabled>
                 <Spinner class="size-4" />
-                Downloading…
+                {t.downloading}
               </Button>
             {:else}
               <Button variant="primary" fullWidth={false} class="flex-1" onclick={downloadAllFiles}>
@@ -577,31 +576,30 @@
             in:fly={{ y: 8, duration: 220, easing: cubicOut }}
           >
             <p class="text-sm text-foreground leading-relaxed">
-              That decryption happened on your device. We stored the encrypted
-              version and never held the key.
+              {t.onYourDevice}
             </p>
             <div class="flex sm:justify-end">
-              <Button href="/" fullWidth={false}>
+              <Button href={hrefFor("/", locale)} fullWidth={false}>
                 <IconUploadRegular class="size-4" />
-                Send your own files
+                {t.sendOwn}
               </Button>
             </div>
             <p class="text-xs">
               <a
-                href="/verify"
+                href={hrefFor("/verify", locale)}
                 class="text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out underline underline-offset-4"
               >
-                Check that claim yourself →
+                {t.checkClaim}
               </a>
             </p>
           </div>
         {:else}
           <p class="text-sm">
             <a
-              href="/"
+              href={hrefFor("/", locale)}
               class="text-primary underline underline-offset-4"
             >
-              Want to send something back? →
+              {t.sendBack}
             </a>
           </p>
         {/if}
@@ -616,16 +614,16 @@
         onclick={() => (imageRevealed = !imageRevealed)}
         aria-pressed={imageRevealed}
         aria-label={imageRevealed
-          ? `Hide ${featured.title}`
-          : `Reveal ${featured.title} by ${featured.artist}`}
+          ? t.hideArt(featured.title)
+          : t.revealArt(featured.title, featured.artist)}
         class="group inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <span class="size-1.5 rounded-full bg-primary"></span>
         <span class="font-medium">{featured.title}</span>
-        <span class="text-muted-foreground">by {featured.artist}</span>
+        <span class="text-muted-foreground">{t.by} {featured.artist}</span>
         <span class="text-muted-foreground/60 mx-1" aria-hidden="true">·</span>
         <span class="min-w-[2.75rem] text-center text-muted-foreground group-hover:text-foreground transition-colors duration-200 ease-out font-medium">
-          {imageRevealed ? "Hide" : "Reveal"}
+          {imageRevealed ? t.hide : t.reveal}
         </span>
       </button>
       {#if featured.artistUrl}
@@ -635,7 +633,7 @@
           rel="noopener noreferrer"
           class="inline-flex items-center gap-1 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-background transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
-          Artist →
+          {t.artist}
         </a>
       {/if}
     </div>

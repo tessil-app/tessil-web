@@ -56,7 +56,7 @@ import { hrefFor } from "$lib/i18n/paths";
   // their own, from the language the visitor picks there.
   $effect(() => {
     const path = $page.url.pathname;
-    if (/^\/(p|f|d)\//.test(path)) return;
+    if (/^\/(p|f)\//.test(path)) return;
     document.documentElement.lang = HTML_LANG[locale];
   });
 

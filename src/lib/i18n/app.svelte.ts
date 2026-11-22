@@ -48,7 +48,7 @@ function browserLocale(): Locale | null {
 
 /** Pages whose language comes from the account rather than the address. */
 export function isAppPath(pathname: string): boolean {
-  return /^\/(dashboard|setup|signin|login|thanks)(\/|$)/.test(pathname);
+  return /^\/(dashboard|setup|signin|login|thanks|d)(\/|$)/.test(pathname);
 }
 
 /**

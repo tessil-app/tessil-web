@@ -40,6 +40,16 @@ const en = {
   unlockFailed: "Couldn't unlock.",
   onThisPage: "On this page",
   lastUpdated: (date: string) => `Last updated ${date}`,
+  common: {
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    uploading: (name: string) => `Uploading ${name}`,
+    downloading: (name: string) => `Downloading ${name}`,
+    done: "Done",
+    retry: (name: string) => `Retry ${name}`,
+    remove: (name: string) => `Remove ${name}`,
+    download: (name: string) => `Download ${name}`,
+  },
   footer: {
     home: "Home",
     compare: "Compare",
@@ -91,6 +101,16 @@ const nl: typeof en = {
   unlockFailed: "Ontgrendelen lukte niet.",
   onThisPage: "Op deze pagina",
   lastUpdated: (date: string) => `Laatst bijgewerkt op ${date}`,
+  common: {
+    showPassword: "Wachtwoord tonen",
+    hidePassword: "Wachtwoord verbergen",
+    uploading: (name: string) => `${name} wordt geüpload`,
+    downloading: (name: string) => `${name} wordt gedownload`,
+    done: "Klaar",
+    retry: (name: string) => `${name} opnieuw proberen`,
+    remove: (name: string) => `${name} verwijderen`,
+    download: (name: string) => `${name} downloaden`,
+  },
   footer: {
     home: "Home",
     compare: "Vergelijken",
