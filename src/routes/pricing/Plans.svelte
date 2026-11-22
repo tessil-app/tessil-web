@@ -160,7 +160,7 @@
         </h2>
         <p class="text-muted-foreground">
           The exact numbers behind each plan. Without an account the limits are 500 MB per
-          transfer, 500 MB a month, 5 transfers a day and links that last up to a day.
+          transfer, 500 MB a month, 5 transfers a day and links that last up to 3 days.
         </p>
       </div>
       <PlanComparison current={auth.user?.tier ?? null} class="mt-8" />

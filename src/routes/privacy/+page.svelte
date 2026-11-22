@@ -13,7 +13,7 @@
 <ProsePage
   title="Privacy Policy"
   tagline="End-to-end encrypted file transfer."
-  updated="November 18, 2026"
+  updated="November 22, 2026"
   current="privacy"
 >
           <section class="space-y-3">
@@ -228,7 +228,7 @@
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
               <li>End-to-end encryption (AES-256-GCM) for all file contents and filenames</li>
               <li>TLS/HTTPS for all data in transit</li>
-              <li>Automatic file deletion after 1, 6, 12, 24, or 72 hours (based on your selection)</li>
+              <li>Automatic file deletion when the link expires, at the time you choose when sending</li>
               <li>Sign-in tokens stored only as SHA-256 hashes (we cannot recover the original token)</li>
               <li>Server-side session cookies marked <code>HttpOnly</code>, <code>Secure</code>, and <code>SameSite</code></li>
               <li>No permanent storage of file contents</li>
@@ -238,7 +238,7 @@
           <section class="space-y-3">
             <h2 class="text-xl font-semibold text-foreground">5. Data Retention</h2>
             <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li><strong>Uploaded files:</strong> Automatically deleted after 1, 6, 12, 24, or 72 hours (your choice)</li>
+              <li><strong>Uploaded files:</strong> Automatically deleted when the link expires, at the time you choose when sending: up to 3 days without an account, 7 days with a free account, and up to 30 or 90 days on the paid plans</li>
               {#if PORTALS_ANNOUNCED}
                 <li>
                   <strong>Files sent through a portal:</strong> Automatically deleted 30 days after they

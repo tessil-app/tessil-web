@@ -46,7 +46,7 @@
     },
     {
       q: "Heb ik een account nodig om bestanden te versturen?",
-      a: "Nee, anoniem versturen werkt direct. Zonder account verstuur je tot 500 MB per transfer met een vervaltermijn tot 24 uur. Met een gratis account wordt dat 1 GiB en tot 72 uur.",
+      a: "Nee, anoniem versturen werkt direct. Zonder account verstuur je tot 500 MB per transfer en blijft een link tot 3 dagen geldig. Met een gratis account wordt dat 1 GiB en tot 7 dagen.",
     },
     {
       q: "Waar worden mijn bestanden opgeslagen?",
@@ -54,7 +54,7 @@
     },
     {
       q: "Is Tessil gratis?",
-      a: "Ja. Er is op dit moment geen betaald abonnement en versleuteling zit nooit achter een betaalmuur.",
+      a: "Versturen is gratis, met of zonder account, en blijft dat. Betaalde abonnementen voegen manieren toe om te ontvangen: portalen voor bestanden en formulieren voor antwoorden. Versleuteling zit nooit achter een betaalmuur.",
     },
   ];
 

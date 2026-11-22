@@ -30,7 +30,7 @@ export const PLANS: Plan[] = [
     features: [
       "Send up to 1 GB per transfer",
       "2 GB a month, 20 transfers a day",
-      "Links that last up to 3 days",
+      "Links that last up to 7 days",
       "A list of what you sent",
       "Can be invited to someone's portal",
     ],
@@ -95,7 +95,7 @@ export const COMPARISON: ComparisonGroup[] = [
       {
         label: "How long a link can last",
         note: "You pick per transfer, from one hour up to this.",
-        values: { free: "3 days", pro: "30 days", max: "90 days" },
+        values: { free: "7 days", pro: "30 days", max: "90 days" },
       },
       {
         label: "Sent per month",
