@@ -1,301 +1,39 @@
 <script lang="ts">
+  // The text is in content/, one file per language with the same sections.
+
+  import { page } from "$app/state";
   import ProsePage from "$lib/components/ProsePage.svelte";
   import Seo from "$lib/components/Seo.svelte";
-  import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
+  import { localeFromPath } from "$lib/i18n/locale";
+  import En from "./content/en.svelte";
+  import Nl from "./content/nl.svelte";
+
+  const locale = $derived(localeFromPath(page.url.pathname));
+  const meta = {
+    "en": {
+      "seoTitle": "Terms of Service - Tessil",
+      "description": "Tessil terms of service: usage, limits, acceptable use, legal compliance. End-to-end encrypted file transfer.",
+      "title": "Terms of Service",
+      "tagline": "End-to-end encrypted file transfer.",
+      "updated": "November 18, 2026"
+    },
+    "nl": {
+      "seoTitle": "Gebruiksvoorwaarden - Tessil",
+      "description": "De gebruiksvoorwaarden van Tessil: gebruik, grenzen, toegestaan gebruik, naleving van de wet. End-to-end versleuteld bestanden versturen.",
+      "title": "Gebruiksvoorwaarden",
+      "tagline": "End-to-end versleuteld bestanden versturen.",
+      "updated": "18 november 2026"
+    }
+  };
+  const m = $derived(meta[locale]);
 </script>
 
-<Seo
-  title="Terms of Service - Tessil"
-  description="Tessil terms of service: usage, limits, acceptable use, legal compliance. End-to-end encrypted file transfer."
-  path="/terms"
-/>
+<Seo title={m.seoTitle} description={m.description} path="/terms" />
 
-<ProsePage
-  title="Terms of Service"
-  tagline="End-to-end encrypted file transfer."
-  updated="November 18, 2026"
-  current="terms"
->
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
-            <p class="text-muted-foreground">
-              By using Tessil ("the Service"), you agree to these terms. If you
-              don't agree, don't use the Service.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">2. Description of Service</h2>
-            <p class="text-muted-foreground">
-              Tessil is an end-to-end encrypted file transfer service with
-              temporary share links.
-            </p>
-            {#if PORTALS_ANNOUNCED}
-              <p class="text-muted-foreground">
-                Sending files is free. It works without an account; signing in adds
-                a list of what you sent and longer-lived transfers.
-              </p>
-              <p class="text-muted-foreground">
-                Paid plans add portals: links through which other people send
-                files to you. What a plan includes and costs is on the
-                <a href="/pricing" class="text-primary underline underline-offset-2">pricing page</a>.
-              </p>
-            {:else}
-              <p class="text-muted-foreground">
-                Tessil is free to use. It works without an account; signing in adds
-                a list of what you sent and longer-lived transfers. There is no paid plan at
-                this time.
-              </p>
-            {/if}
-          </section>
-
-          {#if PORTALS_ANNOUNCED}
-            <section class="space-y-3">
-              <h2 class="text-xl font-semibold text-foreground">Portals</h2>
-              <p class="text-muted-foreground">
-                If you own a portal, you decide who gets its link, what you ask
-                people to send, and what you do with what arrives. You are
-                responsible for having a lawful reason to collect it and for
-                telling the people who send it how you will use it. We store
-                it for you in a form we cannot read.
-              </p>
-              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-                <li>Deliveries are deleted automatically after the period your plan sets. Download what you need to keep; we cannot restore it afterwards</li>
-                <li>If you lose every way into your vault, we cannot open your portals for you</li>
-                <li>Do not use a portal to collect content these terms prohibit. We may switch off a portal that is reported for abuse</li>
-                <li>If your plan ends, your portals stop accepting files. What they already hold stays until it expires</li>
-              </ul>
-              <p class="text-muted-foreground">
-                If you send files through someone's portal, you are sending
-                them to that person, not to us. Questions about what happens
-                to them go to the person who gave you the link.
-              </p>
-            </section>
-
-            {#if FORMS_ANNOUNCED}
-              <section class="space-y-3">
-                <h2 class="text-xl font-semibold text-foreground">Forms</h2>
-                <p class="text-muted-foreground">
-                  If you own a form, you decide what you ask, who gets its link,
-                  and what you do with the answers. You are responsible for
-                  having a lawful reason to collect them, for asking no more
-                  than you need, and for telling the people who answer how you
-                  will use what they give you. We store it for you in a form we
-                  cannot read.
-                </p>
-                <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-                  <li>Responses are deleted automatically after the period your plan sets. Export what you need to keep; we cannot restore it afterwards</li>
-                  <li>If you lose every way into your vault, we cannot open your forms for you</li>
-                  <li>We cannot check a response against your form. Do not rely on a response alone as proof of what someone was asked</li>
-                  <li>Do not use a form to collect content these terms prohibit, or to pose as someone else. We may switch off a form that is reported for abuse</li>
-                  <li>If your plan ends, your forms stop accepting responses. What they already hold stays until it expires</li>
-                </ul>
-                <p class="text-muted-foreground">
-                  If you fill in someone's form, you are answering that person,
-                  not us. Questions about what happens to your answers go to the
-                  person who gave you the link.
-                </p>
-              </section>
-            {/if}
-
-            <section class="space-y-3" id="billing">
-              <h2 class="text-xl font-semibold text-foreground">Paid plans and billing</h2>
-              <p class="text-muted-foreground">
-                Paid plans are sold through Polar, which acts as the merchant
-                of record. That means Polar is the seller on your invoice,
-                takes the payment, and handles tax. We never receive your
-                card details; Polar tells us only that a subscription exists
-                and when it renews or ends.
-              </p>
-              <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-                <li><strong>Renewal.</strong> A plan is paid in advance, per month or per year, and renews automatically until you cancel</li>
-                <li><strong>Cancelling.</strong> You can cancel at any time from your account settings. The plan then runs until the end of the period you have paid for and does not renew</li>
-                <li><strong>After a plan ends.</strong> Your account returns to the free plan. Your portals stop accepting files; what they already hold stays available to you until it expires. Sending keeps working as before</li>
-                <li><strong>Refunds.</strong> If you change your mind within 14 days of your first payment, write to <a href="mailto:hello@tessil.app" class="text-primary underline underline-offset-2">hello@tessil.app</a> and you get it back in full. After that, a period that has started is not refunded, except where the law gives you that right</li>
-                <li><strong>Failed payments.</strong> If a renewal cannot be collected, Polar tries again. If it still fails, the plan ends</li>
-                <li><strong>Price changes.</strong> We tell you by email at least 30 days before a new price applies to your renewal, so you can cancel first</li>
-              </ul>
-              <p class="text-muted-foreground">
-                Encryption, password protection, passkeys and automatic expiry
-                are never part of what a plan sells. They stay free.
-              </p>
-            </section>
-          {/if}
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">3. Acceptable Use</h2>
-            <p class="text-muted-foreground">You agree NOT to use the Service to:</p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Upload, share, or distribute illegal content</li>
-              <li>Share copyrighted material without authorization</li>
-              <li>Distribute malware, viruses, or harmful code</li>
-              <li>Share content that exploits or harms minors</li>
-              <li>Harass, abuse, or threaten others</li>
-              <li>Violate any applicable laws or regulations</li>
-              <li>Attempt to circumvent rate limits or abuse the Service</li>
-              <li>Use automated systems to upload content at scale</li>
-              <li>Resell or commercially exploit the Service without permission</li>
-            </ul>
-            <p class="text-muted-foreground">
-              We reserve the right to terminate access to users who violate these terms.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">4. User Responsibilities</h2>
-            <p class="text-muted-foreground">You are solely responsible for:</p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>The content you upload and share</li>
-              <li>Keeping your share links secure</li>
-              <li>Ensuring you have the right to share the content</li>
-              <li>Complying with all applicable laws in your jurisdiction</li>
-            </ul>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">5. Service Limitations</h2>
-            <p class="text-muted-foreground">
-              Per-file size, monthly volume, and expiry length are limited to keep
-              the service fast and prevent abuse. Signed-in accounts get somewhat
-              higher limits than anonymous use. Fair-usage limits apply to everyone.
-            </p>
-            <p class="text-muted-foreground">
-              We may modify these limits when needed to keep the service available.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">6. Privacy & Encryption</h2>
-            <p class="text-muted-foreground">
-              Tessil uses end-to-end encryption. Files are encrypted in your
-              browser before upload. We don't have the encryption keys:
-            </p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>We cannot view, access, or recover your files</li>
-              <li>If you lose the share link, the files cannot be recovered</li>
-              <li>We cannot comply with requests to provide file contents (as we don't have access)</li>
-            </ul>
-            <p class="text-muted-foreground">
-              For more information, please see our <a href="/privacy" class="text-primary underline underline-offset-2">Privacy Policy</a>.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">7. Illegal Content & Abuse Reporting</h2>
-            <p class="text-muted-foreground">
-              Tessil has zero tolerance for illegal content, including but not limited to child sexual
-              abuse material (CSAM), terrorism-related content, or any content that violates applicable laws.
-            </p>
-            <p class="text-muted-foreground">
-              End-to-end encryption stops us from viewing file contents. We can
-              still act on reports:
-            </p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Anyone can report abuse via our <a href="/abuse" class="text-primary underline underline-offset-2">abuse reporting page</a></li>
-              <li>Upon receiving a valid report, we will immediately delete the reported transfer and all associated data</li>
-              <li>We will preserve any available metadata (such as IP addresses and timestamps) for law enforcement when legally required</li>
-              <li>We cooperate fully with law enforcement investigations in accordance with applicable law</li>
-            </ul>
-            <p class="text-muted-foreground">
-              For urgent matters involving child safety, please contact your local law enforcement
-              immediately in addition to reporting to us at
-              <a href="mailto:abuse@tessil.app" class="text-primary underline underline-offset-2">abuse@tessil.app</a>.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">8. Law Enforcement & Legal Compliance</h2>
-            <p class="text-muted-foreground">
-              We comply with the EU Digital Services Act and applicable Dutch law. Specifically:
-            </p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>We will act expeditiously upon receiving notice of illegal content</li>
-              <li>We will cooperate with law enforcement authorities when presented with valid legal orders</li>
-              <li>We may preserve and disclose available metadata (IP addresses, timestamps, file sizes) in response to lawful requests</li>
-              <li>We will delete transfers identified as containing illegal content</li>
-            </ul>
-            <p class="text-muted-foreground">
-              Due to our zero-knowledge architecture, we do not have access to encryption keys or file contents.
-              Available metadata is limited to what is described in our <a href="/privacy" class="text-primary underline underline-offset-2">Privacy Policy</a>.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">9. Disclaimer of Warranties</h2>
-            <p class="text-muted-foreground">
-              THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND,
-              EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:
-            </p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Implied warranties of merchantability</li>
-              <li>Fitness for a particular purpose</li>
-              <li>Non-infringement</li>
-              <li>Availability, reliability, or accuracy</li>
-            </ul>
-            <p class="text-muted-foreground">
-              We do not guarantee that the Service will be uninterrupted, error-free, or secure.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">10. Limitation of Liability</h2>
-            <p class="text-muted-foreground">
-              TO THE MAXIMUM EXTENT PERMITTED BY LAW, TESSIL AND ITS OPERATORS SHALL NOT BE LIABLE FOR:
-            </p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>Any indirect, incidental, special, consequential, or punitive damages</li>
-              <li>Loss of data, profits, or business opportunities</li>
-              <li>Any damages arising from your use or inability to use the Service</li>
-              <li>Any content uploaded or shared by users</li>
-              <li>Unauthorized access to or alteration of your transmissions or data</li>
-            </ul>
-            <p class="text-muted-foreground">
-              This limitation applies regardless of the legal theory (contract, tort, or otherwise).
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">11. Indemnification</h2>
-            <p class="text-muted-foreground">
-              You agree to indemnify and hold harmless Tessil, its operators, and affiliates from any claims,
-              damages, losses, or expenses (including legal fees) arising from your use of the Service or
-              violation of these Terms.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">12. Service Modifications</h2>
-            <p class="text-muted-foreground">
-              We reserve the right to modify, suspend, or discontinue the Service (or any part thereof)
-              at any time, with or without notice. We shall not be liable to you or any third party for
-              any modification, suspension, or discontinuation of the Service.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">13. Governing Law</h2>
-            <p class="text-muted-foreground">
-              These Terms shall be governed by and construed in accordance with the laws of the Netherlands,
-              without regard to its conflict of law provisions. Any disputes shall be subject to the
-              exclusive jurisdiction of the courts in the Netherlands.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">14. Changes to Terms</h2>
-            <p class="text-muted-foreground">
-              We may update these Terms from time to time. Continued use of the Service after changes
-              constitutes acceptance of the new Terms. We encourage you to review this page periodically.
-            </p>
-          </section>
-
-          <section class="space-y-3">
-            <h2 class="text-xl font-semibold text-foreground">15. Contact</h2>
-            <p class="text-muted-foreground">
-              Questions about these Terms:
-            </p>
-            <p class="text-muted-foreground">
-              <a href="mailto:legal@tessil.app" class="text-primary underline underline-offset-2">legal@tessil.app</a>
-            </p>
-          </section>
+<ProsePage title={m.title} tagline={m.tagline} updated={m.updated} current="terms">
+  {#if locale === "nl"}
+    <Nl />
+  {:else}
+    <En />
+  {/if}
 </ProsePage>
