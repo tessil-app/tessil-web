@@ -8,6 +8,7 @@
   import { api } from "$lib/api/client";
   import { auth } from "$lib/stores/auth.svelte";
   import PlanRow from "./PlanRow.svelte";
+  import LanguageRow from "./LanguageRow.svelte";
 
   let isExporting = $state(false);
   let exportError = $state<string | null>(null);
@@ -67,6 +68,8 @@
 </script>
 
 <PlanRow />
+
+<LanguageRow />
 
 <DividerRow
   title="Your data"

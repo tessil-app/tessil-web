@@ -13,21 +13,27 @@
   import { uploadStore } from "$lib/stores/upload.svelte";
   import { hasDismissedPrompt, markPromptDismissed, shouldAutoOpenPrompt } from "$lib/support/prompt";
   import { cn } from "$lib/utils";
+  import { page } from "$app/state";
+  import { localeFromPath } from "$lib/i18n/locale";
+import { hrefFor } from "$lib/i18n/paths";
+  import { homeMessages } from "$lib/i18n/messages/home";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import { onMount } from "svelte";
 
-  const PAGE_TITLE = "Tessil - Send anything. We see nothing.";
-  const PAGE_DESCRIPTION =
-    "End-to-end encrypted file transfer. Your browser encrypts before upload - we never see your files or the key.";
+  // English at /, Dutch at /nl; the same page. See src/lib/i18n.
+  const locale = $derived(localeFromPath(page.url.pathname));
+  const t = $derived(homeMessages[locale]);
+  const href = (canonical: string) => hrefFor(canonical, locale);
 
-  const homeSchema = {
+  const homeSchema = $derived({
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebSite",
         name: "Tessil",
         url: SITE_URL,
-        description: PAGE_DESCRIPTION,
+        description: t.pageDescription,
+        inLanguage: locale,
       },
       {
         "@type": "WebApplication",
@@ -40,30 +46,23 @@
           price: "0",
           priceCurrency: "EUR",
         },
-        featureList: [
-          "End-to-end encrypted file transfer",
-          "Client-side encryption in browser",
-          "Temporary links with expiration",
-          "Optional password protection",
-        ],
+        featureList: t.schemaFeatures,
         url: SITE_URL,
       },
     ],
-  };
+  });
 
 
   // The question behind "Or ask an AI". Written to invite criticism, not praise.
-  const ASK_PROMPT =
-    "I am considering Tessil (https://tessil.app) for sending files. Read its security page (https://tessil.app/security), its verification page (https://tessil.app/verify) and its source code (https://github.com/tessil-app). Explain in plain language how its encryption works and what the service can and cannot see. Then be critical: what are its weaknesses and limits, what do I still have to trust, and how does it compare with WeTransfer, Proton Drive and Tresorit? Say clearly which claims you could not verify.";
-  const askLinks = [
-    { label: "ChatGPT", href: `https://chatgpt.com/?q=${encodeURIComponent(ASK_PROMPT)}` },
-    { label: "Claude", href: `https://claude.ai/new?q=${encodeURIComponent(ASK_PROMPT)}` },
-    { label: "Perplexity", href: `https://www.perplexity.ai/search?q=${encodeURIComponent(ASK_PROMPT)}` },
-  ];
+  const askLinks = $derived([
+    { label: "ChatGPT", href: `https://chatgpt.com/?q=${encodeURIComponent(t.ask.prompt)}` },
+    { label: "Claude", href: `https://claude.ai/new?q=${encodeURIComponent(t.ask.prompt)}` },
+    { label: "Perplexity", href: `https://www.perplexity.ai/search?q=${encodeURIComponent(t.ask.prompt)}` },
+  ]);
   let askCopied = $state(false);
   async function copyAskPrompt() {
     try {
-      await navigator.clipboard.writeText(ASK_PROMPT);
+      await navigator.clipboard.writeText(t.ask.prompt);
       askCopied = true;
       setTimeout(() => (askCopied = false), 2000);
     } catch {
@@ -72,47 +71,13 @@
   }
 
   // What Tessil does besides sending, each shown once it is announced.
-  const features: Feature[] = [
+  const features: Feature[] = $derived([
     ...(PORTALS_ANNOUNCED
-      ? [
-          {
-            id: "portals" as const,
-            name: "Portals",
-            fresh: true,
-            line: "A link where people send you files. Only you can open them.",
-            href: "/portals",
-            link: "Meet portals",
-            pill: "Now you can receive files too",
-          },
-        ]
+      ? [{ id: "portals" as const, fresh: true, ...t.features.portals, href: href("/portals") }]
       : []),
-    ...(FORMS_ANNOUNCED
-      ? [
-          {
-            id: "forms" as const,
-            name: "Forms",
-            fresh: true,
-            line: "Ask your questions with one link. Only you can read the answers.",
-            href: "/forms",
-            link: "Meet forms",
-            pill: "Forms only you can read",
-          },
-        ]
-      : []),
-    ...(ACCESS_KEYS_ANNOUNCED
-      ? [
-          {
-            id: "cli" as const,
-            name: "Terminal",
-            fresh: true,
-            line: "Send and receive from your terminal, or let your AI assistant do it.",
-            href: "/cli",
-            link: "Meet the tool",
-            pill: "Tessil in your terminal",
-          },
-        ]
-      : []),
-  ];
+    ...(FORMS_ANNOUNCED ? [{ id: "forms" as const, fresh: true, ...t.features.forms, href: href("/forms") }] : []),
+    ...(ACCESS_KEYS_ANNOUNCED ? [{ id: "cli" as const, fresh: true, ...t.features.cli, href: href("/cli") }] : []),
+  ]);
 
   // Plays a film only while it is on screen, and not at all for people who asked for less motion.
   function playInView(node: HTMLVideoElement) {
@@ -134,31 +99,14 @@
   }
 
   // Written without findLast, which older Safari does not have.
-  const newest = [...features].reverse().find((f) => f.fresh) ?? null;
+  const newest = $derived([...features].reverse().find((f) => f.fresh) ?? null);
 
-  const steps: { title: string; body: string; link?: { href: string; label: string } }[] = [
-    {
-      title: "Encrypted before it leaves",
-      body: "Your browser scrambles every file, its name included. What reaches us is unreadable.",
-    },
-    {
-      title: "The key is never ours",
-      body: PORTALS_ANNOUNCED
-        ? "It travels in the part of the link browsers don't send to servers. For portals it stays in your vault."
-        : "It travels in the part of the link browsers don't send to servers.",
-    },
-    {
-      title: "Gone when it should be",
-      body: PORTALS_ANNOUNCED
-        ? "Transfers expire in hours or days. What arrives in a portal is deleted after 30 days, or 90 on Max."
-        : "Transfers expire in hours or days, and the files are deleted with them.",
-    },
-    {
-      title: "Check it yourself",
-      body: "Four checks in your own browser, about two minutes.",
-      link: { href: "/verify", label: "Verify it" },
-    },
-  ];
+  const steps: { title: string; body: string; link?: { href: string; label: string } }[] = $derived([
+    t.steps.encrypted,
+    { title: t.steps.key.title, body: PORTALS_ANNOUNCED ? t.steps.key.bodyPortals : t.steps.key.body },
+    { title: t.steps.gone.title, body: PORTALS_ANNOUNCED ? t.steps.gone.bodyPortals : t.steps.gone.body },
+    { title: t.steps.check.title, body: t.steps.check.body, link: { href: href("/verify"), label: t.steps.check.link } },
+  ]);
 
   type FeaturedItem = {
     slug: string;
@@ -216,15 +164,7 @@
 
 </script>
 
-<Seo
-  title={PAGE_TITLE}
-  description={PAGE_DESCRIPTION}
-  path="/"
-  alternates={[
-    { locale: "en", path: "/" },
-    { locale: "nl", path: "/nl" },
-  ]}
-/>
+<Seo title={t.pageTitle} description={t.pageDescription} path="/" />
 
 <svelte:head>
   {@html `<script type="application/ld+json">${JSON.stringify(homeSchema).replace(/</g, "\\u003c")}</script>`}
@@ -249,7 +189,7 @@
             href={newest.href}
             class="inline-flex sm:hidden items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3.5 text-sm text-foreground transition-colors duration-200 ease-out hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <span class="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">New</span>
+            <span class="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">{t.newTag}</span>
             {newest.pill}
           </a>
         {/if}
@@ -261,21 +201,20 @@
               class="inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-              Keep Tessil alive
+              {t.keepAlive}
             </button>
           </div>
         {/if}
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground leading-none" style="letter-spacing: -0.035em">
-          Send anything.
+          {t.heroLine1}
           <br />
-          We see nothing.
+          {t.heroLine2}
         </h1>
         <p class="max-w-lg text-base text-muted-foreground leading-snug">
-          End-to-end encrypted in your browser. The key never
-          reaches our server.
+          {t.heroSub}
         </p>
         <p class="hidden sm:block text-sm text-muted-foreground/80">
-          Drop a file in the panel - or anywhere on this page.
+          {t.heroDrop}
         </p>
     </div>
 
@@ -288,24 +227,28 @@
       style={featured ? `background-image: url('${featured.src}')` : undefined}
     >
 
-      <SendPanel />
+      <SendPanel {locale} />
 
       {#if features.length > 0 && !hasFiles}
-        <FeatureAccordion {features} class="self-end w-full sm:w-[30rem]" />
+        <FeatureAccordion
+          {features}
+          class="self-end w-full sm:w-[30rem]"
+          words={{ fresh: t.newTag, show: (name) => (locale === "nl" ? `Toon ${name}` : `Show ${name}`) }}
+        />
       {/if}
     </div>
 
     {#if featured}
       <div class="mt-2 flex shrink-0 flex-wrap justify-between gap-x-6 gap-y-0.5 px-1 text-xs text-muted-foreground">
         <p>
-          <span class="font-medium text-foreground">{featured.artist}</span>, from
+          <span class="font-medium text-foreground">{featured.artist}</span>{t.artFrom}
           {#if featured.artistUrl}
             <TextLink href={featured.artistUrl} target="_blank" rel="noopener noreferrer">{featured.title}</TextLink>
           {:else}
             {featured.title}
           {/if}
         </p>
-        <p>On this wall this month.</p>
+        <p>{t.artWall}</p>
       </div>
     {/if}
   </div>
@@ -314,7 +257,7 @@
 
 <div class="bg-background">
   <section aria-labelledby="how-title" class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-    <h2 id="how-title" class="sr-only">How it works</h2>
+    <h2 id="how-title" class="sr-only">{t.howTitle}</h2>
     <ul class="grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
       {#each steps as step (step.title)}
         <li class="space-y-2 border-t border-border pt-5">
@@ -339,15 +282,13 @@
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center">
         <div class="space-y-5">
           <h2 id="portals-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
-            Now it works both ways.
+            {t.portals.title}
           </h2>
           <p class="max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground">
-            A portal is a link you hand to the people you work with. They see what you need
-            and send it, without an account. It is encrypted in their browser, so what arrives
-            can be opened by you and nobody else, us included.
+            {t.portals.body}
           </p>
           <ul class="space-y-2.5 text-sm text-foreground">
-            {#each ["A checklist that shows what is still missing", "Works on a phone, no account for the sender", "Deleted automatically after 30 days, or 90 on Max"] as point (point)}
+            {#each t.portals.points as point (point)}
               <li class="flex items-center gap-2.5">
                 <IconCheckRegular class="size-4 shrink-0 text-primary" />
                 {point}
@@ -355,25 +296,25 @@
             {/each}
           </ul>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-3 pt-2">
-            <Button href={auth.user ? "/dashboard/portals" : "/pricing"} fullWidth={false}>
-              {auth.user ? "Open your portals" : "See the plans"}
+            <Button href={auth.user ? "/dashboard/portals" : href("/pricing")} fullWidth={false}>
+              {auth.user ? t.portals.open : t.portals.plans}
             </Button>
             <p class="text-sm text-muted-foreground">
-              You set portals up in your account. Sending stays free.
-              <TextLink href="/portals">Take the tour</TextLink>
+              {t.portals.note}
+              <TextLink href={href("/portals")}>{t.portals.tour}</TextLink>
             </p>
           </div>
         </div>
 
         <!-- What the sender sees. An illustration, not a control. -->
         <div aria-hidden="true" class="rounded-xl border border-border bg-card p-6 shadow-sm space-y-3.5">
-          <p class="text-xs text-muted-foreground">Send files to</p>
+          <p class="text-xs text-muted-foreground">{t.portals.mock.sendTo}</p>
           <p class="text-xl font-semibold tracking-tight text-foreground">Studio North</p>
           <div class="flex justify-between border-t border-border pt-3.5 text-xs text-muted-foreground">
-            <span>What is needed</span>
-            <span>2 of 3 added</span>
+            <span>{t.portals.mock.needed}</span>
+            <span>{t.portals.mock.progress}</span>
           </div>
-          {#each [{ label: "Signed contract", file: "contract-signed.pdf" }, { label: "Logo files", file: "logo.zip" }] as row (row.label)}
+          {#each [{ label: t.portals.mock.contract, file: "contract-signed.pdf" }, { label: t.portals.mock.logos, file: "logo.zip" }] as row (row.file)}
             <div class="flex items-center gap-2.5 rounded-md border border-border px-3.5 py-2.5 text-sm">
               <IconCheckRegular class="size-4 shrink-0 text-success-foreground" />
               <span class="flex-1 text-foreground">{row.label}</span>
@@ -382,11 +323,11 @@
           {/each}
           <div class="flex items-center gap-2.5 rounded-md border border-dashed border-border px-3.5 py-2.5 text-sm text-muted-foreground">
             <span class="size-4 shrink-0 rounded-full border border-dashed border-warning"></span>
-            <span class="flex-1">Invoice details</span>
-            <span class="text-xs font-medium text-foreground">Choose file</span>
+            <span class="flex-1">{t.portals.mock.invoice}</span>
+            <span class="text-xs font-medium text-foreground">{t.portals.mock.choose}</span>
           </div>
           <div class="rounded-md bg-primary py-2.5 text-center text-sm font-medium text-primary-foreground">
-            Send 2 files
+            {t.portals.mock.send}
           </div>
         </div>
       </div>
@@ -408,22 +349,20 @@
             loop
             playsinline
             preload="none"
-            aria-label="The form editor: questions are added, then the form is filled in and sent."
+            aria-label={t.forms.video}
           >
             <source src="/featured/forms-editor.mp4" type="video/mp4" />
           </video>
         </div>
         <div class="space-y-5">
           <h2 id="forms-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
-            Ask anything. Only you read the answers.
+            {t.forms.title}
           </h2>
           <p class="max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground">
-            A form is a link with your questions on it. The questions are encrypted in your
-            browser and each answer in theirs, so we can read neither. Together the answers add
-            up to a summary only you see.
+            {t.forms.body}
           </p>
           <ul class="space-y-2.5 text-sm text-foreground">
-            {#each ["Seven kinds of question, files among them", "A summary per question, and an export to a spreadsheet", "No account for the people who answer"] as point (point)}
+            {#each t.forms.points as point (point)}
               <li class="flex items-center gap-2.5">
                 <IconCheckRegular class="size-4 shrink-0 text-primary" />
                 {point}
@@ -431,10 +370,10 @@
             {/each}
           </ul>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-3 pt-2">
-            <Button href="/forms/try" fullWidth={false}>Try the editor</Button>
+            <Button href="/forms/try" fullWidth={false}>{t.forms.try}</Button>
             <p class="text-sm text-muted-foreground">
-              No account needed to try it.
-              <TextLink href="/forms">Take the tour</TextLink>
+              {t.forms.note}
+              <TextLink href={href("/forms")}>{t.forms.tour}</TextLink>
             </p>
           </div>
         </div>
@@ -447,15 +386,13 @@
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center">
         <div class="space-y-5">
           <h2 id="terminal-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
-            No browser needed.
+            {t.terminal.title}
           </h2>
           <p class="max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground">
-            The same encrypted transfers and portals from your terminal, your scripts and your
-            AI assistant. The tool signs in with a key of its own, never your password, and an
-            assistant that sends a file for you never sees the link.
+            {t.terminal.body}
           </p>
           <ul class="space-y-2.5 text-sm text-foreground">
-            {#each ["Open source, on macOS and Linux", "Pull what arrived in a portal into folders", "One access key with every account, the free one too"] as point (point)}
+            {#each t.terminal.points as point (point)}
               <li class="flex items-center gap-2.5">
                 <IconCheckRegular class="size-4 shrink-0 text-primary" />
                 {point}
@@ -463,7 +400,7 @@
             {/each}
           </ul>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-3 pt-2">
-            <Button href="/cli" fullWidth={false}>Meet the tool</Button>
+            <Button href={href("/cli")} fullWidth={false}>{t.terminal.meet}</Button>
             <p class="text-sm text-muted-foreground">
               <code class="font-mono text-foreground">brew install tessil-app/tap/tessil</code>
             </p>
@@ -491,16 +428,16 @@
         <div class="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
           <div class="max-w-xl space-y-3">
             <h2 id="pricing-title" class="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.08]">
-              Pay for more. Never for privacy.
+              {t.pricing.title}
             </h2>
             <p class="text-base sm:text-lg leading-relaxed text-muted-foreground">
-              Sending is free, encrypted, and stays that way. A plan adds
-              {FORMS_ANNOUNCED ? "portals and forms" : "portals"}.
+              {t.pricing.body}
+              {FORMS_ANNOUNCED ? t.pricing.addsWithForms : t.pricing.adds}.
             </p>
           </div>
-          <TextLink href="/pricing" class="text-primary">See what each plan includes</TextLink>
+          <TextLink href={href("/pricing")} class="text-primary">{t.pricing.link}</TextLink>
         </div>
-        <PlanCards compact />
+        <PlanCards compact {locale} />
       </div>
     </section>
   {/if}
@@ -509,137 +446,116 @@
     <!-- A heading on the left, the text in a readable column on the right. -->
     <section class="grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-tight">
-        Tessil, explained
+        {t.explained.title}
       </h2>
       <div class="max-w-2xl space-y-4 text-base text-muted-foreground leading-relaxed">
+        <p>{t.explained.p1}</p>
         <p>
-          Tessil is an end-to-end encrypted file transfer service.
-          Files are scrambled in your browser before they leave your
-          device. The decryption key lives in the URL fragment of the
-          share link, the part after <code>#</code> that browsers
-          don't send to servers. We never see your files, your
-          filenames, or your keys.
+          {t.explained.p2Before}
+          <a href={href("/verify")} class="text-primary underline underline-offset-2">{t.explained.p2Link}</a>
+          {t.explained.p2After}
         </p>
         <p>
-          You don't have to take that on faith.
-          <a href="/verify" class="text-primary underline underline-offset-2">Verify it yourself</a>
-          walks through four checks you can run against this site in about two
-          minutes, using the developer tools already in your browser.
+          {t.explained.p3Before}
+          <a href={href("/security")} class="text-primary underline underline-offset-2">{t.explained.p3Link}</a>.
         </p>
         <p>
-          Without an account a link lasts up to three days; with a free
-          account up to a week, and it stays in your list of transfers. Password
-          protection adds a second factor independent of the link.
-          Read more about the security model on the
-          <a href="/security" class="text-primary underline underline-offset-2">security page</a>.
+          {t.explained.p4Before}
+          <a href={href("/compare")} class="text-primary underline underline-offset-2">{t.explained.p4Link}</a>.
         </p>
-        <p>
-          New to encrypted transfer? See how Tessil compares to
-          <a href="/compare" class="text-primary underline underline-offset-2">WeTransfer, Proton Drive, and other tools</a>.
-        </p>
-        <p>
-          {#if PORTALS_ANNOUNCED}
-            Built and run by one person. Sending is free; the paid plans, for receiving, are
-            what keeps it running.
-          {:else}
-            Built and run by one person, and free to use. If Tessil saves you a
-            headache, you can support the project. The link's in the footer below.
-          {/if}
-        </p>
+        <p>{PORTALS_ANNOUNCED ? t.explained.p5Paid : t.explained.p5Free}</p>
       </div>
     </section>
 
     <section class="mt-16 sm:mt-24 pt-16 sm:pt-24 border-t border-border grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-tight">
-        Questions
+        {t.faq.title}
       </h2>
       <div class="max-w-2xl space-y-10">
         <div class="divide-y divide-border border-y border-border text-base">
         <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
-            Is Tessil really end-to-end encrypted?
+            {t.faq.e2eQ}
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-3 text-muted-foreground leading-relaxed">
-            Yes. Your files are encrypted in your browser with AES-GCM before they upload, and the decryption key lives in the share link, never on our servers. We can't read your files, your filenames, or your keys.
+            {t.faq.e2eA}
           </p>
         </details>
         <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
-            Do I need an account to send files?
+            {t.faq.accountQ}
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-3 text-muted-foreground leading-relaxed">
-            No. You can send and receive files anonymously. A free account is optional and just adds a list to manage the transfers you create. It doesn't change how files are encrypted.
+            {t.faq.accountA}
           </p>
         </details>
         <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
-            How is Tessil different from WeTransfer or Dropbox?
+            {t.faq.differentQ}
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-3 text-muted-foreground leading-relaxed">
-            Those services can read what you upload. Tessil can't, because encryption happens in your browser before anything is sent. Tessil is also open source, EU-hosted, and shows no ads.
-            <a href="/compare" class="text-primary underline underline-offset-2">See the full comparison</a>.
+            {t.faq.differentA}
+            <a href={href("/compare")} class="text-primary underline underline-offset-2">{t.faq.differentLink}</a>.
           </p>
         </details>
         <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
-            How large can the files be?
+            {t.faq.sizeQ}
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-3 text-muted-foreground leading-relaxed">
-            Large files are supported through multi-part uploads, so big transfers stay reliable even on slower connections. Signed-in transfers allow larger sizes than anonymous ones.
+            {t.faq.sizeA}
           </p>
         </details>
         <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
-            Is Tessil free?
+            {t.faq.freeQ}
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-3 text-muted-foreground leading-relaxed">
 {#if PORTALS_ANNOUNCED}
-              Sending is free, with or without an account, and stays that way. Paid plans add ways to receive: {FORMS_ANNOUNCED ? "portals for files and forms for answers" : "portals, links where people send files to you"}. No ads and no selling of data on any plan, and the code is open under the AGPL-3.0 licence.
-              <a href="/pricing" class="text-primary underline underline-offset-2">See the plans</a>.
+              {t.faq.freeA(FORMS_ANNOUNCED)}
+              <a href={href("/pricing")} class="text-primary underline underline-offset-2">{t.faq.freeLink}</a>.
             {:else}
-              Yes, completely free, with no ads and no selling of data. Tessil is open source under the AGPL-3.0 licence, so anyone can audit exactly how it handles encryption.
+              {t.faq.freeAFree}
             {/if}
           </p>
         </details>
         <details class="group py-5">
           <summary class="flex cursor-pointer items-center justify-between gap-4 text-foreground font-medium list-none [&::-webkit-details-marker]:hidden">
-            How long do transfers last?
+            {t.faq.lastQ}
             <span class="text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-45 shrink-0" aria-hidden="true">+</span>
           </summary>
           <p class="mt-3 text-muted-foreground leading-relaxed">
-            Transfers expire automatically based on the time limit and download count you choose. Once a transfer expires, the encrypted data is deleted.
+            {t.faq.lastA}
           </p>
         </details>
       </div>
 
         <!-- A second opinion. Plain outbound links; the question is shown in full. -->
         <div class="space-y-4">
-          <h3 class="text-lg font-semibold tracking-tight text-foreground">Or ask an AI</h3>
+          <h3 class="text-lg font-semibold tracking-tight text-foreground">{t.ask.title}</h3>
           <p class="text-base leading-relaxed text-muted-foreground">
-            You don't have to take our answers. Put the question to an assistant that has no
-            stake in it. This is the exact wording it gets, and you can change it first:
+            {t.ask.body}
           </p>
           <blockquote class="rounded-lg bg-card p-4 text-sm leading-relaxed text-foreground">
-            {ASK_PROMPT}
+            {t.ask.prompt}
           </blockquote>
           <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
             {#each askLinks as link (link.label)}
               <TextLink href={link.href} target="_blank" rel="noopener noreferrer" class="text-primary">
-                Ask {link.label}
+                {t.ask.askWith(link.label)}
               </TextLink>
             {/each}
             <TextLink onclick={copyAskPrompt} class="text-muted-foreground">
-              {askCopied ? "Copied" : "Copy the question"}
+              {askCopied ? t.ask.copied : t.ask.copy}
             </TextLink>
           </div>
           <p class="text-xs text-muted-foreground">
-            These open another company's site with the question filled in. Nothing about you
-            is sent along by us.
+            {t.ask.note}
           </p>
         </div>
       </div>

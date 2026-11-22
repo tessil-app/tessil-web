@@ -4,6 +4,10 @@
     SUPPORT_KOFI_URL,
   } from "$lib/config/support";
   import { cn } from "$lib/utils";
+  import { page } from "$app/state";
+  import { uiLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { chromeMessages } from "$lib/i18n/messages/chrome";
   import type { Snippet } from "svelte";
 
   type Current =
@@ -38,17 +42,16 @@
   const linkClass =
     "hover:text-foreground transition-colors duration-200 ease-out";
 
-  const links: { key: Current; href: string; label: string }[] = [
-    { key: "home", href: "/", label: "Home" },
-    { key: "compare", href: "/compare", label: "Compare" },
-    { key: "verify", href: "/verify", label: "Verify" },
-    { key: "pricing", href: "/pricing", label: "Pricing" },
-    { key: "privacy", href: "/privacy", label: "Privacy" },
-    { key: "data", href: "/what-we-store", label: "What we store" },
-    { key: "terms", href: "/terms", label: "Terms" },
-    { key: "security", href: "/security", label: "Security" },
-    { key: "abuse", href: "/abuse", label: "Abuse" },
-  ];
+  // In the page's language, and to that language's pages where they exist.
+  const locale = $derived(uiLocale(page.url.pathname));
+  const words = $derived(chromeMessages[locale].footer);
+  const links: { key: Current; href: string; label: string }[] = $derived(
+    (["home", "compare", "verify", "pricing", "privacy", "data", "terms", "security", "abuse"] as const).map((key) => ({
+      key,
+      href: hrefFor(key === "home" ? "/" : key === "data" ? "/what-we-store" : `/${key}`, locale),
+      label: words[key],
+    })),
+  );
 </script>
 
 <footer

@@ -35,9 +35,30 @@
   import IconLockRegular from "phosphor-icons-svelte/IconLockRegular.svelte";
   import IconLockOpenRegular from "phosphor-icons-svelte/IconLockOpenRegular.svelte";
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
+  import LanguageSuggestion from "$lib/components/LanguageSuggestion.svelte";
+  import LanguageSwitch from "$lib/components/LanguageSwitch.svelte";
+  import { uiLocale } from "$lib/i18n/app.svelte";
+  import { HTML_LANG } from "$lib/i18n/locale";
+import { hrefFor } from "$lib/i18n/paths";
+  import { chromeMessages } from "$lib/i18n/messages/chrome";
+  import { sendMessages } from "$lib/i18n/messages/send";
   import "../app.css";
 
   let { children } = $props();
+
+  // The language of everything around the page. See $lib/i18n/app.svelte.ts.
+  const locale = $derived(uiLocale($page.url.pathname));
+  const c = $derived(chromeMessages[locale]);
+  const vaultWords = $derived(sendMessages[locale]);
+
+  // The server writes <html lang> into each page; after that, moving between
+  // pages in the browser has to keep it right. Portal and form pages set
+  // their own, from the language the visitor picks there.
+  $effect(() => {
+    const path = $page.url.pathname;
+    if (/^\/(p|f|d)\//.test(path)) return;
+    document.documentElement.lang = HTML_LANG[locale];
+  });
 
   let vaultUnlocked = $state(false);
 
@@ -109,13 +130,13 @@
 
   // Signed-out visitors get the pages that help them decide. Signed-in
   // people get their own pages instead; these stay in the footer for them.
-  const publicLinks = [
-    ...(PORTALS_ANNOUNCED ? [{ href: "/portals", label: "Portals" }] : []),
-    ...(FORMS_ANNOUNCED ? [{ href: "/forms", label: "Forms" }] : []),
-    ...(ACCESS_KEYS_ANNOUNCED ? [{ href: "/cli", label: "CLI" }] : []),
-    { href: "/pricing", label: "Pricing" },
-    { href: "/security", label: "Security" },
-  ];
+  const publicLinks = $derived([
+    ...(PORTALS_ANNOUNCED ? [{ href: hrefFor("/portals", locale), label: c.portals }] : []),
+    ...(FORMS_ANNOUNCED ? [{ href: hrefFor("/forms", locale), label: c.forms }] : []),
+    ...(ACCESS_KEYS_ANNOUNCED ? [{ href: hrefFor("/cli", locale), label: c.cli }] : []),
+    { href: hrefFor("/pricing", locale), label: c.pricing },
+    { href: hrefFor("/security", locale), label: c.security },
+  ]);
 
   // Header links are plain text; the current page is the darker one.
   const navLinkBase =
@@ -232,17 +253,17 @@
       if (!result.ok) {
         unlockError =
           result.reason === "wrong_password"
-            ? "That password didn't unlock the vault."
+            ? vaultWords.wrongPassword
             : result.reason === "wrong_phrase"
-              ? "That recovery phrase doesn't match. Check spelling and word order."
+              ? vaultWords.wrongPhrase
               : result.reason === "not_setup"
-                ? "Vault isn't set up yet. Set one up from settings first."
-                : "We couldn't read your vault. Try again.";
+                ? vaultWords.noVault
+                : vaultWords.unreadableVault;
         return;
       }
       closeUnlock();
     } catch (err) {
-      unlockError = err instanceof Error ? err.message : "Couldn't unlock.";
+      unlockError = err instanceof Error ? err.message : c.unlockFailed;
     } finally {
       isUnlockingVault = false;
     }
@@ -270,7 +291,7 @@
   href="#main-content"
   class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-card focus:text-foreground focus:rounded-md focus:outline-2 focus:outline-offset-2 focus:outline-ring"
 >
-  Skip to main content
+  {c.skip}
 </a>
 <div class="min-h-screen bg-background text-foreground">
   <header
@@ -294,13 +315,13 @@
       )}
     >
       <a
-        href="/"
+        href={hrefFor("/", locale)}
         class="inline-flex text-sm hover:opacity-80 transition-opacity duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-        aria-label="Tessil - home"
+        aria-label={c.home}
       >
         <Wordmark layout="horizontal" markSize={22} />
       </a>
-      <nav class="flex items-center gap-2 text-sm" aria-label="Account">
+      <nav class="flex items-center gap-2 text-sm" aria-label={c.accountNav}>
         {#if auth.loaded}
           {#if auth.isAuthenticated && auth.user}
             {@const email = auth.user.email}
@@ -309,7 +330,7 @@
               aria-current={(isActive("/dashboard", true) || isActive("/dashboard/new")) ? "page" : undefined}
               class={cn(navLinkBase, "hidden sm:inline-flex", (isActive("/dashboard", true) || isActive("/dashboard/new")) ? navLinkActive : navLinkInactive)}
             >
-              Transfers
+              {c.transfers}
             </a>
             {#if showPortals}
               <a
@@ -317,7 +338,7 @@
                 aria-current={isActive("/dashboard/portals") ? "page" : undefined}
                 class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard/portals") ? navLinkActive : navLinkInactive)}
               >
-                Portals
+                {c.portals}
               </a>
             {/if}
             {#if showForms}
@@ -326,12 +347,13 @@
                 aria-current={isActive("/dashboard/forms") ? "page" : undefined}
                 class={cn(navLinkBase, "hidden sm:inline-flex", isActive("/dashboard/forms") ? navLinkActive : navLinkInactive)}
               >
-                Forms
+                {c.forms}
               </a>
             {/if}
+            <LanguageSwitch class="mx-1" />
             <DropdownMenu
               align="end"
-              label="Account menu"
+              label={c.accountMenu}
               triggerClass="p-1 hover:bg-accent text-muted-foreground hover:text-foreground"
             >
               {#snippet trigger()}
@@ -347,18 +369,18 @@
                   class="px-3 py-2 border-b border-border mb-1"
                 >
                   <p class="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Signed in as
+                    {c.signedInAs}
                   </p>
                   <p class="text-sm text-foreground truncate" title={email}>{email}</p>
                 </div>
                 <!-- On a phone the page links live here; there is no room for them beside the logo. -->
                 <DropdownMenuItem
-                  href="/"
-                  onSelect={() => { goto("/"); close(); }}
+                  href="/dashboard/new"
+                  onSelect={() => { goto("/dashboard/new"); close(); }}
                   class="sm:hidden"
                 >
                   <IconUploadRegular class="size-4 opacity-70" />
-                  New transfer
+                  {c.newTransfer}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   href="/dashboard"
@@ -366,7 +388,7 @@
                   class={cn("sm:hidden", (isActive("/dashboard", true) || isActive("/dashboard/new")) && "bg-accent")}
                 >
                   <IconListRegular class="size-4 opacity-70" />
-                  Transfers
+                  {c.transfers}
                 </DropdownMenuItem>
                 {#if showPortals}
                   <DropdownMenuItem
@@ -375,7 +397,7 @@
                     class={cn("sm:hidden", isActive("/dashboard/portals") && "bg-accent")}
                   >
                     <IconTrayRegular class="size-4 opacity-70" />
-                    Portals
+                    {c.portals}
                   </DropdownMenuItem>
                 {/if}
                 {#if showForms}
@@ -385,7 +407,7 @@
                     class={cn("sm:hidden", isActive("/dashboard/forms") && "bg-accent")}
                   >
                     <IconClipboardTextRegular class="size-4 opacity-70" />
-                    Forms
+                    {c.forms}
                   </DropdownMenuItem>
                 {/if}
                 <div class="my-1 h-px bg-border sm:hidden" role="separator"></div>
@@ -395,28 +417,28 @@
                   class={isActive("/dashboard/settings") ? "bg-accent" : ""}
                 >
                   <IconGearRegular class="size-4 opacity-70" />
-                  Settings
+                  {c.settings}
                 </DropdownMenuItem>
                 {#if auth.needsVaultSetup}
                   <DropdownMenuItem
                     onSelect={() => { goto("/setup/vault"); close(); }}
                   >
                     <IconLockRegular class="size-4 opacity-70" />
-                    Set up vault
+                    {c.setUpVault}
                   </DropdownMenuItem>
                 {:else if vaultUnlocked}
                   <DropdownMenuItem
                     onSelect={() => { handleLock(); close(); }}
                   >
                     <IconLockOpenRegular class="size-4 opacity-70" />
-                    Lock vault
+                    {c.lockVault}
                   </DropdownMenuItem>
                 {:else}
                   <DropdownMenuItem
                     onSelect={() => { close(); openUnlock(); }}
                   >
                     <IconLockRegular class="size-4 opacity-70" />
-                    Unlock vault
+                    {c.unlockVault}
                   </DropdownMenuItem>
                 {/if}
                 <div class="my-1 h-px bg-border" role="separator"></div>
@@ -425,7 +447,7 @@
                   onSelect={() => { close(); handleLogout(); }}
                 >
                   <IconSignOutRegular class="size-4 opacity-70" />
-                  Sign out
+                  {c.signOut}
                 </DropdownMenuItem>
               {/snippet}
             </DropdownMenu>
@@ -442,7 +464,7 @@
             <div class="sm:hidden">
               <DropdownMenu
                 align="end"
-                label="Menu"
+                label={c.menu}
                 triggerClass="p-2 hover:bg-accent text-muted-foreground hover:text-foreground"
               >
                 {#snippet trigger()}
@@ -461,6 +483,7 @@
                 {/snippet}
               </DropdownMenu>
             </div>
+            <LanguageSwitch class="mx-1" />
             <a
               href="/login"
               aria-current={isActive("/login", true) ? "page" : undefined}
@@ -469,13 +492,14 @@
                 isActive("/login", true) && "bg-card border-border",
               )}
             >
-              Sign in
+              {c.signIn}
             </a>
           {/if}
         {/if}
       </nav>
     </div>
   </header>
+  <LanguageSuggestion />
 
   <main id="main-content">
     {@render children()}
@@ -485,8 +509,8 @@
 {#if auth.isAuthenticated}
   <Modal
     open={unlockOpen}
-    title="Unlock your vault"
-    description="Unlock to read your transfer names and your portals."
+    title={c.unlockTitle}
+    description={c.unlockBody}
     onClose={closeUnlock}
   >
     <form onsubmit={submitUnlock} class="space-y-4" novalidate>
@@ -494,7 +518,7 @@
       {#if unlockMode === "password"}
         <PasswordInput
           id="nav-unlock-password"
-          label="Vault password"
+          label={c.vaultPassword}
           autocomplete="current-password"
           required
           bind:value={unlockPassword}
@@ -503,7 +527,7 @@
       {:else}
         <Textarea
           id="nav-unlock-phrase"
-          label="Recovery phrase"
+          label={c.recoveryPhrase}
           placeholder="word word word …"
           rows={3}
           bind:value={unlockPhrase}
@@ -534,8 +558,8 @@
         disabled={isUnlockingVault}
       >
         {unlockMode === "password"
-          ? "Forgot your password? Use your recovery phrase instead."
-          : "Have your password? Use it instead."}
+          ? c.usePhrase
+          : c.usePassword}
       </button>
       {/if}
     </form>
@@ -548,7 +572,7 @@
         onclick={closeUnlock}
         disabled={isUnlockingVault}
       >
-        Cancel
+        {c.cancel}
       </Button>
       <Button
         type="button"
@@ -558,9 +582,9 @@
       >
         {#if isUnlockingVault}
           <Spinner aria-hidden="true" />
-          Unlocking…
+          {c.unlocking}
         {:else}
-          Unlock
+          {c.unlock}
         {/if}
       </Button>
     {/snippet}

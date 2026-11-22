@@ -1,5 +1,6 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { LOCALIZED_ENTRIES } from './src/lib/i18n/routes.js';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -12,6 +13,12 @@ const config = {
 		adapter: adapter({
 			fallback: '200.html'
 		}),
+
+		// Pages in other languages are listed so the build renders them even
+		// where no link on an English page points to them yet.
+		prerender: {
+			entries: ['*', ...LOCALIZED_ENTRIES]
+		},
 
 		// Script policy only; every other directive is the nginx header
 		// (tessil-api/infra/nginx/snippets/security-headers.conf). `hash` pins

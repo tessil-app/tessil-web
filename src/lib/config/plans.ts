@@ -3,6 +3,7 @@
 // PLAN_* settings); change both together. Prices are charged by Polar,
 // so these numbers must match the products there.
 
+import type { Locale } from "$lib/i18n/locale";
 import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED } from "./launch";
 
 export type PlanId = "free" | "pro" | "max";
@@ -202,12 +203,62 @@ export const COMPARISON: ComparisonGroup[] = [
   },
 ];
 
+// The same plans in Dutch. Numbers and order as above; only the words differ.
+const PLAN_TEXT_NL: Record<PlanId, Pick<Plan, "name" | "pitch" | "lead" | "features">> = {
+  free: {
+    name: "Gratis",
+    pitch: "Om te versturen.",
+    lead: null,
+    features: [
+      "Verstuur tot 1 GB per transfer",
+      "2 GB per maand, 20 transfers per dag",
+      "Links die tot 7 dagen geldig blijven",
+      "Een lijst met wat je verstuurde",
+      "Kan uitgenodigd worden voor iemands portaal",
+    ],
+  },
+  pro: {
+    name: "Pro",
+    pitch: "Ook om te ontvangen.",
+    lead: "Alles van Gratis, plus:",
+    features: [
+      "3 portalen, elk met een eigen checklist en teksten",
+      ...(FORMS_ANNOUNCED ? ["3 formulieren met tot 15 vragen"] : []),
+      "20 GB opslag",
+      "Transfers en portaalbestanden tot 30 dagen bewaard",
+      "Verstuur tot 5 GB per bestand",
+      "Deel een portaal met één persoon",
+    ],
+  },
+  max: {
+    name: "Max",
+    pitch: "Meer ruimte, en een pagina die eruitziet als de jouwe.",
+    lead: "Alles van Pro, plus:",
+    features: [
+      "10 portalen",
+      ...(FORMS_ANNOUNCED ? ["10 formulieren met tot 50 vragen"] : []),
+      "100 GB opslag",
+      "Transfers en portaalbestanden tot 90 dagen bewaard",
+      "Je logo, een wachtwoord en bestanden terugsturen",
+    ],
+  },
+};
+
+/** The plans with their words in a language. */
+export function plansFor(locale: Locale): Plan[] {
+  return locale === "nl" ? PLANS.map((p) => ({ ...p, ...PLAN_TEXT_NL[p.id] })) : PLANS;
+}
+
 export function priceLabel(plan: Plan, cycle: Cycle): string {
   if (!plan.price) return "€0";
   return `€${plan.price[cycle]}`;
 }
 
-export function priceUnit(plan: Plan, cycle: Cycle): string {
+export function priceUnit(plan: Plan, cycle: Cycle, locale: Locale = "en"): string {
+  if (locale === "nl") {
+    if (!plan.price) return "altijd";
+    return cycle === "annual" ? "per jaar" : "per maand";
+  }
   if (!plan.price) return "always";
   return cycle === "annual" ? "a year" : "a month";
 }
