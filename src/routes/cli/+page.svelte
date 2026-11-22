@@ -11,16 +11,24 @@
   import TextLink from "$lib/components/TextLink.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import IconXRegular from "phosphor-icons-svelte/IconXRegular.svelte";
+  import { page } from "$app/state";
+  import { localeFromPath } from "$lib/i18n/locale";
+  import { cliMessages } from "$lib/i18n/messages/cli";
+  import { hrefFor } from "$lib/i18n/paths";
 
-  const installs = [
+  const locale = $derived(localeFromPath(page.url.pathname));
+  const t = $derived(cliMessages[locale]);
+  const href = (canonical: string) => hrefFor(canonical, locale);
+
+  const installs = $derived([
     { id: "brew", label: "Homebrew", command: "brew install tessil-app/tap/tessil" },
     {
       id: "script",
-      label: "Script",
+      label: t.script,
       command: "curl -fsSL https://raw.githubusercontent.com/tessil-app/tessil-cli/main/install.sh | sh",
     },
     { id: "npm", label: "npm", command: "npx tessil help" },
-  ] as const;
+  ] as const);
   let copied = $state<string | null>(null);
 
   async function copy(text: string) {
@@ -35,22 +43,11 @@
 
   const assistantCommand = "claude mcp add tessil -- tessil mcp";
 
-  const can = [
-    "Send files and get a link",
-    "List and delete what it sent",
-    "Read the portals you hand it",
-  ];
-  const cannot = [
-    "Open your vault or see your password",
-    "Touch your account, billing or passkeys",
-    "See transfers it did not send",
-    "Open a portal you did not hand it",
-  ];
 </script>
 
 <Seo
-  title="Tessil from your terminal - CLI and MCP server"
-  description="Send and receive end-to-end encrypted files from a terminal, a script or an AI assistant. Open source. Your assistant never sees the link."
+  title={t.seoTitle}
+  description={t.description}
   path="/cli"
 />
 
@@ -58,7 +55,7 @@
   <div class="flex items-center gap-2 rounded-xl border border-border bg-card py-2 pl-4 pr-2 text-left">
     <code class="command min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.8125rem] text-foreground sm:text-sm">{command}</code>
     <Button variant="secondary" fullWidth={false} class="shrink-0 px-3 py-1.5 text-sm" onclick={() => copy(command)}>
-      {copied === command ? "Copied" : "Copy"}
+      {copied === command ? t.copied : t.copy}
     </Button>
   </div>
 {/snippet}
@@ -67,11 +64,10 @@
   <section class="mx-auto max-w-6xl px-4 sm:px-6 pt-10 pb-20 sm:pt-16 sm:pb-28">
     <div class="space-y-5">
       <h1 class="text-5xl font-semibold leading-none text-foreground sm:text-7xl lg:text-8xl" style="letter-spacing: -0.045em">
-        No browser needed.
+        {t.heading}
       </h1>
       <p class="max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-        The same encrypted transfers and portals, from your terminal, your scripts and your AI
-        assistant. We still see nothing.
+        {t.sub}
       </p>
     </div>
 
@@ -81,13 +77,13 @@
 
     <div class="mt-14 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:items-center">
       <div class="space-y-2">
-        <h2 class="text-2xl font-semibold tracking-tight text-foreground">Install the real one</h2>
+        <h2 class="text-2xl font-semibold tracking-tight text-foreground">{t.installTitle}</h2>
         <p class="text-muted-foreground">
-          Then <code class="font-mono text-foreground">tessil login</code>. Open source, AGPL-3.0.
-          <TextLink href="https://github.com/tessil-app/tessil-cli">Read the code</TextLink>
+          {t.installThen} <code class="font-mono text-foreground">tessil login</code>{t.installAfter}
+          <TextLink href="https://github.com/tessil-app/tessil-cli">{t.readCode}</TextLink>
         </p>
       </div>
-      <CommandTabs id="install" label="How to install" options={installs} class="min-w-0" />
+      <CommandTabs id="install" label={t.howInstall} options={installs} class="min-w-0" />
     </div>
   </section>
 
@@ -96,34 +92,31 @@
     <div class="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2 lg:items-center">
       <div class="min-w-0 space-y-5">
         <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-          It never asks<br />for your password.
+          {t.pairTitle1}<br />{t.pairTitle2}
         </h2>
         <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
-          <code class="font-mono text-foreground">tessil login</code> makes a key of its own on your
-          computer and shows a short code. You approve it in your browser, tick what it may do,
-          and that is the pairing.
+          <code class="font-mono text-foreground">tessil login</code> {t.pairBody}
         </p>
         <p class="max-w-xl text-muted-foreground">
-          The key lives in your system's keychain. It works for 90 days, and you can revoke it
-          from your settings the moment you want to.
+          {t.pairKeychain}
         </p>
       </div>
 
       <!-- What the approval looks like. An illustration, not a control. -->
       <div aria-hidden="true" class="min-w-0 space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <p class="text-sm font-medium text-foreground">A program is asking for access</p>
+        <p class="text-sm font-medium text-foreground">{t.mock.asking}</p>
         <dl class="space-y-2 text-sm">
           <div class="flex gap-4">
-            <dt class="w-20 shrink-0 text-muted-foreground">Calls itself</dt>
+            <dt class="w-20 shrink-0 text-muted-foreground">{t.mock.callsItself}</dt>
             <dd class="text-foreground">MacBook, tessil</dd>
           </div>
           <div class="flex gap-4">
-            <dt class="w-20 shrink-0 text-muted-foreground">Its key</dt>
+            <dt class="w-20 shrink-0 text-muted-foreground">{t.mock.itsKey}</dt>
             <dd class="font-mono text-xs text-foreground">0b28 b9da 2a75 0945 a5b7 9f5c 1796 c49a</dd>
           </div>
         </dl>
         <ul class="space-y-2 border-t border-border pt-4 text-sm text-foreground">
-          {#each [{ label: "Send files", on: true }, { label: "See what it sent", on: true }, { label: "Read portals you pick", on: false }] as box (box.label)}
+          {#each [{ label: t.mock.send, on: true }, { label: t.mock.see, on: true }, { label: t.mock.read, on: false }] as box (box.label)}
             <li class="flex items-center gap-2.5">
               <span class="flex size-4 items-center justify-center rounded {box.on ? 'bg-primary text-white' : 'border border-input'}">
                 {#if box.on}<IconCheckRegular class="size-3" />{/if}
@@ -133,8 +126,8 @@
           {/each}
         </ul>
         <div class="flex gap-2 pt-1">
-          <span class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Approve</span>
-          <span class="px-3 py-2 text-sm text-muted-foreground">Don't approve</span>
+          <span class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">{t.mock.approve}</span>
+          <span class="px-3 py-2 text-sm text-muted-foreground">{t.mock.dont}</span>
         </div>
       </div>
     </div>
@@ -145,15 +138,13 @@
     <div class="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2 lg:items-center">
       <div class="min-w-0 space-y-5">
         <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-          Your assistant sends it.<br />It never sees the link.
+          {t.assistantTitle1}<br />{t.assistantTitle2}
         </h2>
         <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
-          A link holds the key to your files, and whatever an assistant sees is kept by whoever
-          runs the model. So the link goes to your clipboard, and the assistant is told only
-          that it did.
+          {t.assistantBody}
         </p>
         <ul class="space-y-2.5 text-foreground">
-          {#each ["No tool takes or returns a link, a key or a password", "No tool returns what is inside a file", "What a sender wrote is passed on marked as theirs", "It runs on your machine. There is no hosted version"] as point (point)}
+          {#each t.assistantPoints as point (point)}
             <li class="flex items-start gap-2.5">
               <span class="mt-1 shrink-0 text-primary"><IconCheckRegular class="size-4" /></span>
               {point}
@@ -162,25 +153,24 @@
         </ul>
         <div class="max-w-xl space-y-2">
           {@render commandRow(assistantCommand)}
-          <p class="text-sm text-muted-foreground">Works with any assistant that can start a local MCP server.</p>
+          <p class="text-sm text-muted-foreground">{t.anyAssistant}</p>
         </div>
       </div>
 
       <!-- A conversation, and the one place the link goes. An illustration, not a control. -->
       <div aria-hidden="true" class="min-w-0 space-y-3">
         <div class="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-3 text-primary-foreground">
-          Send the signed contract to Anna, valid for three days.
+          {t.chatAsk}
         </div>
         <div class="max-w-[85%] rounded-2xl rounded-bl-md border border-border bg-background px-4 py-3 text-foreground">
           <p class="mb-2 flex items-center gap-2 font-mono text-xs text-muted-foreground">
             <span class="size-1.5 rounded-full bg-success"></span>
             tessil, send_files
           </p>
-          Sent contract-signed.pdf, encrypted on your machine. The link is on your clipboard.
-          I can't see it.
+          {t.chatReply}
         </div>
         <div class="ml-auto flex max-w-[85%] items-center gap-3 rounded-xl border border-dashed border-input px-4 py-3">
-          <span class="shrink-0 text-xs text-muted-foreground">Your clipboard</span>
+          <span class="shrink-0 text-xs text-muted-foreground">{t.clipboard}</span>
           <span class="truncate font-mono text-xs text-primary">https://tessil.app/d/8sKq2ZpLw4…#rT9c…</span>
         </div>
       </div>
@@ -191,12 +181,12 @@
   <section class="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2 lg:items-center">
     <!-- A folder as pull leaves it. An illustration, not a control. -->
     <div aria-hidden="true" class="order-last min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-6 font-mono text-sm shadow-sm lg:order-first">
-      <p class="text-muted-foreground">Tax 2025/</p>
-      {#each [{ ref: "7F3A-91C2", files: ["passport.jpg", "annual-statement.pdf", "record.txt"], fresh: true }, { ref: "B6B7-3015", files: ["mortgage-overview.pdf", "record.txt"], fresh: false }] as delivery (delivery.ref)}
+      <p class="text-muted-foreground">{t.folder}</p>
+      {#each [{ ref: "7F3A-91C2", files: t.folderFiles[0], fresh: true }, { ref: "B6B7-3015", files: t.folderFiles[1], fresh: false }] as delivery (delivery.ref)}
         <p class="mt-3 flex items-center gap-2 pl-4 text-foreground">
           {delivery.ref}/
           {#if delivery.fresh}
-            <span class="rounded-full bg-primary/10 px-2 py-0.5 font-sans text-xs font-medium text-primary">new</span>
+            <span class="rounded-full bg-primary/10 px-2 py-0.5 font-sans text-xs font-medium text-primary">{t.fresh}</span>
           {/if}
         </p>
         {#each delivery.files as file (file)}
@@ -206,20 +196,18 @@
     </div>
     <div class="min-w-0 space-y-5">
       <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-        Portals that<br />file themselves.
+        {t.portalsTitle1}<br />{t.portalsTitle2}
       </h2>
       <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
-        Hand a portal to the tool and
-        <code class="font-mono text-foreground">tessil pull</code> brings down what arrived: one
-        folder per delivery, with the files and a record of who sent what.
+        {t.portalsBefore}
+        <code class="font-mono text-foreground">tessil pull</code> {t.portalsAfter}
       </p>
       <p class="max-w-xl text-muted-foreground">
-        Run it again and it fetches only what is new. Put it on a schedule and a portal whose
-        files are deleted after 30 days becomes an archive you keep.
+        {t.portalsAgain}
       </p>
       <p class="text-sm text-muted-foreground">
-        Reading portals needs a paid plan, like portals themselves.
-        <TextLink href="/portals">What a portal is</TextLink>
+        {t.portalsPaid}
+        <TextLink href={href("/portals")}>{t.whatPortal}</TextLink>
       </p>
     </div>
   </section>
@@ -229,18 +217,17 @@
     <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
       <div class="max-w-2xl space-y-5">
         <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-          A key, not the keys.
+          {t.keyTitle}
         </h2>
         <p class="text-lg leading-relaxed text-muted-foreground">
-          The tool signs in with an access key that is its own. It can do what you ticked. The
-          rest is not forbidden to it; it was never given the means.
+          {t.keyBody}
         </p>
       </div>
       <div class="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
         <div class="space-y-4 bg-card p-6 sm:p-8">
-          <p class="text-sm font-medium text-foreground">It can</p>
+          <p class="text-sm font-medium text-foreground">{t.itCan}</p>
           <ul class="space-y-2.5 text-foreground">
-            {#each can as point (point)}
+            {#each t.can as point (point)}
               <li class="flex items-start gap-2.5">
                 <span class="mt-1 shrink-0 text-primary"><IconCheckRegular class="size-4" /></span>
                 {point}
@@ -249,9 +236,9 @@
           </ul>
         </div>
         <div class="space-y-4 bg-card p-6 sm:p-8">
-          <p class="text-sm font-medium text-foreground">It cannot</p>
+          <p class="text-sm font-medium text-foreground">{t.itCannot}</p>
           <ul class="space-y-2.5 text-muted-foreground">
-            {#each cannot as point (point)}
+            {#each t.cannot as point (point)}
               <li class="flex items-start gap-2.5">
                 <span class="mt-1 shrink-0"><IconXRegular class="size-4" /></span>
                 {point}
@@ -261,10 +248,8 @@
         </div>
       </div>
       <p class="mt-6 max-w-2xl text-sm text-muted-foreground">
-        One thing we will not pretend: an assistant that can also run commands on your computer
-        can do what you can do there, including reading your clipboard. Those limits are set
-        where you approve what it runs.
-        <TextLink href="/security#access-keys">How access keys work</TextLink>
+        {t.honest}
+        <TextLink href="{href('/security')}#access-keys">{t.howKeys}</TextLink>
       </p>
     </div>
   </section>
@@ -273,16 +258,16 @@
   <section class="border-t border-border">
     <div class="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-24 text-center sm:py-32">
       <h2 class="text-4xl font-semibold leading-none tracking-tight text-foreground sm:text-6xl">
-        Install it.
+        {t.installIt}
       </h2>
       <p class="max-w-lg text-lg text-muted-foreground">
-        One access key comes with every account, the free one included.
+        {t.oneKey}
       </p>
-      <CommandTabs id="install-again" label="How to install" options={installs} class="w-full max-w-xl" />
+      <CommandTabs id="install-again" label={t.howInstall} options={installs} class="w-full max-w-xl" />
       <p class="flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
-        <TextLink href="https://github.com/tessil-app/tessil-cli#readme">Every command</TextLink>
-        <TextLink href="https://github.com/tessil-app/tessil-cli/releases">Downloads</TextLink>
-        <TextLink href="/pricing#compare">What each plan includes</TextLink>
+        <TextLink href="https://github.com/tessil-app/tessil-cli#readme">{t.everyCommand}</TextLink>
+        <TextLink href="https://github.com/tessil-app/tessil-cli/releases">{t.downloads}</TextLink>
+        <TextLink href="{href('/pricing')}#compare">{t.plans}</TextLink>
       </p>
     </div>
   </section>

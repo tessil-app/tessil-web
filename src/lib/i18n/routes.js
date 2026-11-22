@@ -19,6 +19,7 @@ export const LOCALIZED = {
   "/terms": { nl: "/nl/voorwaarden" },
   "/verify": { nl: "/nl/controleren" },
   "/abuse": { nl: "/nl/misbruik" },
+  "/cli": { nl: "/nl/cli" },
   "/compare": { nl: "/nl/vergelijken" },
   "/compare/wetransfer-alternative": { nl: "/nl/vergelijken/wetransfer-alternatief" },
   "/compare/boomerang-alternative": { nl: "/nl/vergelijken/boomerang-alternatief" },
