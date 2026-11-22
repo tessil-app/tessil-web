@@ -224,7 +224,7 @@
   <!-- CTA -->
   <div class="mt-10 flex flex-wrap items-center gap-3">
     <Button href={ctaPrimaryHref} variant="primary" fullWidth={false}>
-      {t.ctaPrimary}
+      {c.cta?.label ?? t.ctaPrimary}
     </Button>
     <Button href={ctaSecondaryHref} variant="secondary" fullWidth={false}>
       {t.ctaSecondary}

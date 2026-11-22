@@ -87,7 +87,9 @@ const paid = { free: false, pro: true, max: true } as const;
 const maxOnly = { free: false, pro: false, max: true } as const;
 
 // Every limit per plan. Same source as the lists above: the API's tiers.
-export const COMPARISON: ComparisonGroup[] = [
+/** The table for a set of launched products. */
+export function comparisonGroups(shown: { forms: boolean; accessKeys: boolean }): ComparisonGroup[] {
+  return [
   {
     title: "Sending",
     rows: [
@@ -147,7 +149,7 @@ export const COMPARISON: ComparisonGroup[] = [
   },
   // Shown once forms are announced. Counts mirror PLAN_*_MAX_FORMS in the API
   // and questionLimit in $lib/form/questions.
-  ...(FORMS_ANNOUNCED
+  ...(shown.forms
     ? [
         {
           title: "Asking through forms",
@@ -176,7 +178,7 @@ export const COMPARISON: ComparisonGroup[] = [
       ]
     : []),
   // Shown once the command-line tool is released.
-  ...(ACCESS_KEYS_ANNOUNCED
+  ...(shown.accessKeys
     ? [
         {
           title: "From a terminal or an AI assistant",
@@ -202,6 +204,12 @@ export const COMPARISON: ComparisonGroup[] = [
     ],
   },
 ];
+}
+
+export const COMPARISON: ComparisonGroup[] = comparisonGroups({
+  forms: FORMS_ANNOUNCED,
+  accessKeys: ACCESS_KEYS_ANNOUNCED,
+});
 
 // The same plans in Dutch. Numbers and order as above; only the words differ.
 const PLAN_TEXT_NL: Record<PlanId, Pick<Plan, "name" | "pitch" | "lead" | "features">> = {
@@ -329,7 +337,7 @@ const COMPARISON_NL: Record<string, string> = {
 };
 
 /** A value such as "30 days" in Dutch; sizes and counts need nothing. */
-function valueNl(value: PlanValue): PlanValue {
+export function valueNl(value: PlanValue): PlanValue {
   if (typeof value !== "string") return value;
   return value.replace(/^(\d+) days?$/, (_, n) => `${n} ${n === "1" ? "dag" : "dagen"}`);
 }
@@ -350,7 +358,7 @@ export function comparisonFor(locale: Locale): ComparisonGroup[] {
 
 /** English words in the comparison with no Dutch yet. For the test. */
 export function untranslatedComparison(): string[] {
-  return COMPARISON.flatMap((g) => [g.title, ...g.rows.flatMap((r) => [r.label, ...(r.note ? [r.note] : [])])]).filter(
+  return comparisonGroups({ forms: true, accessKeys: true }).flatMap((g) => [g.title, ...g.rows.flatMap((r) => [r.label, ...(r.note ? [r.note] : [])])]).filter(
     (text) => !(text in COMPARISON_NL),
   );
 }

@@ -19,7 +19,14 @@ export const LOCALIZED = {
   "/terms": { nl: "/nl/voorwaarden" },
   "/verify": { nl: "/nl/controleren" },
   "/abuse": { nl: "/nl/misbruik" },
+  "/compare": { nl: "/nl/vergelijken" },
   "/compare/wetransfer-alternative": { nl: "/nl/vergelijken/wetransfer-alternatief" },
+  "/compare/zivver-alternative": { nl: "/nl/vergelijken/zivver-alternatief" },
+  "/compare/dropbox-file-request-alternative": { nl: "/nl/vergelijken/dropbox-bestandsverzoek-alternatief" },
+  "/compare/google-forms-alternative": { nl: "/nl/vergelijken/google-forms-alternatief" },
+  "/compare/typeform-alternative": { nl: "/nl/vergelijken/typeform-alternatief" },
+  "/compare/jotform-alternative": { nl: "/nl/vergelijken/jotform-alternatief" },
+  "/compare/formdesk-alternative": { nl: "/nl/vergelijken/formdesk-alternatief" },
 };
 
 /** Every non-English address, for the build to prerender. */

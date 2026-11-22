@@ -6,7 +6,7 @@
   import { LAST_VERIFIED, comparisons } from "$lib/compare/comparisons";
   import { LAST_VERIFIED_NL, comparisonsNl, getComparisonNl, nlSlugForEn } from "$lib/compare/comparisons.nl";
   import { localeFromPath } from "$lib/i18n/locale";
-import { hrefFor, localizedPath } from "$lib/i18n/paths";
+  import { hrefFor, localizedPath } from "$lib/i18n/paths";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -26,6 +26,12 @@ import { hrefFor, localizedPath } from "$lib/i18n/paths";
       : comparisons.filter((x) => x.slug !== c.slug).map((x) => ({ slug: x.slug, heading: x.heading })),
   );
 
+  const lang = $derived(dutch ? "nl" : "en");
+  // Portals and forms each have their own part of the security page.
+  const securityHref = $derived(
+    hrefFor("/security", lang) + (c.kind === "portal" ? "#portals" : c.kind === "form" ? "#forms" : ""),
+  );
+
   // The same page in the other language, when it has one.
   const altPath = $derived(
     dutch ? canonical : (localizedPath(canonical, "nl") ?? undefined),
@@ -37,11 +43,11 @@ import { hrefFor, localizedPath } from "$lib/i18n/paths";
   locale={dutch ? "nl" : "en"}
   basePath={dutch ? "/nl/vergelijken" : "/compare"}
   homePath={hrefFor("/", dutch ? "nl" : "en")}
-  indexPath={dutch ? undefined : "/compare"}
+  indexPath={hrefFor("/compare", lang)}
   {others}
-  lastVerified={dutch ? LAST_VERIFIED_NL : LAST_VERIFIED}
-  ctaPrimaryHref={hrefFor("/", dutch ? "nl" : "en")}
-  ctaSecondaryHref="/security"
+  lastVerified={c.verified ?? (dutch ? LAST_VERIFIED_NL : LAST_VERIFIED)}
+  ctaPrimaryHref={hrefFor(c.cta?.href ?? "/", lang)}
+  ctaSecondaryHref={securityHref}
   canonicalPath={canonical}
   {altPath}
 />

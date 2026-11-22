@@ -5,7 +5,9 @@
 // `enSlug` links each entry to its English counterpart, which is what drives
 // hreflang and the language switcher.
 
+import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
 import type { Comparison } from "./comparisons";
+import { RECEIVING_VERIFIED_NL, receivingComparisonsNl } from "./receiving.nl";
 
 export type LocalizedComparison = Comparison & {
   /** Slug of the English page this translates, for hreflang pairing. */
@@ -27,7 +29,7 @@ const TESSIL_NL = {
   password: true,
 };
 
-export const comparisonsNl: LocalizedComparison[] = [
+const sendComparisonsNl: LocalizedComparison[] = [
   {
     slug: "wetransfer-alternatief",
     enSlug: "wetransfer-alternative",
@@ -82,6 +84,13 @@ export const comparisonsNl: LocalizedComparison[] = [
       },
     ],
   },
+];
+
+export const comparisonsNl: LocalizedComparison[] = [
+  ...sendComparisonsNl,
+  ...receivingComparisonsNl
+    .filter((c) => (c.kind === "form" ? FORMS_ANNOUNCED : PORTALS_ANNOUNCED))
+    .map((c) => ({ ...c, verified: RECEIVING_VERIFIED_NL })),
 ];
 
 export function getComparisonNl(slug: string): LocalizedComparison | undefined {

@@ -4,6 +4,9 @@
 // pricing/features often. Keep claims fair and checkable: this is a
 // privacy-principled, AGPL project, not a hit piece.
 
+import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
+import { RECEIVING_VERIFIED, receivingComparisons } from "./receiving";
+
 /** A cell is a yes/no (rendered as a check/cross) or a short string. */
 export type Cell = boolean | string;
 
@@ -36,6 +39,12 @@ export type Comparison = {
   /** Honest verdict paragraphs. */
   verdict: string[];
   faq: Faq[];
+  /** What is compared: sending (the default), portals or forms. */
+  kind?: "send" | "portal" | "form";
+  /** The main button, when it is not "send a file". `href` is the English address. */
+  cta?: { label: string; href: string };
+  /** When the competitor's details were last checked, when not LAST_VERIFIED. */
+  verified?: string;
 };
 
 /** Shown on every page so competitor facts are dated, not presented as eternal truth. */
@@ -54,7 +63,7 @@ const TESSIL = {
   password: true,
 };
 
-export const comparisons: Comparison[] = [
+const sendComparisons: Comparison[] = [
   {
     slug: "wetransfer-alternative",
     competitor: "WeTransfer",
@@ -281,6 +290,14 @@ export const comparisons: Comparison[] = [
       },
     ],
   },
+];
+
+// Portal and form comparisons appear once those products are announced.
+export const comparisons: Comparison[] = [
+  ...sendComparisons,
+  ...receivingComparisons
+    .filter((c) => (c.kind === "form" ? FORMS_ANNOUNCED : PORTALS_ANNOUNCED))
+    .map((c) => ({ ...c, verified: RECEIVING_VERIFIED })),
 ];
 
 export function getComparison(slug: string): Comparison | undefined {
