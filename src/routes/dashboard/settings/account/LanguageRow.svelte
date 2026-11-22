@@ -9,6 +9,8 @@
   import { appLocale, chooseLocale } from "$lib/i18n/app.svelte";
   import { isLocale, LANGUAGE_NAME, LOCALES } from "$lib/i18n/locale";
 
+  import { settingsMessages } from "$lib/i18n/messages/settings";
+  const t = $derived(settingsMessages[appLocale()].language);
   let value = $state<string>(appLocale());
   let error = $state<string | null>(null);
   let saved = $state(false);
@@ -21,14 +23,14 @@
       await chooseLocale(next);
       saved = true;
     } catch {
-      error = "Couldn't save the language. Try again.";
+      error = t.failed;
     }
   }
 </script>
 
 <DividerRow
   title="Language / Taal"
-  body="For the pages after you sign in, on every device. Parts not yet translated stay in English."
+  body={t.body}
 >
   {#snippet actions()}
     <Select
@@ -44,7 +46,7 @@
     {#if error}
       <Alert tone="destructive">{error}</Alert>
     {:else if saved}
-      <p class="text-sm text-muted-foreground" role="status">Saved.</p>
+      <p class="text-sm text-muted-foreground" role="status">{t.saved}</p>
     {/if}
   {/snippet}
 </DividerRow>

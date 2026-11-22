@@ -10,6 +10,9 @@
   import PlanRow from "./PlanRow.svelte";
   import LanguageRow from "./LanguageRow.svelte";
 
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { settingsMessages } from "$lib/i18n/messages/settings";
+  const t = $derived(settingsMessages[appLocale()].account);
   let isExporting = $state(false);
   let exportError = $state<string | null>(null);
 
@@ -33,7 +36,7 @@
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      exportError = err instanceof Error ? err.message : "Couldn't export your data.";
+      exportError = err instanceof Error ? err.message : t.exportFailed;
     } finally {
       isExporting = false;
     }
@@ -60,7 +63,7 @@
       auth.user = null;
       await goto("/?deleted=1", { replaceState: true });
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't delete your account.";
+      errorMessage = err instanceof Error ? err.message : t.deleteFailed;
     } finally {
       isDeleting = false;
     }
@@ -72,8 +75,8 @@
 <LanguageRow />
 
 <DividerRow
-  title="Your data"
-  body="Export everything we have on you as JSON: your account, transfers, and recent sign-in activity. File contents aren't included - we never had them."
+  title={t.dataTitle}
+  body={t.dataBody}
 >
   {#snippet actions()}
     <Button
@@ -84,9 +87,9 @@
     >
       {#if isExporting}
         <Spinner aria-hidden="true" />
-        Preparing export
+        {t.preparing}
       {:else}
-        Export
+        {t.export}
       {/if}
     </Button>
   {/snippet}
@@ -97,7 +100,7 @@
         {exportError}
         {#snippet action()}
           <Button variant="secondary" fullWidth={false} onclick={exportAccount}>
-            Retry
+            {t.retry}
           </Button>
         {/snippet}
       </Alert>
@@ -106,13 +109,13 @@
 </DividerRow>
 
 <DividerRow
-  title="Danger zone"
-  body="Permanently delete your account and all transfers. This can't be undone."
+  title={t.dangerTitle}
+  body={t.dangerBody}
 >
   {#snippet actions()}
     {#if !confirming}
       <Button variant="ghost" fullWidth={false} onclick={startConfirm}>
-        Delete account
+        {t.deleteAccount}
       </Button>
     {/if}
   {/snippet}
@@ -124,7 +127,7 @@
           <TextInput
             id="confirm-email"
             type="email"
-            label={`Type ${auth.user.email} to confirm`}
+            label={t.typeToConfirm(auth.user.email)}
             bind:value={confirmEmail}
             autocomplete="off"
             autocapitalize="off"
@@ -139,7 +142,7 @@
           onclick={cancelConfirm}
           disabled={isDeleting}
         >
-          Cancel
+          {t.cancel}
         </Button>
         <Button
           variant="destructive"
@@ -149,9 +152,9 @@
         >
           {#if isDeleting}
             <Spinner aria-hidden="true" />
-            Deleting
+            {t.deleting}
           {:else}
-            Permanently delete
+            {t.permanently}
           {/if}
         </Button>
       </div>
