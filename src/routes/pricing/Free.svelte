@@ -18,14 +18,14 @@
     "500 MB per file and per transfer",
     "500 MB a month",
     "5 transfers a day",
-    "Expiry up to 24 hours",
+    "Expiry up to 3 days",
   ];
 
   const accountBullets = [
     "1 GiB per file and per transfer",
     "2 GB a month",
     "20 transfers a day",
-    "Expiry up to 72 hours",
+    "Expiry up to 7 days",
     "A list of what you've sent, plus passkeys and encrypted titles",
   ];
 

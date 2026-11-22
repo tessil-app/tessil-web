@@ -65,18 +65,19 @@
   const TITLE_MAX = 200;
 
   const EXPIRES_OPTIONS = $derived.by(() => {
+    // Mirrors allowedExpiryHours per tier in the API.
     const base = [
       { value: 1, label: "1h" },
       { value: 6, label: "6h" },
       { value: 12, label: "12h" },
       { value: 24, label: "1d" },
+      { value: 72, label: "3d" },
     ];
     if (!auth.user) return base;
-    const free = [...base, { value: 72, label: "3d" }];
+    const free = [...base, { value: 168, label: "7d" }];
     if (auth.user.tier !== "pro" && auth.user.tier !== "max") return free;
     const pro = [
       ...free,
-      { value: 168, label: "7d" },
       { value: 336, label: "14d" },
       { value: 720, label: "30d" },
     ];

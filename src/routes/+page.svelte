@@ -527,8 +527,8 @@
           minutes, using the developer tools already in your browser.
         </p>
         <p>
-          Anonymous transfers expire in hours; signed-in transfers
-          can run longer and stay in your list of transfers. Password
+          Without an account a link lasts up to three days; with a free
+          account up to a week, and it stays in your list of transfers. Password
           protection adds a second factor independent of the link.
           Read more about the security model on the
           <a href="/security" class="text-primary underline underline-offset-2">security page</a>.
