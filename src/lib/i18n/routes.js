@@ -14,6 +14,7 @@ export const LOCALIZED = {
   "/forms": { nl: "/nl/formulieren" },
   "/pricing": { nl: "/nl/prijzen" },
   "/what-we-store": { nl: "/nl/wat-we-bewaren" },
+  "/security": { nl: "/nl/beveiliging" },
   "/compare/wetransfer-alternative": { nl: "/nl/vergelijken/wetransfer-alternatief" },
 };
 
