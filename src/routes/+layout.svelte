@@ -37,8 +37,8 @@
   import IconSignOutRegular from "phosphor-icons-svelte/IconSignOutRegular.svelte";
   import LanguageSuggestion from "$lib/components/LanguageSuggestion.svelte";
   import LanguageSwitch from "$lib/components/LanguageSwitch.svelte";
-  import { uiLocale } from "$lib/i18n/app.svelte";
-  import { HTML_LANG } from "$lib/i18n/locale";
+  import { readChosenLocale, rememberLocale, uiLocale } from "$lib/i18n/app.svelte";
+  import { HTML_LANG, localeFromPath } from "$lib/i18n/locale";
 import { hrefFor } from "$lib/i18n/paths";
   import { chromeMessages } from "$lib/i18n/messages/chrome";
   import { sendMessages } from "$lib/i18n/messages/send";
@@ -58,6 +58,12 @@ import { hrefFor } from "$lib/i18n/paths";
     const path = $page.url.pathname;
     if (/^\/(p|f|d)\//.test(path)) return;
     document.documentElement.lang = HTML_LANG[locale];
+  });
+
+  // Reading the Dutch site counts as choosing Dutch, until the reader picks,
+  // so signing in from there carries on in Dutch.
+  $effect(() => {
+    if (localeFromPath($page.url.pathname) === "nl" && readChosenLocale() === null) rememberLocale("nl");
   });
 
   let vaultUnlocked = $state(false);

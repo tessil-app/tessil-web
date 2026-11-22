@@ -19,6 +19,12 @@
     signInWithPasskey,
   } from "$lib/auth/passkey";
   import { onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { signinMessages } from "$lib/i18n/messages/signin";
+  import { hrefFor } from "$lib/i18n/paths";
+
+  const locale = $derived(appLocale());
+  const t = $derived(signinMessages[locale].login);
 
   let email = $state("");
   let isSubmitting = $state(false);
@@ -38,8 +44,7 @@
 
   onMount(() => {
     if (page.url.searchParams.get("error") === "link-invalid") {
-      errorMessage =
-        "That sign-in link has expired or been used. Request a new one below.";
+      errorMessage = t.linkInvalid;
     }
     if (auth.isAuthenticated) {
       goto("/dashboard", { replaceState: true });
@@ -78,7 +83,7 @@
         }
       } else {
         passkeyError =
-          err instanceof Error ? err.message : "Passkey sign-in failed.";
+          err instanceof Error ? err.message : t.passkeyFailed;
       }
     } finally {
       isPasskeySigningIn = false;
@@ -95,7 +100,7 @@
       submitted = true;
     } catch (err) {
       errorMessage =
-        err instanceof Error ? err.message : "Something went wrong. Try again.";
+        err instanceof Error ? err.message : t.genericError;
     } finally {
       isSubmitting = false;
     }
@@ -114,7 +119,7 @@
       codeError =
         err instanceof Error
           ? err.message
-          : "That code didn't match. Try again or request a new link.";
+          : t.codeMismatch;
     } finally {
       isVerifyingCode = false;
     }
@@ -128,32 +133,29 @@
   }
 </script>
 
-<Seo title="Sign in - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout>
   <PageHeader
-    title="Sign in"
-    tagline="We'll email you a one-time link. First time here? Your account is created on first sign-in - no password needed."
+    title={t.title}
+    tagline={t.tagline}
   />
 
   <Frame.Root>
     <Frame.Panel>
       {#if submitted}
         <div class="space-y-6">
-          <Alert tone="success" title="Check your inbox">
-            If <span class="text-foreground">{email}</span> is a valid email, a
-            sign-in link is on its way. The link expires in 15 minutes.
-            Don't see it after a minute or two? Check your spam or junk folder.
+          <Alert tone="success" title={t.inboxTitle}>
+            {t.inboxBefore} <span class="text-foreground">{email}</span> {t.inboxAfter}
           </Alert>
 
           <div class="space-y-3 border-t pt-6">
             <div class="space-y-1">
               <div class="text-sm font-medium text-foreground">
-                Opened the link on a different device?
+                {t.otherDevice}
               </div>
               <p class="text-sm text-muted-foreground">
-                The other device will show you a 6-digit code. Enter it here
-                to sign in on this device.
+                {t.otherDeviceBody}
               </p>
             </div>
             <form onsubmit={handleVerifyCode} class="space-y-3" novalidate>
@@ -176,9 +178,9 @@
               >
                 {#if isVerifyingCode}
                   <Spinner aria-hidden="true" />
-                  Verifying…
+                  {t.verifying}
                 {:else}
-                  Sign in with code
+                  {t.withCode}
                 {/if}
               </Button>
             </form>
@@ -186,7 +188,7 @@
 
           <div class="flex">
             <Button variant="ghost" fullWidth={false} onclick={reset}>
-              Send another link
+              {t.another}
             </Button>
           </div>
         </div>
@@ -195,7 +197,7 @@
           {#if passkeySupported}
             <div class="space-y-3">
               {#if passkeyError}
-                <Alert tone="destructive" title="Passkey sign-in failed">
+                <Alert tone="destructive" title={t.passkeyFailedTitle}>
                   {passkeyError}
                 </Alert>
               {/if}
@@ -207,14 +209,13 @@
               >
                 {#if isPasskeySigningIn}
                   <Spinner aria-hidden="true" />
-                  Waiting for passkey…
+                  {t.waitingPasskey}
                 {:else}
-                  Sign in with passkey
+                  {t.withPasskey}
                 {/if}
               </Button>
               <p class="text-sm text-muted-foreground">
-                Use a passkey saved on this device, or pick one from another
-                device.
+                {t.passkeyHint}
               </p>
             </div>
 
@@ -224,7 +225,7 @@
               </div>
               <div class="relative flex justify-center">
                 <span class="bg-background px-2 text-xs uppercase tracking-wide text-muted-foreground">
-                  or
+                  {t.or}
                 </span>
               </div>
             </div>
@@ -234,8 +235,8 @@
             <TextInput
               id="email"
               type="email"
-              label="Email"
-              placeholder="you@example.com"
+              label={t.email}
+              placeholder={t.emailPlaceholder}
               autocomplete="email webauthn"
               required
               bind:value={email}
@@ -245,20 +246,19 @@
             <Button type="submit" disabled={isSubmitting || email.length === 0}>
               {#if isSubmitting}
                 <Spinner aria-hidden="true" />
-                Sending…
+                {t.sending}
               {:else}
-                Send sign-in link
+                {t.send}
               {/if}
             </Button>
           </form>
 
           <!-- What signing up costs, for those deciding whether to. -->
           <div class="rounded-lg bg-secondary px-4 py-3 text-sm text-muted-foreground">
-            <p class="font-medium text-foreground">What an account stores</p>
+            <p class="font-medium text-foreground">{t.storesTitle}</p>
             <p class="mt-1">
-              Your email, when you signed in, and the size and dates of what you send.
-              Never your files, their names or the key that opens them.
-              <TextLink href="/what-we-store">Everything it stores</TextLink>
+              {t.stores}
+              <TextLink href={hrefFor("/what-we-store", locale)}>{t.storesLink}</TextLink>
             </p>
           </div>
         </div>

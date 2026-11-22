@@ -14,6 +14,10 @@
   import Spinner from "$lib/components/Spinner.svelte";
   import { auth } from "$lib/stores/auth.svelte";
   import { onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { signinMessages } from "$lib/i18n/messages/signin";
+
+  const t = $derived(signinMessages[appLocale()].verify);
 
   let failed = $state(false);
 
@@ -57,25 +61,22 @@
   }
 </script>
 
-<Seo title="Signing you in - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout>
   <PageHeader
-    title={failed ? "This link didn't work" : "Signing you in"}
-    tagline={failed
-      ? "Sign-in links are single use and valid for 15 minutes."
-      : "One moment while we check your sign-in link."}
+    title={failed ? t.failedTitle : t.title}
+    tagline={failed ? t.failedTagline : t.tagline}
   />
 
   <Frame.Root>
     <Frame.Panel>
       {#if failed}
-        <Alert tone="warning" title="Request a fresh link">
-          This link has already been used, has expired, or is incomplete. Ask
-          for a new one and open it on the same device you requested it from.
+        <Alert tone="warning" title={t.freshTitle}>
+          {t.fresh}
           {#snippet action()}
             <Button variant="secondary" fullWidth={false} href="/login">
-              Back to sign-in
+              {t.back}
             </Button>
           {/snippet}
         </Alert>
@@ -85,7 +86,7 @@
           aria-live="polite"
         >
           <Spinner />
-          <span>Checking your link</span>
+          <span>{t.checking}</span>
         </div>
       {/if}
     </Frame.Panel>

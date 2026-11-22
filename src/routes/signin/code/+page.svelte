@@ -9,6 +9,10 @@
   import IconCopySimpleRegular from "phosphor-icons-svelte/IconCopySimpleRegular.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import { onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { signinMessages } from "$lib/i18n/messages/signin";
+
+  const t = $derived(signinMessages[appLocale()].code);
 
   let code = $state<string | null>(null);
   let secondsRemaining = $state<number | null>(null);
@@ -25,11 +29,8 @@
 
   const timeLabel = $derived.by(() => {
     if (secondsRemaining === null) return "";
-    if (secondsRemaining <= 0) return "expired";
-    const m = Math.floor(secondsRemaining / 60);
-    const s = secondsRemaining % 60;
-    if (m === 0) return `${s}s left`;
-    return `${m}m ${s.toString().padStart(2, "0")}s left`;
+    if (secondsRemaining <= 0) return t.expired;
+    return t.left(Math.floor(secondsRemaining / 60), secondsRemaining % 60);
   });
 
   onMount(() => {
@@ -82,33 +83,31 @@
   }
 </script>
 
-<Seo title="Your sign-in code - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout>
   <PageHeader
-    title="Your sign-in code"
-    tagline="It looks like you opened the link on a different device. Type this code on the device where you started signing in - we won't sign you in here."
+    title={t.title}
+    tagline={t.tagline}
   />
 
   <Frame.Root>
     <Frame.Panel>
       {#if code === null}
-        <Alert tone="warning" title="No code to show">
-          This page only works when reached from a sign-in email link. Head
-          back to your other device and request a fresh link.
+        <Alert tone="warning" title={t.noneTitle}>
+          {t.none}
           {#snippet action()}
             <Button variant="secondary" fullWidth={false} href="/login">
-              Back to sign-in
+              {t.back}
             </Button>
           {/snippet}
         </Alert>
       {:else if expired}
-        <Alert tone="warning" title="This code has expired">
-          Sign-in codes are valid for 15 minutes. Start over from the device
-          where you began.
+        <Alert tone="warning" title={t.expiredTitle}>
+          {t.expiredBody}
           {#snippet action()}
             <Button variant="secondary" fullWidth={false} href="/login">
-              Request a new link
+              {t.newLink}
             </Button>
           {/snippet}
         </Alert>
@@ -118,11 +117,11 @@
             <div
               class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
             >
-              Six-digit code
+              {t.sixDigits}
             </div>
             <div
               class="rounded-md border bg-muted/30 py-6 text-center font-mono text-4xl sm:text-5xl font-semibold tabular-nums tracking-[0.25em] text-foreground select-all"
-              aria-label="Sign-in code"
+              aria-label={t.codeLabel}
             >
               {formattedCode}
             </div>
@@ -139,17 +138,15 @@
           <Button variant="secondary" onclick={handleCopy}>
             {#if copied}
               <IconCheckRegular class="size-4" />
-              Copied
+              {t.copied}
             {:else}
               <IconCopySimpleRegular class="size-4" />
-              Copy code
+              {t.copy}
             {/if}
           </Button>
 
-          <Alert tone="info" title="What to do next">
-            Switch back to the device where you started signing in and enter
-            this code. Closing this tab won't lose anything - the code stays
-            valid on the other device until it's used or expires.
+          <Alert tone="info" title={t.nextTitle}>
+            {t.next}
           </Alert>
         </div>
       {/if}
