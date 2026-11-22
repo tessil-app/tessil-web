@@ -537,10 +537,10 @@ import { hrefFor } from "$lib/i18n/paths";
 
       <Select
         id="nav-unlock-hold"
-        label="Stay unlocked on this device for"
+        label={c.stayUnlocked}
         bind:value={holdDays}
         disabled={isUnlockingVault}
-        options={VAULT_HOLD_DAYS.map((d) => ({ value: String(d), label: d === 1 ? "1 day" : `${d} days` }))}
+        options={VAULT_HOLD_DAYS.map((d) => ({ value: String(d), label: c.days(d) }))}
       />
 
       {#if unlockError}
