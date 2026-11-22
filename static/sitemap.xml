@@ -103,6 +103,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://tessil.app/nl/prijzen</loc>
+    <lastmod>2026-11-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://tessil.app/compare/boomerang-alternative</loc>
     <lastmod>2026-06-14</lastmod>
     <changefreq>monthly</changefreq>

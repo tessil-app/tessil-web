@@ -2,7 +2,9 @@
   // Every limit of every plan in one table, for whoever wants the detail
   // the plan cards leave out.
 
-  import { COMPARISON, PLANS, type PlanId, type PlanValue } from "$lib/config/plans";
+  import { comparisonFor, plansFor, type PlanId, type PlanValue } from "$lib/config/plans";
+  import type { Locale } from "$lib/i18n/locale";
+  import { pricingMessages } from "$lib/i18n/messages/pricing";
   import { cn } from "$lib/utils";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
 
@@ -10,11 +12,15 @@
     /** The signed-in account's plan, to mark its column. */
     current?: string | null;
     class?: string;
+    locale?: Locale;
   }
 
-  let { current = null, class: className }: Props = $props();
+  let { current = null, class: className, locale = "en" }: Props = $props();
 
-  const ids: PlanId[] = PLANS.map((p) => p.id);
+  const PLANS = $derived(plansFor(locale));
+  const COMPARISON = $derived(comparisonFor(locale));
+  const t = $derived(pricingMessages[locale].table);
+  const ids: PlanId[] = ["free", "pro", "max"];
 
   // Far down the table the column names are out of sight. While they
   // are, a small label follows the pointer and names the column under it.
@@ -64,10 +70,10 @@
 {#snippet cell(value: PlanValue, plan: string)}
   {#if value === true}
     <span aria-hidden="true" class="inline-flex"><IconCheckRegular class="size-4 text-primary" /></span>
-    <span class="sr-only">Included in {plan}</span>
+    <span class="sr-only">{t.included(plan)}</span>
   {:else if value === false}
     <span aria-hidden="true" class="text-muted-foreground/60">–</span>
-    <span class="sr-only">Not in {plan}</span>
+    <span class="sr-only">{t.notIn(plan)}</span>
   {:else}
     {value}
   {/if}
@@ -79,7 +85,7 @@
     onpointermove={track}
     onpointerleave={leave}
   >
-    <caption class="sr-only">What each plan includes</caption>
+    <caption class="sr-only">{t.caption}</caption>
     <colgroup>
       <col />
       {#each ids as id (id)}
@@ -100,7 +106,7 @@
           >
             {plan.name}
             {#if current === plan.id}
-              <span class="block text-xs font-normal text-muted-foreground">Your plan</span>
+              <span class="block text-xs font-normal text-muted-foreground">{t.yourPlan}</span>
             {/if}
           </th>
         {/each}
