@@ -84,6 +84,191 @@ const sendComparisonsNl: LocalizedComparison[] = [
       },
     ],
   },
+  {
+    slug: "boomerang-alternatief",
+    enSlug: "boomerang-alternative",
+    competitor: "Boomerang",
+    shortName: "Boomerang",
+    metaTitle: "Versleuteld, open source alternatief voor Boomerang - Tessil",
+    metaDescription:
+      "Boomerang is een nette transferdienst zonder advertenties, maar niet end-to-end versleuteld. Tessil versleutelt in je browser, houdt de sleutel buiten de server en is open source. EU-hosting, gratis versturen.",
+    heading: "Tessil vs Boomerang",
+    summary:
+      "Net als Boomerang: zonder inloggen, zonder advertenties, gehost in de EU. Anders dan Boomerang: echt end-to-end versleuteld en open source.",
+    intro: [
+      "Boomerang (bmrng.me) is een nette transferdienst zonder advertenties, van een van de oprichters van WeTransfer. Je hoeft niet in te loggen, je gegevens blijven in de EU, en Boomerang zegt uitdrukkelijk geen advertenties te tonen en geen AI op je bestanden te trainen. Voor wie privacy belangrijk vindt, is dat een echte stap vooruit ten opzichte van de bekende grote namen.",
+      "Waar het ophoudt, is de versleuteling. Boomerang beschrijft bestanden als versleuteld onderweg en in opslag. Dat betekent dat Boomerang de sleutels heeft en in principe kan lezen wat je uploadt. Dat is gewoon veilig bestanden delen, geen end-to-end versleuteling.",
+      "Tessil dicht dat gat. Bestanden worden in je browser versleuteld voordat ze worden geüpload, en de sleutel staat in het fragment van de deellink, dus wij bewaren alleen versleutelde gegevens die we niet kunnen lezen. Alles is open source onder AGPL-3.0, dus de bewering is te controleren in plaats van alleen beweerd.",
+    ],
+    rows: [
+      { label: "End-to-end versleuteld", tessil: TESSIL_NL.e2e, competitor: false },
+      { label: "Sleutel bereikt de server nooit", tessil: TESSIL_NL.keyServer, competitor: false },
+      { label: "Werkt zonder account", tessil: TESSIL_NL.noAccount, competitor: true },
+      { label: "Open source", tessil: TESSIL_NL.openSource, competitor: false },
+      { label: "Hosting / jurisdictie", tessil: TESSIL_NL.hosting, competitor: "Gegevens in de EU (op Cloudflare)" },
+      { label: "Advertenties en tracking van derden", tessil: TESSIL_NL.tracking, competitor: "Geen (advertentievrij)" },
+      { label: "Prijs", tessil: TESSIL_NL.price, competitor: "Gratis + betaald (ongeveer € 6,99 per maand)" },
+      { label: "Vervaltermijn en downloadlimieten", tessil: TESSIL_NL.expiry, competitor: true },
+      { label: "Wachtwoordbeveiliging", tessil: TESSIL_NL.password, competitor: "Alleen betaald" },
+    ],
+    verdict: [
+      "Boomerang is een van de prettigere bekende transferdiensten: geen advertenties, geen AI-training, gehost in de EU, geen inloggen. Wil je vooral niet dat een platform dat van advertenties leeft je uploads uitbuit, dan doet Boomerang dat goed.",
+      "Tessil is de volgende stap: als je wilt dat de dienst je bestanden technisch niet kán lezen, in plaats van alleen belooft het niet te doen. Versleuteling in de browser plus open source code is het verschil tussen een beleid vertrouwen en het controleren.",
+    ],
+    faq: [
+      {
+        q: "Is Boomerang end-to-end versleuteld?",
+        a: "Volgens de openbare beschrijving niet. Boomerang versleutelt bestanden onderweg en in opslag, dus het beheert de sleutels en kan bij je bestanden. Tessil versleutelt in je browser en ontvangt de sleutel nooit, dus het bewaart alleen versleutelde gegevens die het niet kan lezen. Beweringen over versleuteling veranderen, dus controleer het op de site van elke aanbieder.",
+      },
+      {
+        q: "Wat kost Boomerang in vergelijking met Tessil?",
+        a: "Boomerang heeft een gratis versie en een betaald abonnement van ongeveer € 6,99 per maand voor meer opslag en grotere bestanden. Versturen met Tessil is gratis, met of zonder account; betaalde abonnementen voegen portalen en formulieren toe om te ontvangen. Kijk op de site van Boomerang voor de actuele prijzen.",
+      },
+      {
+        q: "Is Tessil ook in Nederland gemaakt?",
+        a: "Ja. Tessil wordt in Nederland gebouwd en volledig in de EU gehost (Duitsland en Nederland). Net als bij Boomerang heb je geen account nodig om te versturen, en Tessil voegt end-to-end versleuteling in de browser en volledig open source code toe.",
+      },
+    ],
+  },
+  {
+    slug: "proton-drive-alternatief",
+    enSlug: "proton-drive-alternative",
+    competitor: "Proton Drive",
+    shortName: "Proton Drive",
+    metaTitle: "Proton Drive alternatief om snel versleuteld te versturen - Tessil",
+    metaDescription:
+      "Proton Drive is een volledige versleutelde cloud. Tessil is gericht, end-to-end versleuteld bestanden versturen zonder account: deel een link, de sleutel verlaat je browser niet. Open source, EU-hosting.",
+    heading: "Tessil vs Proton Drive",
+    summary:
+      "Proton Drive is versleutelde cloudopslag; Tessil is gericht, versleuteld bestanden versturen zonder account.",
+    intro: [
+      "Proton Drive is een uitstekende end-to-end versleutelde clouddrive van het Proton-team in Zwitserland. Wil je bestanden lang bewaren met versleutelde synchronisatie tussen apparaten, dan is het een sterke keuze. Maar het is in de eerste plaats opslag, en je hebt een Proton-account nodig.",
+      "Tessil lost een smaller probleem op: stuur dit bestand nu versleuteld naar deze persoon, zonder dat iemand zich hoeft aan te melden. Bestanden worden in je browser versleuteld, de sleutel reist mee in het fragment van de link, en de transfer verloopt wanneer jij wilt. Geen account nodig om te versturen of te ontvangen.",
+      "Beide houden je gegevens zero-knowledge. Het verschil is de vorm: een drive waarin je werkt, tegenover een transfer die je verstuurt en vergeet.",
+    ],
+    rows: [
+      { label: "End-to-end versleuteld", tessil: TESSIL_NL.e2e, competitor: true },
+      { label: "Sleutel bereikt de server nooit", tessil: TESSIL_NL.keyServer, competitor: true },
+      { label: "Werkt zonder account", tessil: TESSIL_NL.noAccount, competitor: false },
+      { label: "Open source", tessil: TESSIL_NL.openSource, competitor: "Apps zijn open source" },
+      { label: "Hosting / jurisdictie", tessil: TESSIL_NL.hosting, competitor: "Zwitserland" },
+      { label: "Advertenties en tracking van derden", tessil: TESSIL_NL.tracking, competitor: "Geen" },
+      { label: "Gemaakt voor", tessil: "Losse versleutelde transfers", competitor: "Versleutelde cloudopslag" },
+      { label: "Prijs", tessil: TESSIL_NL.price, competitor: "Gratis versie + betaald" },
+      { label: "Vervaltermijn en downloadlimieten", tessil: TESSIL_NL.expiry, competitor: true },
+      { label: "Wachtwoordbeveiliging", tessil: TESSIL_NL.password, competitor: true },
+    ],
+    verdict: [
+      "Kies Proton Drive als je een versleuteld thuis voor je bestanden wilt, met synchronisatie en lange opslag, en een account geen bezwaar is. Kies Tessil als je iemand gewoon veilig een bestand wilt geven zonder dat een van jullie zich aanmeldt.",
+      "Veel mensen gebruiken beide: Proton Drive om te bewaren, Tessil om te versturen.",
+    ],
+    faq: [
+      {
+        q: "Vervangt Tessil Proton Drive?",
+        a: "Niet precies: Proton Drive is cloudopslag, Tessil is losse transfers. Tessil vervangt het deel 'deel een link naar een bestand', zonder account of langdurige opslag.",
+      },
+      {
+        q: "Heb ik voor Tessil een account nodig, zoals bij Proton?",
+        a: "Nee. Tessil werkt volledig anoniem. Een account is optioneel en voegt alleen een lijst toe met de transfers die je maakt, waar je ze kunt beheren.",
+      },
+      {
+        q: "Zijn ze allebei end-to-end versleuteld?",
+        a: "Ja. Beide versleutelen op je apparaat, zodat de dienst je bestanden niet kan lezen. Tessil publiceert daarnaast zijn volledige broncode onder AGPL-3.0.",
+      },
+    ],
+  },
+  {
+    slug: "tresorit-send-alternatief",
+    enSlug: "tresorit-send-alternative",
+    competitor: "Tresorit Send",
+    shortName: "Tresorit Send",
+    metaTitle: "Open source alternatief voor Tresorit Send - Tessil",
+    metaDescription:
+      "Een open source alternatief voor Tresorit Send. End-to-end versleuteld bestanden versturen, de sleutel bereikt de server nooit, gehost in de EU, geen account nodig.",
+    heading: "Tessil vs Tresorit Send",
+    summary:
+      "Net als Tresorit Send, maar open source en gehost in de EU. Versleuteld, met een link, zonder account.",
+    intro: [
+      "Tresorit Send is de gratis transferdienst van Tresorit, een gewaardeerd Zwitsers encryptiebedrijf. Het is echt end-to-end versleuteld en werkt met een link: dicht bij wat Tessil doet. Het belangrijkste verschil is dat Tresorit gesloten broncode heeft, dus je neemt de beweringen over versleuteling op vertrouwen aan.",
+      "Tessil biedt hetzelfde model (versleuteling in de browser, sleutel in het fragment van de link, geen account om te versturen) en publiceert elke regel broncode onder AGPL-3.0, zodat de zero-knowledge-bewering te controleren is in plaats van alleen beweerd.",
+      "De hosting is volledig in de EU, en er zijn nergens advertenties of trackers van derden.",
+    ],
+    rows: [
+      { label: "End-to-end versleuteld", tessil: TESSIL_NL.e2e, competitor: true },
+      { label: "Sleutel bereikt de server nooit", tessil: TESSIL_NL.keyServer, competitor: true },
+      { label: "Werkt zonder account", tessil: TESSIL_NL.noAccount, competitor: true },
+      { label: "Open source", tessil: TESSIL_NL.openSource, competitor: false },
+      { label: "Hosting / jurisdictie", tessil: TESSIL_NL.hosting, competitor: "Zwitserland (Tresorit / Swiss Post)" },
+      { label: "Advertenties en tracking van derden", tessil: TESSIL_NL.tracking, competitor: "Geen" },
+      { label: "Prijs", tessil: TESSIL_NL.price, competitor: "Send gratis + betaalde Tresorit" },
+      { label: "Vervaltermijn en downloadlimieten", tessil: TESSIL_NL.expiry, competitor: true },
+      { label: "Wachtwoordbeveiliging", tessil: TESSIL_NL.password, competitor: true },
+    ],
+    verdict: [
+      "Tresorit Send is een degelijke, betrouwbare keuze, zeker als je Tresorit al gebruikt. Tessil geeft dezelfde versleutelde ervaring met een link, met de extra zekerheid van volledig open source code en hosting in de EU, en versturen is gratis.",
+      "Is controleerbaarheid voor jou belangrijk, dan is dat de doorslag: de code van Tessil is openbaar.",
+    ],
+    faq: [
+      {
+        q: "Wat is het verschil tussen Tessil en Tresorit Send?",
+        a: "Ze lijken erg op elkaar: beide zijn end-to-end versleuteld, werken met een link en vragen geen account om te versturen. Tessil is open source (AGPL-3.0) en gehost in de EU; Tresorit Send heeft gesloten broncode en wordt in Zwitserland gehost.",
+      },
+      {
+        q: "Is Tessil echt gratis?",
+        a: "Versturen is gratis en blijft dat, met of zonder account. Betaalde abonnementen voegen portalen en formulieren toe om te ontvangen. Er zijn geen advertenties en geen trackers van derden.",
+      },
+      {
+        q: "Kan ik de versleuteling van Tessil controleren?",
+        a: "Ja. De volledige code is gepubliceerd onder AGPL-3.0, dus iedereen kan nagaan hoe versleuteling en sleutelbeheer werken.",
+      },
+    ],
+  },
+  {
+    slug: "wormhole-alternatief",
+    enSlug: "wormhole-alternative",
+    competitor: "Wormhole",
+    shortName: "Wormhole",
+    metaTitle: "Alternatief voor Wormhole (wormhole.app) - Tessil",
+    metaDescription:
+      "Net als Wormhole houdt Tessil de sleutel in de link, zodat wij je bestanden niet kunnen lezen. Anders dan Wormhole is Tessil open source, gehost in de EU, en met optionele accounts.",
+    heading: "Tessil vs Wormhole",
+    summary:
+      "Hetzelfde model met de sleutel in de link als Wormhole, plus open source, hosting in de EU en optionele accounts.",
+    intro: [
+      "Wormhole (wormhole.app) maakte de strakke, moderne vorm van versleuteld versturen populair: bestanden worden in de browser versleuteld en de sleutel staat in de link, dus de dienst kan ze niet lezen. Transfers verlopen snel vanzelf. Een mooie dienst, en het dichtst bij Tessil in opzet.",
+      "Tessil gebruikt hetzelfde kernidee (versleuteling in de browser, sleutel in het fragment van de URL) en verschilt in wat eromheen zit. Het is open source onder AGPL-3.0, gehost in de EU in plaats van de VS, en biedt een optioneel gratis account met een lijst van je transfers, zodat je ze kunt beheren en opnieuw delen in plaats van dat elke verzending vluchtig is.",
+      "Je kiest ook zelf hoe lang een link geldig blijft, in plaats van vast te zitten aan één korte levensduur.",
+    ],
+    rows: [
+      { label: "End-to-end versleuteld", tessil: TESSIL_NL.e2e, competitor: true },
+      { label: "Sleutel bereikt de server nooit", tessil: TESSIL_NL.keyServer, competitor: true },
+      { label: "Werkt zonder account", tessil: TESSIL_NL.noAccount, competitor: true },
+      { label: "Open source", tessil: TESSIL_NL.openSource, competitor: false },
+      { label: "Hosting / jurisdictie", tessil: TESSIL_NL.hosting, competitor: "Verenigde Staten (Socket)" },
+      { label: "Advertenties en tracking van derden", tessil: TESSIL_NL.tracking, competitor: "Geen" },
+      { label: "Optionele accounts / lijst met transfers", tessil: true, competitor: false },
+      { label: "Instelbare geldigheid van links", tessil: TESSIL_NL.expiry, competitor: "Vaste korte levensduur" },
+      { label: "Prijs", tessil: TESSIL_NL.price, competitor: "Gratis" },
+    ],
+    verdict: [
+      "Wormhole en Tessil delen het belangrijkste: geen van beide diensten kan je bestanden lezen. Wil je de meest vluchtige ervaring, versturen en vergeten, dan is Wormhole prima. Wil je liever controleerbare open source code, hosting in de EU en de mogelijkheid van een account dat je transfers bijhoudt, dan past Tessil beter.",
+      "Versturen is bij beide gratis, dus het draait vooral om jurisdictie, openheid en of je optioneel iets wilt bewaren.",
+    ],
+    faq: [
+      {
+        q: "Is Tessil hetzelfde als Wormhole?",
+        a: "Het versleutelingsmodel is hetzelfde: bestanden worden op je apparaat versleuteld en de sleutel blijft in de link. Tessil verschilt doordat het open source is (AGPL-3.0), in de EU wordt gehost en optionele accounts biedt met een instelbare geldigheid.",
+      },
+      {
+        q: "Verwijdert Tessil transfers automatisch, zoals Wormhole?",
+        a: "Ja. Transfers verlopen op basis van de tijd en de downloadlimiet die je instelt. Je kiest zelf de periode in plaats van vast te zitten aan één korte levensduur.",
+      },
+      {
+        q: "Waar worden beide diensten gehost?",
+        a: "Tessil wordt volledig in de EU gehost (Duitsland en Nederland). Wormhole wordt vanuit de Verenigde Staten beheerd.",
+      },
+    ],
+  },
 ];
 
 export const comparisonsNl: LocalizedComparison[] = [

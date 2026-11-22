@@ -146,7 +146,7 @@ const sendComparisons: Comparison[] = [
       },
       {
         q: "What does Boomerang cost compared to Tessil?",
-        a: "Boomerang has a free tier and a paid plan around EUR 6.99/month for more storage and larger files. Tessil is currently free. Check Boomerang's site for up-to-date pricing.",
+        a: "Boomerang has a free tier and a paid plan around EUR 6.99/month for more storage and larger files. Sending with Tessil is free, with or without an account; paid plans add portals and forms for receiving. Check Boomerang's site for up-to-date pricing.",
       },
       {
         q: "Is Tessil also made in the Netherlands?",
@@ -227,7 +227,7 @@ const sendComparisons: Comparison[] = [
       { label: "Password protection", tessil: TESSIL.password, competitor: true },
     ],
     verdict: [
-      "Tresorit Send is a solid, trustworthy option, especially if you're already in the Tresorit ecosystem. Tessil gives you the same encrypted, link-based experience with the added assurances that come from being fully open source and EU-hosted - and it's free.",
+      "Tresorit Send is a solid, trustworthy option, especially if you're already in the Tresorit ecosystem. Tessil gives you the same encrypted, link-based experience with the added assurances that come from being fully open source and EU-hosted - and sending is free.",
       "If auditability matters to you, that's the deciding line: Tessil's code is public.",
     ],
     faq: [
@@ -237,7 +237,7 @@ const sendComparisons: Comparison[] = [
       },
       {
         q: "Is Tessil really free?",
-        a: "Yes. The current version is free with no paid tier. There are no ads and no third-party trackers.",
+        a: "Sending is free and stays free, with or without an account. Paid plans add portals and forms for receiving. There are no ads and no third-party trackers.",
       },
       {
         q: "Can I verify Tessil's encryption?",

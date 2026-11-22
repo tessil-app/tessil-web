@@ -23,8 +23,8 @@ describe("comparisons", () => {
     }
   });
 
-  it("has a Dutch version of every portal and form comparison", () => {
-    for (const c of comparisons.filter((c) => c.kind === "portal" || c.kind === "form")) {
+  it("has a Dutch version of every comparison", () => {
+    for (const c of comparisons) {
       expect(comparisonsNl.some((nl) => nl.enSlug === c.slug)).toBe(true);
     }
   });
