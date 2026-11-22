@@ -1,6 +1,10 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
-import { LOCALIZED_ENTRIES } from './src/lib/i18n/routes.js';
+import { loadEnv } from 'vite';
+import { entriesFor } from './src/lib/i18n/routes.js';
+
+// The launch flags as the build sees them: the shell, then the .env files.
+const env = loadEnv(process.env.NODE_ENV === 'development' ? 'development' : 'production', process.cwd(), 'VITE_');
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -17,7 +21,7 @@ const config = {
 		// Pages in other languages are listed so the build renders them even
 		// where no link on an English page points to them yet.
 		prerender: {
-			entries: ['*', ...LOCALIZED_ENTRIES]
+			entries: ['*', ...entriesFor(env)]
 		},
 
 		// Script policy only; every other directive is the nginx header
