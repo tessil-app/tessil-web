@@ -290,7 +290,8 @@ const en = {
     closeAbout: "Takes answers up to and including this day.",
     lastDay: "Last day",
     notify: "Email when a response arrives",
-    notifyAbout: "At most one per form per hour. It can't say what was answered.",
+    notifyAbout:
+      "The first response is emailed at once; after that at most one email every 10 minutes, with the number that arrived. It can't say what was answered: we can't read that.",
   },
   tryout: {
     seoTitle: "Try the form editor - Tessil",
@@ -602,7 +603,8 @@ const nl: typeof en = {
     closeAbout: "Neemt antwoorden aan tot en met deze dag.",
     lastDay: "Laatste dag",
     notify: "Mail als er een inzending binnenkomt",
-    notifyAbout: "Hooguit één per formulier per uur. Er staat niet in wat er is geantwoord.",
+    notifyAbout:
+      "De eerste inzending mailen we meteen; daarna hooguit één mail per 10 minuten, met het aantal dat binnenkwam. Er staat niet in wat er is geantwoord: dat kunnen wij niet lezen.",
   },
   tryout: {
     seoTitle: "Probeer de formuliereditor - Tessil",

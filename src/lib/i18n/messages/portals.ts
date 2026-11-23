@@ -93,7 +93,7 @@ const en = {
     },
     {
       name: "An email when files arrive",
-      about: "One per portal per hour at most. It can't say what came in, because we can't read that.",
+      about: "At once for the first delivery, then at most one every 10 minutes with the number that arrived. It can't say what came in, because we can't read that.",
     },
     {
       name: "Your logo",
@@ -218,7 +218,7 @@ const nl: typeof en = {
     },
     {
       name: "Een e-mail als er bestanden binnenkomen",
-      about: "Hooguit één per portaal per uur. Er staat niet in wat er binnenkwam, want dat kunnen wij niet lezen.",
+      about: "Meteen bij de eerste levering, daarna hooguit één per 10 minuten met het aantal dat binnenkwam. Er staat niet in wat er binnenkwam, want dat kunnen wij niet lezen.",
     },
     {
       name: "Je logo",

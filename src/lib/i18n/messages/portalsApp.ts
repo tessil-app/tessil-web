@@ -343,7 +343,7 @@ const en = {
     lastDay: "Last day",
     notify: "Email when files arrive",
     notifyAbout:
-      "One email per portal per hour at most, to you and whoever you share the portal with. It can't say what was sent: we can't read that.",
+      "The first delivery is emailed at once; after that at most one email every 10 minutes, with the number that arrived. To you and whoever you share the portal with. It can't say what was sent: we can't read that.",
     creating: "Creating…",
     saving: "Saving…",
     create: "Create portal",
@@ -702,7 +702,7 @@ const nl: typeof en = {
     lastDay: "Laatste dag",
     notify: "Mail als er bestanden binnenkomen",
     notifyAbout:
-      "Hooguit één mail per portaal per uur, aan jou en aan wie je het portaal deelt. Er staat niet in wat er is gestuurd: dat kunnen wij niet lezen.",
+      "De eerste levering mailen we meteen; daarna hooguit één mail per 10 minuten, met het aantal dat binnenkwam. Aan jou en aan wie je het portaal deelt. Er staat niet in wat er is gestuurd: dat kunnen wij niet lezen.",
     creating: "Maken…",
     saving: "Opslaan…",
     create: "Portaal maken",
