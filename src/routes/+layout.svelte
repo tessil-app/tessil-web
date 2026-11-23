@@ -157,6 +157,9 @@ import { hrefFor } from "$lib/i18n/paths";
   // Nothing has scrolled under the header yet.
   let atTop = $state(true);
   let headerEl = $state<HTMLElement | null>(null);
+  // The header's real height, for sections that sit behind it: it differs
+  // signed in and signed out.
+  let headerHeight = $state(0);
 
   function readHeaderTone() {
     if (!headerEl) return;
@@ -299,9 +302,13 @@ import { hrefFor } from "$lib/i18n/paths";
 >
   {c.skip}
 </a>
-<div class="min-h-screen bg-background text-foreground">
+<div
+  class="min-h-screen bg-background text-foreground"
+  style:--header-h={headerHeight > 0 ? `${headerHeight}px` : null}
+>
   <header
     bind:this={headerEl}
+    bind:offsetHeight={headerHeight}
     class={cn(
       "sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200 ease-out",
       // On a dark page the bar is invisible until something scrolls under

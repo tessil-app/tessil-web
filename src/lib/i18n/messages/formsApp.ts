@@ -292,6 +292,20 @@ const en = {
     notify: "Email when a response arrives",
     notifyAbout: "At most one per form per hour. It can't say what was answered.",
   },
+  tryout: {
+    seoTitle: "Try the form editor - Tessil",
+    title: "New client intake",
+    message: "A few questions before our first call. It takes about two minutes.",
+    thanks: "Thank you. We will be in touch within two working days.",
+    name: "Your name",
+    who: "Are you here for yourself or a business?",
+    whoOptions: ["Myself", "A business"],
+    help: "What can we help you with?",
+    helpHint: "A few lines is enough.",
+    start: "When would you like to start?",
+    id: "A copy of your ID",
+    idHint: "A photo is fine.",
+  },
 };
 
 const nl: typeof en = {
@@ -589,6 +603,20 @@ const nl: typeof en = {
     lastDay: "Laatste dag",
     notify: "Mail als er een inzending binnenkomt",
     notifyAbout: "Hooguit één per formulier per uur. Er staat niet in wat er is geantwoord.",
+  },
+  tryout: {
+    seoTitle: "Probeer de formuliereditor - Tessil",
+    title: "Intake nieuwe klant",
+    message: "Een paar vragen voor ons eerste gesprek. Het kost ongeveer twee minuten.",
+    thanks: "Dank je wel. Je hoort binnen twee werkdagen van ons.",
+    name: "Je naam",
+    who: "Kom je voor jezelf of voor een bedrijf?",
+    whoOptions: ["Voor mezelf", "Voor een bedrijf"],
+    help: "Waarmee kunnen we je helpen?",
+    helpHint: "Een paar regels is genoeg.",
+    start: "Wanneer wil je beginnen?",
+    id: "Een kopie van je identiteitsbewijs",
+    idHint: "Een foto is prima.",
   },
 };
 

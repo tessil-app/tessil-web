@@ -408,8 +408,8 @@
 
 <Seo title={t.seoTitle} robots="noindex" />
 
-<!-- -mt-14 pulls the image behind the sticky nav so the glass effect sees through to artwork. -->
-<section class="relative min-h-screen -mt-14 overflow-hidden">
+<!-- Pulled behind the sticky nav so the glass effect sees through to artwork. -->
+<section class="relative min-h-screen under-header overflow-hidden">
   {#if featured}
     <div
       aria-hidden="true"

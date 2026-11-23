@@ -107,7 +107,7 @@
 <svelte:window ondragover={(e) => e.preventDefault()} ondrop={(e) => e.preventDefault()} />
 
 <!-- Pulled up behind the header, which turns dark while this is under it. -->
-<div class="hero -mt-16" data-header-tone="dark">
+<div class="hero under-header" data-header-tone="dark">
   <div class="mx-auto flex min-h-[100svh] max-w-6xl flex-col items-center justify-center gap-4 px-4 sm:px-6 pt-24 pb-10 text-center sm:gap-5">
     <h1 class="text-6xl font-semibold leading-none text-white sm:text-7xl lg:text-8xl" style="letter-spacing: -0.045em">
       {t.heading}
@@ -345,7 +345,7 @@
 
   <CompareLinks kind="portal" {locale} />
 
-  <SiteFooter />
+  <SiteFooter class="mt-2 px-4 pb-16" />
 </div>
 
 <style>

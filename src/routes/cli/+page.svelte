@@ -272,7 +272,7 @@
     </div>
   </section>
 
-  <SiteFooter />
+  <SiteFooter class="px-4 pb-16" />
 </div>
 
 <style>
