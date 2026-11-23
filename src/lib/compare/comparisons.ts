@@ -49,6 +49,8 @@ export type Comparison = {
 
 /** Shown on every page so competitor facts are dated, not presented as eternal truth. */
 export const LAST_VERIFIED = "June 2026";
+/** The same, for structured data. */
+export const LAST_VERIFIED_ISO = "2026-06-01";
 
 // Tessil's column is identical across comparisons.
 const TESSIL = {

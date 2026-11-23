@@ -5,6 +5,7 @@
 import type { Comparison } from "./comparisons";
 
 export const RECEIVING_VERIFIED = "November 2026";
+export const RECEIVING_VERIFIED_ISO = "2026-11-22";
 
 const PORTAL = {
   e2e: true,

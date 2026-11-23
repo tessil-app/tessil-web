@@ -19,6 +19,7 @@ import { hrefFor } from "$lib/i18n/paths";
   import { homeMessages } from "$lib/i18n/messages/home";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import { onMount } from "svelte";
+  import { applicationNode, ORG_ID, organizationNode } from "$lib/seo/schema";
 
   // English at /, Dutch at /nl; the same page. See src/lib/i18n.
   const locale = $derived(localeFromPath(page.url.pathname));
@@ -30,25 +31,15 @@ import { hrefFor } from "$lib/i18n/paths";
     "@graph": [
       {
         "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
         name: "Tessil",
+        publisher: { "@id": ORG_ID },
         url: SITE_URL,
         description: t.pageDescription,
         inLanguage: locale,
       },
-      {
-        "@type": "WebApplication",
-        name: "Tessil",
-        applicationCategory: "SecurityApplication",
-        operatingSystem: "Any",
-        browserRequirements: "Requires JavaScript and modern browser APIs",
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "EUR",
-        },
-        featureList: t.schemaFeatures,
-        url: SITE_URL,
-      },
+      organizationNode(),
+      applicationNode(t.schemaFeatures, t.pageDescription),
     ],
   });
 

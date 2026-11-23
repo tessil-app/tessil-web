@@ -13,6 +13,11 @@
   import { SITE_URL } from "$lib/config/site";
   import { compareStrings } from "$lib/i18n/messages";
   import { HTML_LANG, type Locale } from "$lib/i18n/locale";
+  import { CHOOSE } from "$lib/compare/choose";
+  import { LAST_VERIFIED_ISO } from "$lib/compare/comparisons";
+  import { RECEIVING_VERIFIED_ISO } from "$lib/compare/receiving";
+  import { homeMessages } from "$lib/i18n/messages/home";
+  import { APP_ID, applicationNode, ORG_ID, organizationNode } from "$lib/seo/schema";
 
   let {
     comparison,
@@ -50,12 +55,29 @@
   const t = $derived(compareStrings[locale]);
   const path = $derived(`${basePath}/${c.slug}`);
   const canonical = $derived(`${SITE_URL}${path}`);
+  // Keyed by the English slug, which the English address ends in.
+  const choose = $derived(CHOOSE[canonicalPath.split("/").pop() ?? ""]?.[locale]);
+  const verifiedIso = $derived(c.kind && c.kind !== "send" ? RECEIVING_VERIFIED_ISO : LAST_VERIFIED_ISO);
 
   // Breadcrumb + FAQ structured data, prerendered into the static HTML.
   const jsonLd = $derived(
     JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": canonical,
+          url: canonical,
+          name: c.metaTitle,
+          description: c.metaDescription,
+          inLanguage: HTML_LANG[locale],
+          dateModified: verifiedIso,
+          isPartOf: { "@id": `${SITE_URL}/#website` },
+          publisher: { "@id": ORG_ID },
+          about: [{ "@id": APP_ID }, { "@type": "SoftwareApplication", name: c.competitor }],
+        },
+        organizationNode(),
+        applicationNode(homeMessages[locale].schemaFeatures),
         {
           "@type": "BreadcrumbList",
           itemListElement: [
@@ -210,6 +232,24 @@
   <p class="mt-3 text-xs text-muted-foreground/80">
     {t.lastVerified(c.competitor, lastVerified)}
   </p>
+
+  {#if choose}
+    <section class="mt-12 max-w-3xl">
+      <h2 class="text-xl font-semibold text-foreground">{t.chooseHeading}</h2>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {#each [{ title: t.chooseThem(c.competitor), items: choose.them }, { title: t.chooseTessil, items: choose.tessil }] as side (side.title)}
+          <div class="rounded-xl border border-border bg-card/60 p-5">
+            <h3 class="text-sm font-semibold text-foreground">{side.title}</h3>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground">
+              {#each side.items as item (item)}
+                <li>{item}</li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
 
   <!-- Verdict -->
   <section class="mt-12 max-w-2xl">
