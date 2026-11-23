@@ -58,7 +58,9 @@
   const canonical = $derived(`${SITE_URL}${path}`);
   // Keyed by the English slug, which the English address ends in.
   const choose = $derived(CHOOSE[canonicalPath.split("/").pop() ?? ""]?.[locale]);
-  const verifiedIso = $derived(c.kind && c.kind !== "send" ? RECEIVING_VERIFIED_ISO : LAST_VERIFIED_ISO);
+  const verifiedIso = $derived(
+    c.verifiedIso ?? (c.kind && c.kind !== "send" ? RECEIVING_VERIFIED_ISO : LAST_VERIFIED_ISO),
+  );
 
   // Breadcrumb + FAQ structured data, prerendered into the static HTML.
   const jsonLd = $derived(

@@ -290,4 +290,92 @@ export const receivingComparisons: Comparison[] = [
     ],
     cta: { label: "Try the form editor", href: "/forms/try" },
   },
+  {
+    slug: "tresorit-file-request-alternative",
+    kind: "portal",
+    competitor: "Tresorit file requests",
+    shortName: "Tresorit",
+    metaTitle: "Tresorit file request alternative, open source - Tessil",
+    metaDescription:
+      "Collect files from clients through an end-to-end encrypted link, without asking for their email address. How Tessil portals compare to Tresorit file requests.",
+    heading: "Tessil vs Tresorit file requests",
+    summary:
+      "Both collect files through an end-to-end encrypted link. Tessil asks senders nothing, is open source, and is priced per account.",
+    intro: [
+      "Tresorit, a Swiss encrypted storage company, offers file requests on its Solo, Business and Enterprise plans: a link through which anyone can upload files into a folder in your Tresorit, end-to-end encrypted. Uploaders need no Tresorit account but give an email address, an upload session holds up to 5 GB, and a folder has one request link at a time. It is a serious, well-regarded product, and the encryption is real.",
+      "A Tessil portal does the same core job with a different shape. Senders give nothing about themselves unless you add a field for it, you can list the documents you need so you see what is missing, and every sender gets a confirmation with a reference. The code is open source, so the encryption can be checked rather than taken on trust.",
+    ],
+    rows: [
+      { label: "Encrypted so the provider cannot read it", tessil: PORTAL.e2e, competitor: true },
+      { label: "Senders need no account", tessil: PORTAL.noAccount, competitor: "Yes, but they give an email address" },
+      { label: "List of the documents you need", tessil: PORTAL.checklist, competitor: false },
+      { label: "Encrypted storage and sync for your own files", tessil: false, competitor: true },
+      { label: "Open source", tessil: PORTAL.openSource, competitor: false },
+      { label: "Hosting", tessil: PORTAL.hosting, competitor: "Swiss company" },
+      { label: "Price", tessil: PORTAL.price, competitor: "Part of its Solo, Business and Enterprise plans" },
+    ],
+    verdict: [
+      "If your team already keeps its files in Tresorit, its file requests are the natural choice: what clients send lands next to everything else, end-to-end encrypted.",
+      "If you only need clients to send you documents, a portal is lighter: no email address asked of them, a checklist of what is still missing, open-source code, and a price that does not depend on storage plans.",
+    ],
+    faq: [
+      {
+        q: "Are both end-to-end encrypted?",
+        a: "Yes. Tresorit encrypts file request uploads end to end, and so does Tessil. The difference is that Tessil's code is public, so anyone can check how it is done.",
+      },
+      {
+        q: "Do senders have to give their email address?",
+        a: "On Tresorit file requests, yes. On a Tessil portal, no: we ask senders nothing, and you can add one field of your own, such as a name or client number, which is encrypted like the files.",
+      },
+      {
+        q: "Is a portal a replacement for Tresorit?",
+        a: "Only for receiving. Tessil is not storage: files are kept for 30 days, or 90 on Max, and then deleted. Download what you need to keep.",
+      },
+    ],
+    cta: { label: "See how portals work", href: "/portals" },
+  },
+  {
+    slug: "cryptpad-form-alternative",
+    kind: "form",
+    competitor: "CryptPad Form",
+    shortName: "CryptPad",
+    metaTitle: "CryptPad Form alternative for encrypted intake forms - Tessil",
+    metaDescription:
+      "Two open-source, end-to-end encrypted form builders. How Tessil forms compare to CryptPad Form, and when to pick each.",
+    heading: "Tessil vs CryptPad Form",
+    summary:
+      "Both are open source and end-to-end encrypted. CryptPad is a free office suite with forms; Tessil is a form and file tool for clients.",
+    intro: [
+      "CryptPad is an open-source, end-to-end encrypted office suite made in France, free to use on its cryptpad.fr instance and possible to host yourself. Its Form app encrypts questions and answers so only the form's owners can read them, lets people answer anonymously, and offers roles for who edits, who reads responses and who answers. It is the closest thing to Tessil forms in principle, and an excellent project.",
+      "Tessil forms share the principle and differ in purpose. They are built for collecting answers and documents from clients: a file question encrypted like the rest, a summary per question and a CSV export made in your browser, and templates, all hosted for you in the EU. People answering need no account.",
+    ],
+    rows: [
+      { label: "Answers encrypted so the provider cannot read them", tessil: FORM.e2e, competitor: true },
+      { label: "Open source", tessil: FORM.openSource, competitor: "Yes (AGPL-3.0)" },
+      { label: "People answer without an account", tessil: FORM.noAccount, competitor: true },
+      { label: "File question", tessil: true, competitor: "Not in its documentation" },
+      { label: "Documents, sheets and other office apps", tessil: false, competitor: true },
+      { label: "Self-hosting", tessil: false, competitor: true },
+      { label: "Price", tessil: FORM.price, competitor: "Free on cryptpad.fr" },
+    ],
+    verdict: [
+      "If you want a free, encrypted suite of documents, sheets and forms, or want to host it yourself, CryptPad is the better fit, and its forms are good.",
+      "If you collect personal answers and documents from clients, Tessil is built for exactly that: file questions, a checklist-style flow, a confirmation with a reference, and nothing for you to run.",
+    ],
+    faq: [
+      {
+        q: "Are both really end-to-end encrypted?",
+        a: "Yes. CryptPad encrypts forms and answers in the browser, as Tessil does, and both publish their code under AGPL-3.0.",
+      },
+      {
+        q: "Can people send files through a CryptPad form?",
+        a: "We found no file question in CryptPad's form documentation. In a Tessil form, a file question is encrypted in the respondent's browser like every other answer.",
+      },
+      {
+        q: "Why pay for Tessil when CryptPad is free?",
+        a: "You may not need to. If CryptPad's forms do what you need, use them. Tessil's paid plans add file questions, portals for receiving documents, and storage that is run and kept for you.",
+      },
+    ],
+    cta: { label: "Try the form editor", href: "/forms/try" },
+  },
 ];

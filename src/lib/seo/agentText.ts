@@ -59,7 +59,7 @@ export function comparisonMarkdown(
   // Heading levels, one deeper when nested in llms-full.txt.
   const h = (n: number) => "#".repeat(n + (opts.depth ?? 0));
   const choose: Choose | undefined = CHOOSE[opts.enSlug]?.[opts.locale];
-  const iso = c.kind && c.kind !== "send" ? RECEIVING_VERIFIED_ISO : LAST_VERIFIED_ISO;
+  const iso = c.verifiedIso ?? (c.kind && c.kind !== "send" ? RECEIVING_VERIFIED_ISO : LAST_VERIFIED_ISO);
   return [
     `${h(1)} ${c.heading}`,
     "",

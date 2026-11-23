@@ -269,6 +269,96 @@ const sendComparisonsNl: LocalizedComparison[] = [
       },
     ],
   },
+  {
+    slug: "swisstransfer-alternatief",
+    enSlug: "swisstransfer-alternative",
+    competitor: "SwissTransfer",
+    shortName: "SwissTransfer",
+    metaTitle: "End-to-end versleuteld alternatief voor SwissTransfer - Tessil",
+    metaDescription:
+      "SwissTransfer is gratis en bewaart bestanden in Zwitserland, maar is niet end-to-end versleuteld. Tessil versleutelt in je browser, zodat wij je bestanden niet kunnen lezen. Open source, EU-hosting, gratis.",
+    heading: "Tessil vs SwissTransfer",
+    summary:
+      "Beide zijn gratis en zonder account. SwissTransfer verstuurt grotere bestanden; Tessil versleutelt ze zodat de dienst ze niet kan lezen.",
+    intro: [
+      "SwissTransfer, van de Zwitserse hostingpartij Infomaniak, is een royale gratis dienst: tot 50 GB per transfer, geen account, een optioneel wachtwoord, en bestanden die alleen in Infomaniaks eigen datacenters in Zwitserland staan. Infomaniak beschrijft de bestanden als versleuteld tijdens verzending en in opslag. Het noemt ze niet end-to-end versleuteld: de sleutels liggen dus bij Infomaniak.",
+      "Tessil versleutelt elk bestand in je browser voordat het wordt geüpload, en de sleutel zit in het fragment van de link, het deel na de # dat browsers nooit naar een server sturen. Wij bewaren alleen versleutelde data die we niet kunnen openen, in de EU, en de code is open source onder AGPL-3.0.",
+    ],
+    rows: [
+      { label: "End-to-end versleuteld", tessil: TESSIL_NL.e2e, competitor: "Nee; versleuteld tijdens verzending en in opslag" },
+      { label: "Sleutel bereikt de server nooit", tessil: TESSIL_NL.keyServer, competitor: false },
+      { label: "Werkt zonder account", tessil: TESSIL_NL.noAccount, competitor: true },
+      { label: "Grootste transfer, gratis", tessil: "1 GB", competitor: "50 GB" },
+      { label: "Hosting / jurisdictie", tessil: TESSIL_NL.hosting, competitor: "Zwitserland (eigen datacenters van Infomaniak)" },
+      { label: "Open source", tessil: TESSIL_NL.openSource, competitor: "Geen openbare servercode gevonden" },
+      { label: "Wachtwoord", tessil: TESSIL_NL.password, competitor: true },
+      { label: "Prijs", tessil: TESSIL_NL.price, competitor: "Gratis" },
+    ],
+    verdict: [
+      "Voor grote bestanden die niet gevoelig zijn, is SwissTransfer moeilijk te verslaan: 50 GB, gratis, geen account, en een partij met eigen Zwitserse datacenters.",
+      "Voor documenten die niemand anders mag lezen, is end-to-end versleuteling het verschil dat telt. Bij Tessil heeft de dienst de sleutel nooit; bij SwissTransfer wel. De gratis transfers van Tessil zijn kleiner, dat is de ruil.",
+    ],
+    faq: [
+      {
+        q: "Is SwissTransfer end-to-end versleuteld?",
+        a: "Niet volgens Infomaniaks eigen beschrijving: bestanden zijn versleuteld tijdens verzending en in opslag, niet in je browser. Tessil versleutelt in je browser en krijgt de sleutel nooit.",
+      },
+      {
+        q: "Kan ik 50 GB versturen met Tessil?",
+        a: "Nee. Gratis transfers bij Tessil gaan tot 1 GB, betaalde abonnementen tot 5 GB per bestand. Moet je 50 GB aan niet-gevoelige bestanden versturen, dan past SwissTransfer beter.",
+      },
+      {
+        q: "Is Zwitserland of de EU beter voor privacy?",
+        a: "Beide hebben sterke privacywetgeving. Het land bepaalt wie de gegevens van een aanbieder kan opeisen; end-to-end versleuteling bepaalt of die gegevens überhaupt leesbaar zijn. Tessil wordt in de EU gehost en heeft alleen gegevens die het niet kan lezen.",
+      },
+    ],
+    verified: "november 2026",
+    verifiedIso: "2026-11-23",
+  },
+  {
+    slug: "smash-alternatief",
+    enSlug: "smash-alternative",
+    competitor: "Smash",
+    shortName: "Smash",
+    metaTitle: "Alternatief voor Smash met end-to-end versleuteling - Tessil",
+    metaDescription:
+      "Smash verstuurt gratis bestanden van elke grootte. Tessil versleutelt bestanden in je browser, zodat de dienst ze niet kan lezen. Open source, EU-hosting, zonder account.",
+    heading: "Tessil vs Smash",
+    summary: "Smash verstuurt bestanden van elke grootte. Tessil verstuurt kleinere bestanden die alleen de ontvanger kan lezen.",
+    intro: [
+      "Smash is een Franse dienst die bekendstaat om gratis transfers zonder limiet op de grootte, die tot 7 dagen beschikbaar blijven. De beveiligingspagina beschrijft bestanden als versleuteld met AES-256 in opslag en met TLS tijdens verzending, opgeslagen bij Amazon Web Services in meerdere regio's in de wereld, met hosting in Frankrijk als optie voor zakelijke klanten. Sommige pagina's van Smash noemen het gratis abonnement end-to-end versleuteld; wat de beveiligingspagina beschrijft is versleuteling in opslag en tijdens verzending, die de dienst zelf kan opheffen.",
+      "Tessil versleutelt elk bestand in je browser voor het uploaden, en de sleutel blijft in het fragment van de link, dat nooit naar een server gaat. Wij bewaren versleutelde data die we niet kunnen lezen, in de EU, en de code is open source onder AGPL-3.0.",
+    ],
+    rows: [
+      { label: "Versleuteld in je browser, sleutel nooit op de server", tessil: TESSIL_NL.keyServer, competitor: "Niet zoals de beveiligingspagina het beschrijft" },
+      { label: "Werkt zonder account", tessil: TESSIL_NL.noAccount, competitor: true },
+      { label: "Grootste transfer, gratis", tessil: "1 GB", competitor: "Geen limiet" },
+      { label: "Hosting / jurisdictie", tessil: TESSIL_NL.hosting, competitor: "AWS, meerdere regio's; Frankrijk bij zakelijke abonnementen" },
+      { label: "Open source", tessil: TESSIL_NL.openSource, competitor: false },
+      { label: "Wachtwoord", tessil: TESSIL_NL.password, competitor: true },
+      { label: "Prijs", tessil: TESSIL_NL.price, competitor: "Gratis + betaalde abonnementen" },
+    ],
+    verdict: [
+      "Verstuur je enorme video- of ontwerpbestanden en is de inhoud niet vertrouwelijk, dan zijn de onbeperkte gratis transfers van Smash de praktische keuze.",
+      "Moet wat je verstuurt tussen jou en de ontvanger blijven, dan betekent versleuteling in de browser bij Tessil dat de dienst het niet kan lezen, wat het beleid ook zegt. De gratis transfers van Tessil zijn daarvoor kleiner.",
+    ],
+    faq: [
+      {
+        q: "Is Smash end-to-end versleuteld?",
+        a: "De pagina's verschillen. De beveiligingspagina beschrijft AES-256-versleuteling in opslag en TLS tijdens verzending, op opslag bij AWS: versleuteling waarvan de dienst de sleutels heeft. Tessil versleutelt in je browser en krijgt de sleutel nooit. Kijk op de huidige beveiligingspagina van Smash voor hun eigen woorden.",
+      },
+      {
+        q: "Heeft Tessil een limiet op de bestandsgrootte?",
+        a: "Ja: 1 GB per transfer op het gratis abonnement en 5 GB per bestand op betaalde abonnementen. Dat is de eerlijke prijs van alles in de browser versleutelen.",
+      },
+      {
+        q: "Waar worden bestanden bewaard?",
+        a: "Tessil bewaart versleutelde bestanden alleen in de EU. Smash zegt bestanden op te slaan bij AWS in meerdere regio's, dicht bij de gebruiker, met Frankrijk als optie voor zakelijke klanten.",
+      },
+    ],
+    verified: "november 2026",
+    verifiedIso: "2026-11-23",
+  },
 ];
 
 export const comparisonsNl: LocalizedComparison[] = [

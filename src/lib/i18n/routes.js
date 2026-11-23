@@ -36,6 +36,10 @@ export const LOCALIZED = {
   "/compare/typeform-alternative": { nl: "/nl/vergelijken/typeform-alternatief", needs: "VITE_FORMS_ANNOUNCED" },
   "/compare/jotform-alternative": { nl: "/nl/vergelijken/jotform-alternatief", needs: "VITE_FORMS_ANNOUNCED" },
   "/compare/formdesk-alternative": { nl: "/nl/vergelijken/formdesk-alternatief", needs: "VITE_FORMS_ANNOUNCED" },
+  "/compare/swisstransfer-alternative": { nl: "/nl/vergelijken/swisstransfer-alternatief" },
+  "/compare/smash-alternative": { nl: "/nl/vergelijken/smash-alternatief" },
+  "/compare/tresorit-file-request-alternative": { nl: "/nl/vergelijken/tresorit-bestandsverzoek-alternatief", needs: "VITE_PORTALS_ANNOUNCED" },
+  "/compare/cryptpad-form-alternative": { nl: "/nl/vergelijken/cryptpad-form-alternatief", needs: "VITE_FORMS_ANNOUNCED" },
 };
 
 /** Every non-English address. */

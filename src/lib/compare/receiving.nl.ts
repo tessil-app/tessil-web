@@ -295,4 +295,94 @@ export const receivingComparisonsNl: LocalizedComparison[] = [
     ],
     cta: { label: "Probeer de formuliereditor", href: "/forms/try" },
   },
+  {
+    slug: "tresorit-bestandsverzoek-alternatief",
+    enSlug: "tresorit-file-request-alternative",
+    kind: "portal",
+    competitor: "Tresorit-bestandsverzoeken",
+    shortName: "Tresorit",
+    metaTitle: "Alternatief voor Tresorit-bestandsverzoeken, open source - Tessil",
+    metaDescription:
+      "Ontvang bestanden van klanten via een end-to-end versleutelde link, zonder naar hun e-mailadres te vragen. Zo verhouden Tessil-portalen zich tot bestandsverzoeken van Tresorit.",
+    heading: "Tessil vs Tresorit-bestandsverzoeken",
+    summary:
+      "Beide verzamelen bestanden via een end-to-end versleutelde link. Tessil vraagt afzenders niets, is open source en kost een bedrag per account.",
+    intro: [
+      "Tresorit, een Zwitsers bedrijf voor versleutelde opslag, biedt bestandsverzoeken op de abonnementen Solo, Business en Enterprise: een link waarmee iedereen bestanden kan uploaden in een map in je Tresorit, end-to-end versleuteld. Wie uploadt heeft geen Tresorit-account nodig maar geeft een e-mailadres op, een uploadsessie bevat tot 5 GB, en een map heeft één verzoeklink tegelijk. Een serieus, goed aangeschreven product, en de versleuteling is echt.",
+      "Een Tessil-portaal doet hetzelfde kernwerk in een andere vorm. Afzenders geven niets over zichzelf op tenzij je daar een veld voor toevoegt, je kunt de documenten opsommen die je nodig hebt zodat je ziet wat ontbreekt, en elke afzender krijgt een bevestiging met een kenmerk. De code is open source, dus de versleuteling is te controleren in plaats van op vertrouwen aan te nemen.",
+    ],
+    rows: [
+      { label: "Versleuteld zodat de aanbieder het niet kan lezen", tessil: PORTAAL.e2e, competitor: true },
+      { label: "Afzenders hebben geen account nodig", tessil: PORTAAL.noAccount, competitor: "Ja, maar ze geven een e-mailadres op" },
+      { label: "Lijst van de documenten die je nodig hebt", tessil: PORTAAL.checklist, competitor: false },
+      { label: "Versleutelde opslag en synchronisatie voor je eigen bestanden", tessil: false, competitor: true },
+      { label: "Open source", tessil: PORTAAL.openSource, competitor: false },
+      { label: "Hosting", tessil: "EU (Duitsland + Nederland)", competitor: "Zwitsers bedrijf" },
+      { label: "Prijs", tessil: PORTAAL.price, competitor: "Onderdeel van de abonnementen Solo, Business en Enterprise" },
+    ],
+    verdict: [
+      "Bewaart je team zijn bestanden al in Tresorit, dan zijn de bestandsverzoeken de logische keuze: wat klanten sturen komt naast al het andere terecht, end-to-end versleuteld.",
+      "Heb je alleen nodig dat klanten je documenten sturen, dan is een portaal lichter: geen e-mailadres gevraagd, een checklist van wat nog ontbreekt, open-source code, en een prijs die niet van een opslagabonnement afhangt.",
+    ],
+    faq: [
+      {
+        q: "Zijn beide end-to-end versleuteld?",
+        a: "Ja. Tresorit versleutelt uploads via bestandsverzoeken end-to-end, en Tessil ook. Het verschil is dat de code van Tessil openbaar is, zodat iedereen kan nagaan hoe het werkt.",
+      },
+      {
+        q: "Moeten afzenders hun e-mailadres opgeven?",
+        a: "Bij Tresorit-bestandsverzoeken wel. Bij een Tessil-portaal niet: we vragen afzenders niets, en je kunt zelf één veld toevoegen, zoals een naam of klantnummer, dat net als de bestanden wordt versleuteld.",
+      },
+      {
+        q: "Vervangt een portaal Tresorit?",
+        a: "Alleen voor ontvangen. Tessil is geen opslag: bestanden blijven 30 dagen bewaard, of 90 bij Max, en worden daarna verwijderd. Download wat je wilt houden.",
+      },
+    ],
+    cta: { label: "Bekijk hoe portalen werken", href: "/portals" },
+  },
+  {
+    slug: "cryptpad-form-alternatief",
+    enSlug: "cryptpad-form-alternative",
+    kind: "form",
+    competitor: "CryptPad Form",
+    shortName: "CryptPad",
+    metaTitle: "Alternatief voor CryptPad Form voor versleutelde intakeformulieren - Tessil",
+    metaDescription:
+      "Twee open-source formulierbouwers met end-to-end versleuteling. Zo verhouden Tessil-formulieren zich tot CryptPad Form, en wanneer je welke kiest.",
+    heading: "Tessil vs CryptPad Form",
+    summary:
+      "Beide zijn open source en end-to-end versleuteld. CryptPad is een gratis kantoorpakket met formulieren; Tessil is een hulpmiddel voor formulieren en bestanden van klanten.",
+    intro: [
+      "CryptPad is een open-source, end-to-end versleuteld kantoorpakket uit Frankrijk, gratis te gebruiken op cryptpad.fr en zelf te hosten. De Form-app versleutelt vragen en antwoorden zodat alleen de eigenaren van het formulier ze kunnen lezen, laat mensen anoniem antwoorden en kent rollen voor wie bewerkt, wie antwoorden leest en wie invult. In opzet het dichtst bij Tessil-formulieren, en een uitstekend project.",
+      "Tessil-formulieren delen het principe en verschillen in doel. Ze zijn gemaakt om antwoorden en documenten van klanten te verzamelen: een vraag voor bestanden die net zo versleuteld is als de rest, een samenvatting per vraag en een CSV-export die in je browser worden gemaakt, en sjablonen, allemaal voor je gehost in de EU. Wie antwoordt heeft geen account nodig.",
+    ],
+    rows: [
+      { label: "Antwoorden versleuteld zodat de aanbieder ze niet kan lezen", tessil: FORMULIER.e2e, competitor: true },
+      { label: "Open source", tessil: FORMULIER.openSource, competitor: "Ja (AGPL-3.0)" },
+      { label: "Antwoorden zonder account", tessil: FORMULIER.noAccount, competitor: true },
+      { label: "Vraag voor bestanden", tessil: true, competitor: "Niet in de documentatie" },
+      { label: "Documenten, spreadsheets en andere kantoorapps", tessil: false, competitor: true },
+      { label: "Zelf hosten", tessil: false, competitor: true },
+      { label: "Prijs", tessil: FORMULIER.price, competitor: "Gratis op cryptpad.fr" },
+    ],
+    verdict: [
+      "Wil je een gratis, versleuteld pakket met documenten, spreadsheets en formulieren, of wil je het zelf hosten, dan past CryptPad beter, en de formulieren zijn goed.",
+      "Verzamel je persoonlijke antwoorden en documenten van klanten, dan is Tessil precies daarvoor gemaakt: vragen voor bestanden, een bevestiging met een kenmerk, en niets om zelf te beheren.",
+    ],
+    faq: [
+      {
+        q: "Zijn beide echt end-to-end versleuteld?",
+        a: "Ja. CryptPad versleutelt formulieren en antwoorden in de browser, net als Tessil, en beide publiceren hun code onder AGPL-3.0.",
+      },
+      {
+        q: "Kunnen mensen bestanden sturen via een CryptPad-formulier?",
+        a: "We vonden geen vraag voor bestanden in de documentatie van CryptPad. In een Tessil-formulier wordt een bestandsvraag in de browser van de invuller versleuteld, net als elk ander antwoord.",
+      },
+      {
+        q: "Waarom betalen voor Tessil als CryptPad gratis is?",
+        a: "Misschien hoeft dat niet. Doen de formulieren van CryptPad wat je nodig hebt, gebruik ze dan. De betaalde abonnementen van Tessil voegen vragen voor bestanden toe, portalen om documenten te ontvangen, en opslag die voor je wordt beheerd.",
+      },
+    ],
+    cta: { label: "Probeer de formuliereditor", href: "/forms/try" },
+  },
 ];

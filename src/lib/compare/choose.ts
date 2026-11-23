@@ -254,4 +254,82 @@ export const CHOOSE: Record<string, Record<Locale, Choose>> = {
       ],
     },
   },
+  "swisstransfer-alternative": {
+    en: {
+      them: ["You send very large files, up to 50 GB, that are not sensitive.", "Swiss hosting is what you want."],
+      tessil: [
+        "The files should stay unreadable to the service, not just stored in a good jurisdiction.",
+        "You want open-source code you can check.",
+      ],
+    },
+    nl: {
+      them: ["Je verstuurt heel grote bestanden, tot 50 GB, die niet gevoelig zijn.", "Je wilt hosting in Zwitserland."],
+      tessil: [
+        "De bestanden moeten onleesbaar blijven voor de dienst, niet alleen in een goed land staan.",
+        "Je wilt open-source code die je kunt controleren.",
+      ],
+    },
+  },
+  "smash-alternative": {
+    en: {
+      them: ["You send huge files with no size limit and the content is not confidential."],
+      tessil: [
+        "What you send should stay between you and the recipient.",
+        "You want the files kept in the EU, by a service that cannot read them.",
+      ],
+    },
+    nl: {
+      them: ["Je verstuurt enorme bestanden zonder limiet en de inhoud is niet vertrouwelijk."],
+      tessil: [
+        "Wat je verstuurt moet tussen jou en de ontvanger blijven.",
+        "Je wilt de bestanden in de EU, bij een dienst die ze niet kan lezen.",
+      ],
+    },
+  },
+  "tresorit-file-request-alternative": {
+    en: {
+      them: [
+        "Your team already keeps its files in Tresorit.",
+        "You want what clients send to land next to your encrypted storage.",
+      ],
+      tessil: [
+        "Senders should not have to give an email address.",
+        "You want a checklist of the documents you still need.",
+        "You want open-source code and a price that does not depend on storage.",
+      ],
+    },
+    nl: {
+      them: [
+        "Je team bewaart zijn bestanden al in Tresorit.",
+        "Je wilt dat wat klanten sturen naast je versleutelde opslag terechtkomt.",
+      ],
+      tessil: [
+        "Afzenders hoeven geen e-mailadres op te geven.",
+        "Je wilt een checklist van de documenten die je nog nodig hebt.",
+        "Je wilt open-source code en een prijs die niet van opslag afhangt.",
+      ],
+    },
+  },
+  "cryptpad-form-alternative": {
+    en: {
+      them: [
+        "You want a free encrypted office suite with documents and sheets as well as forms.",
+        "You want to host it yourself.",
+      ],
+      tessil: [
+        "You collect personal answers and documents from clients, with a file question.",
+        "You want it run for you, hosted in the EU.",
+      ],
+    },
+    nl: {
+      them: [
+        "Je wilt een gratis versleuteld kantoorpakket met documenten en spreadsheets naast formulieren.",
+        "Je wilt het zelf hosten.",
+      ],
+      tessil: [
+        "Je verzamelt persoonlijke antwoorden en documenten van klanten, met een vraag voor bestanden.",
+        "Je wilt dat het voor je wordt beheerd, gehost in de EU.",
+      ],
+    },
+  },
 };
