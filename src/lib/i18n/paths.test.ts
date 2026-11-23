@@ -1,9 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { localeFromPath } from "./locale";
 import { alternatesOf, canonicalPath, hrefFor, localizedPath } from "./paths";
 import { LOCALIZED, LOCALIZED_ENTRIES } from "./routes.js";
+import { sitemapXml } from "$lib/seo/sitemap";
 
 describe("addresses in two languages", () => {
   it("knows the language of an address", () => {
@@ -42,7 +41,8 @@ describe("addresses in two languages", () => {
   });
 
   it("lists every page in the sitemap in each of its languages", () => {
-    const sitemap = readFileSync(join(import.meta.dir, "../../../static/sitemap.xml"), "utf8");
+    const env = { VITE_PORTALS_ANNOUNCED: "true", VITE_FORMS_ANNOUNCED: "true", VITE_ACCESS_KEYS_ANNOUNCED: "true" };
+    const sitemap = sitemapXml({ portals: true, forms: true, env }, () => "2026-11-23");
     for (const [canonical, paths] of Object.entries(LOCALIZED)) {
       for (const path of [canonical, paths.nl]) {
         expect(sitemap).toContain(`<loc>https://tessil.app${path}</loc>`);

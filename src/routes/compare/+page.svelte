@@ -11,6 +11,8 @@
   import { localeFromPath } from "$lib/i18n/locale";
   import { compareIndexMessages } from "$lib/i18n/messages/compareIndex";
   import { hrefFor } from "$lib/i18n/paths";
+  import { SITE_URL } from "$lib/config/site";
+  import { HTML_LANG } from "$lib/i18n/locale";
 
   const locale = $derived(localeFromPath(page.url.pathname));
   const t = $derived(compareIndexMessages[locale]);
@@ -21,9 +23,32 @@
       .map((kind) => ({ kind, items: list.filter((c) => (c.kind ?? "send") === kind) }))
       .filter((g) => g.items.length > 0),
   );
+
+  // The list itself as structured data, so answer engines see every comparison.
+  const jsonLd = $derived(
+    JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "@id": `${SITE_URL}${hrefFor("/compare", locale)}`,
+      name: t.title,
+      description: t.description,
+      inLanguage: HTML_LANG[locale],
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+      mainEntity: {
+        "@type": "ItemList",
+        itemListElement: groups
+          .flatMap((g) => g.items)
+          .map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c.heading, url: `${SITE_URL}${base}/${c.slug}` })),
+      },
+    }).replace(/</g, "\\u003c"),
+  );
 </script>
 
 <Seo title={t.seoTitle} description={t.description} path="/compare" />
+
+<svelte:head>
+  {@html `<script type="application/ld+json">${jsonLd}</script>`}
+</svelte:head>
 
 <PageLayout width="5xl">
   <PageHeader title={t.title} tagline={t.tagline} />
