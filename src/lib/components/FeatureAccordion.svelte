@@ -38,6 +38,20 @@
   // and in the middle of the strip when folded. Guessed until measured.
   let nameWidths = $state<number[]>(untrack(() => features.map((f) => f.name.length * 8.5)));
   let tagWidths = $state<number[]>(untrack(() => features.map(() => 38)));
+  // How tall each pane's words are at the open width. The row is as tall as
+  // the longest needs, so a long sentence never runs under its heading.
+  let bodyHeights = $state<number[]>(untrack(() => features.map(() => 0)));
+  const tallest = $derived(Math.max(0, ...bodyHeights));
+
+  // A pointer passing over the row on its way elsewhere should not set every
+  // pane moving: hover opens one only after resting on it for a moment.
+  const HOVER_REST_MS = 90;
+  let resting: ReturnType<typeof setTimeout> | undefined;
+  function hoverOpen(i: number) {
+    clearTimeout(resting);
+    resting = setTimeout(() => (open = i), HOVER_REST_MS);
+  }
+  $effect(() => () => clearTimeout(resting));
 </script>
 
 {#snippet glyph(id: Feature["id"])}
@@ -61,7 +75,7 @@
   </svg>
 {/snippet}
 
-<div class={cn("accordion", className)} style:--n={features.length}>
+<div class={cn("accordion", className)} style:--n={features.length} style:--body-h={tallest > 0 ? `${tallest}px` : null}>
   {#each features as feature, i (feature.id)}
     {@const on = i === open}
     <div class="pane" class:on style:--name-w="{nameWidths[i]}px" style:--tag-w="{tagWidths[i]}px">
@@ -73,11 +87,15 @@
         aria-expanded={on}
         aria-controls="feature-{feature.id}"
         inert={on}
-        onclick={() => (open = i)}
+        onclick={() => {
+          clearTimeout(resting);
+          open = i;
+        }}
         onpointerenter={(e) => {
           // Hover opens only where there is a real pointer; a tap is a click.
-          if (e.pointerType === "mouse") open = i;
+          if (e.pointerType === "mouse") hoverOpen(i);
         }}
+        onpointerleave={() => clearTimeout(resting)}
       ></button>
 
       <!-- Open: what it is, and the way to its page. -->
@@ -88,8 +106,10 @@
         inert={!on}
         aria-label="{feature.name}. {feature.line} {feature.link}"
       >
-        <span class="block text-base font-semibold leading-snug text-foreground">{feature.line}</span>
-        <span class="block text-sm text-primary underline-offset-4 group-hover:underline">{feature.link}</span>
+        <span class="body" bind:offsetHeight={bodyHeights[i]}>
+          <span class="line block font-semibold leading-snug text-foreground">{feature.line}</span>
+          <span class="block text-sm text-primary underline-offset-4 group-hover:underline">{feature.link}</span>
+        </span>
       </a>
 
       <!-- The same three things in both states. -->
@@ -106,12 +126,14 @@
   .accordion {
     --fold: 3.5rem;
     --gap: 0.5rem;
-    --h: 10.5rem;
+    /* The heading row, the words, and the padding around them; never less than 10.5rem. */
+    --h: max(10.5rem, calc(var(--pad-y) * 2 + var(--mark) + 0.5rem + var(--body-h, 0px)));
     /* Where the open pane's heading sits. */
     --pad-x: 1.25rem;
     --pad-y: 1.125rem;
     --mark: 1.75rem;
-    --move: 250ms cubic-bezier(0.25, 1, 0.5, 1);
+    /* Gentle at both ends, so a pane settles instead of snapping open. */
+    --move: 380ms cubic-bezier(0.32, 0.72, 0, 1);
     container-type: inline-size;
     display: flex;
     gap: var(--gap);
@@ -125,6 +147,8 @@
     background: color-mix(in srgb, var(--card) 95%, transparent);
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     transition: flex-basis var(--move);
+    /* What moves inside a pane stays inside it. */
+    contain: layout paint;
   }
   .pane.on {
     /* Everything the row has left once the others are folded. */
@@ -151,14 +175,21 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    gap: 0.625rem;
-    padding: var(--pad-y) var(--pad-x);
+    /* Room at the top for the mark, name and tag, so long text never runs under them. */
+    padding: calc(var(--pad-y) + var(--mark) + 0.5rem) var(--pad-x) var(--pad-y);
     opacity: 0;
-    transition: opacity 120ms ease-out;
+    transform: translateY(4px);
+    transition:
+      opacity 100ms ease-out,
+      transform 100ms ease-out;
   }
   .pane.on .unfolded {
     opacity: 1;
-    transition: opacity 180ms ease-out 110ms;
+    transform: none;
+    /* Arrives once the pane is most of the way open. */
+    transition:
+      opacity 220ms ease-out 150ms,
+      transform 260ms cubic-bezier(0.32, 0.72, 0, 1) 150ms;
   }
 
   /* Mark, name and tag are laid out at the pane's top left corner and put in
@@ -171,6 +202,9 @@
     top: 0;
     pointer-events: none;
     transition: transform var(--move);
+    /* Each on its own layer: moved and turned without being redrawn every frame. */
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
   /* Folded: at the foot of the strip. Open: first thing in the heading. */
@@ -216,6 +250,26 @@
     );
   }
 
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+  .line {
+    font-size: 1rem;
+    text-wrap: pretty;
+  }
+  /* On a narrow phone the open pane has little width: slightly smaller
+     words keep the sentence to a few lines. */
+  @media (max-width: 400px) {
+    .accordion {
+      --pad-x: 1rem;
+    }
+    .line {
+      font-size: 0.9375rem;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .pane,
     .unfolded,
@@ -224,6 +278,9 @@
     .name,
     .tag {
       transition: none;
+    }
+    .unfolded {
+      transform: none;
     }
   }
 </style>

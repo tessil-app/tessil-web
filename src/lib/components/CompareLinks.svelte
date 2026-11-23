@@ -18,7 +18,7 @@
 
 {#if items.length > 0}
   <section class="border-t border-border" aria-labelledby="compare-links">
-    <div class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+    <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <h2 id="compare-links" class="text-sm font-medium text-muted-foreground">{t.related[kind]}</h2>
       <ul class="mt-4 flex flex-wrap gap-2">
         {#each items as c (c.slug)}

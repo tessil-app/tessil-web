@@ -135,9 +135,9 @@ import { hrefFor } from "$lib/i18n/paths";
   {@html `<script type="application/ld+json">${JSON.stringify(homeSchema).replace(/</g, "\\u003c")}</script>`}
 </svelte:head>
 
-<!-- -mt-14 pulls the image behind the sticky nav so the glass effect actually sees through to artwork. -->
+<!-- Pulled behind the sticky nav so the glass effect actually sees through to artwork. -->
 
-<section class="relative -mt-14 overflow-hidden">
+<section class="relative under-header overflow-hidden">
 
   <!-- Empty, the whole hero is one screen: words, wall and label, no scrolling.
        With files queued the panel is taller and the page may grow. -->

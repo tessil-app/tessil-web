@@ -8,28 +8,37 @@
   import Seo from "$lib/components/Seo.svelte";
   import { FORM_QUESTIONS_PRO } from "$lib/form/questions";
   import { keepTryout, readTryout } from "$lib/form/tryout";
+  import { appLocale } from "$lib/i18n/app.svelte";
   import { DEFAULT_LOCALE } from "$lib/i18n/locale";
+  import { formsAppMessages } from "$lib/i18n/messages/formsApp";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { untrack } from "svelte";
   import type { PortalSettings } from "$lib/portal/keys";
   import { auth } from "$lib/stores/auth.svelte";
 
   const kept = readTryout();
 
+  // The reader's language: the editor's own words, and the example form.
+  const locale = $derived(appLocale());
+  const start = untrack(() => appLocale());
+  const x = formsAppMessages[start].tryout;
+
   const initial: PortalSettings = {
-    title: kept?.title ?? "New client intake",
-    lang: kept?.lang ?? DEFAULT_LOCALE,
+    title: kept?.title ?? x.title,
+    lang: kept?.lang ?? start,
     checklist: [],
-    message: kept?.message ?? "A few questions before our first call. It takes about two minutes.",
-    thanks: kept?.thanks ?? "Thank you. We will be in touch within two working days.",
+    message: kept?.message ?? x.message,
+    thanks: kept?.thanks ?? x.thanks,
     fieldLabel: "",
     logo: null,
     twoWay: false,
     returns: [],
     questions: kept?.questions ?? [
-      { id: "try001", type: "short", label: "Your name", required: true },
-      { id: "try002", type: "choice", label: "Are you here for yourself or a business?", options: ["Myself", "A business"], required: true },
-      { id: "try003", type: "long", label: "What can we help you with?", hint: "A few lines is enough." },
-      { id: "try004", type: "date", label: "When would you like to start?" },
-      { id: "try005", type: "file", label: "A copy of your ID", hint: "A photo is fine." },
+      { id: "try001", type: "short", label: x.name, required: true },
+      { id: "try002", type: "choice", label: x.who, options: [...x.whoOptions], required: true },
+      { id: "try003", type: "long", label: x.help, hint: x.helpHint },
+      { id: "try004", type: "date", label: x.start },
+      { id: "try005", type: "file", label: x.id, hint: x.idHint },
     ],
     closesAt: null,
     notifyOnDelivery: false,
@@ -45,10 +54,17 @@
       thanks: settings.thanks,
       questions: settings.questions ?? [],
     });
-    await goto(auth.user ? "/dashboard/forms/new" : "/pricing?kept=form");
+    await goto(auth.user ? "/dashboard/forms/new" : `${hrefFor("/pricing", locale)}?kept=form`);
   }
 </script>
 
-<Seo title="Try the form editor - Tessil" robots="noindex" />
+<Seo title={formsAppMessages[locale].tryout.seoTitle} robots="noindex" />
 
-<FormEditor {initial} mode="create" onSave={create} cancelHref="/forms" questionLimit={FORM_QUESTIONS_PRO} />
+<FormEditor
+  {initial}
+  mode="create"
+  onSave={create}
+  cancelHref={hrefFor("/forms", locale)}
+  questionLimit={FORM_QUESTIONS_PRO}
+  uiLocale={locale}
+/>

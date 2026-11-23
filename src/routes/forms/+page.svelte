@@ -340,7 +340,7 @@
 
   <CompareLinks kind="form" {locale} />
 
-  <SiteFooter />
+  <SiteFooter class="mt-2 px-4 pb-16" />
 </div>
 
 <style>

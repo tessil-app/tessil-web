@@ -85,7 +85,7 @@ const en = {
     },
     {
       name: "An email when someone answers",
-      about: "One per form per hour at most. It can't say what was answered, because we can't read that.",
+      about: "At once for the first response, then at most one every 10 minutes with the number that arrived. It can't say what was answered, because we can't read that.",
     },
     {
       name: "Try it first",

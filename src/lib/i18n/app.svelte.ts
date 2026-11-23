@@ -48,7 +48,8 @@ function browserLocale(): Locale | null {
 
 /** Pages whose language comes from the account rather than the address. */
 export function isAppPath(pathname: string): boolean {
-  return /^\/(dashboard|setup|signin|login|d)(\/|$)/.test(pathname);
+  // The form try-out is a tool with one address, so it follows the reader too.
+  return /^\/(dashboard|setup|signin|login|d|forms\/try)(\/|$)/.test(pathname);
 }
 
 /**
