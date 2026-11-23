@@ -5,12 +5,24 @@ import { comparisons as shown } from "./comparisons";
 import { comparisonsNl as shownNl } from "./comparisons.nl";
 import { receivingComparisons } from "./receiving";
 import { receivingComparisonsNl } from "./receiving.nl";
+import { CHOOSE } from "./choose";
 
 // Every comparison, whichever products the build has announced.
 const comparisons = [...shown.filter((c) => !c.kind || c.kind === "send"), ...receivingComparisons];
 const comparisonsNl = [...shownNl.filter((c) => !c.kind || c.kind === "send"), ...receivingComparisonsNl];
 
 describe("comparisons", () => {
+  it("says when to pick each side, in both languages", () => {
+    for (const c of comparisons) {
+      for (const locale of ["en", "nl"] as const) {
+        const choose = CHOOSE[c.slug]?.[locale];
+        expect(choose?.them.length ?? 0).toBeGreaterThan(0);
+        expect(choose?.tessil.length ?? 0).toBeGreaterThan(0);
+      }
+    }
+    expect(Object.keys(CHOOSE).sort()).toEqual(comparisons.map((c) => c.slug).sort());
+  });
+
   it("includes the portal and form comparisons", () => {
     expect(comparisons.some((c) => c.kind === "portal")).toBe(true);
     expect(comparisons.some((c) => c.kind === "form")).toBe(true);

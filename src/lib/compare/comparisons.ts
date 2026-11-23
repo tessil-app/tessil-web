@@ -5,7 +5,7 @@
 // privacy-principled, AGPL project, not a hit piece.
 
 import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
-import { RECEIVING_VERIFIED, receivingComparisons } from "./receiving";
+import { RECEIVING_VERIFIED, RECEIVING_VERIFIED_ISO, receivingComparisons } from "./receiving";
 
 /** A cell is a yes/no (rendered as a check/cross) or a short string. */
 export type Cell = boolean | string;
@@ -45,10 +45,14 @@ export type Comparison = {
   cta?: { label: string; href: string };
   /** When the competitor's details were last checked, when not LAST_VERIFIED. */
   verified?: string;
+  /** The same date for structured data, as YYYY-MM-DD. */
+  verifiedIso?: string;
 };
 
 /** Shown on every page so competitor facts are dated, not presented as eternal truth. */
-export const LAST_VERIFIED = "June 2026";
+export const LAST_VERIFIED = "November 2026";
+/** The same, for structured data. */
+export const LAST_VERIFIED_ISO = "2026-11-23";
 
 // Tessil's column is identical across comparisons.
 const TESSIL = {
@@ -75,14 +79,15 @@ const sendComparisons: Comparison[] = [
     summary:
       "A private, end-to-end encrypted alternative to WeTransfer. Your files are unreadable to us by design.",
     intro: [
-      "WeTransfer is the default way most people send big files: drop them in, share a link. It's convenient, but it isn't end-to-end encrypted - WeTransfer holds the keys, so the service (and anyone who compels it) can in principle access what you upload. The free tier also shows ads and runs analytics, and its terms drew criticism in 2025 over language that appeared to grant broad rights over uploaded content (later revised).",
+      "WeTransfer is the default way most people send big files: drop them in, share a link. It's convenient, but on the free and standard plans it isn't end-to-end encrypted - WeTransfer holds the keys, so the service (and anyone who compels it) can in principle access what you upload. WeTransfer lists end-to-end encryption on its Enterprise plan only, which starts at 50 seats. The free plan allows 3 GB or 10 transfers per 30 days with links that last 3 days, shows ads and runs analytics, and its terms drew criticism in 2025 over language that appeared to grant broad rights over uploaded content (later revised).",
       "Tessil is built for the case where that matters. Files are encrypted in your browser with AES-GCM before they ever leave your device, and the decryption key lives in the share link's URL fragment - the part after the # that browsers never send to a server. We store only ciphertext we can't read.",
       "It's open source (AGPL-3.0), hosted entirely in the EU, free, and needs no account to send.",
     ],
     rows: [
-      { label: "End-to-end encrypted", tessil: TESSIL.e2e, competitor: false },
-      { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: false },
+      { label: "End-to-end encrypted", tessil: TESSIL.e2e, competitor: "Enterprise plan only (50+ seats)" },
+      { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: "Not on free or standard plans" },
       { label: "Works without an account", tessil: TESSIL.noAccount, competitor: true },
+      { label: "Free limits", tessil: "1 GB per transfer, 2 GB a month, links up to 7 days", competitor: "3 GB or 10 transfers per 30 days, links 3 days" },
       { label: "Open source", tessil: TESSIL.openSource, competitor: false },
       { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "EU (NL); owned by Bending Spoons" },
       { label: "Ads & third-party tracking", tessil: TESSIL.tracking, competitor: "Ads on the free tier" },
@@ -92,16 +97,16 @@ const sendComparisons: Comparison[] = [
     ],
     verdict: [
       "If you just want to lob a file at someone and privacy isn't a concern, WeTransfer is fine and frictionless. If you'd rather the service physically can't read what you send - for client work, documents, anything sensitive - Tessil gives you that without giving up the simple link-based flow.",
-      "Tessil's free tier caps transfers smaller than WeTransfer's, which is the honest trade for zero-knowledge encryption and no ads.",
+      "The free limits are now close: WeTransfer allows 3 GB per 30 days, Tessil 1 GB per transfer and 2 GB a month. WeTransfer's paid plans send far larger files; Tessil's answer is end-to-end encryption on every plan, including the free one, and no ads.",
     ],
     faq: [
       {
         q: "Is WeTransfer end-to-end encrypted?",
-        a: "No. WeTransfer encrypts files in transit and at rest, but it controls the keys, so the service can access your files. Tessil encrypts in your browser and never receives the key.",
+        a: "Not on its free or standard paid plans: files are encrypted in transit and at rest with keys WeTransfer controls, so the service can access them. WeTransfer lists end-to-end encryption as a feature of its Enterprise plan, which needs at least 50 seats. Tessil encrypts in your browser and never receives the key, on every plan.",
       },
       {
         q: "Can Tessil send large files like WeTransfer?",
-        a: "Tessil supports multi-part uploads up to its current per-transfer limit. The cap is smaller than WeTransfer's paid plans, in exchange for true end-to-end encryption and no ads.",
+        a: "Up to 1 GB per transfer for free and 5 GB per file on paid plans. WeTransfer's paid plans go much larger; its free plan allows 3 GB in total per 30 days.",
       },
       {
         q: "Do I need an account to use Tessil?",
@@ -220,6 +225,7 @@ const sendComparisons: Comparison[] = [
       { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: true },
       { label: "Works without an account", tessil: TESSIL.noAccount, competitor: true },
       { label: "Open source", tessil: TESSIL.openSource, competitor: false },
+      { label: "Largest transfer, free", tessil: "1 GB", competitor: "5 GB" },
       { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "Switzerland (Tresorit / Swiss Post)" },
       { label: "Ads & third-party tracking", tessil: TESSIL.tracking, competitor: "None" },
       { label: "Price", tessil: TESSIL.price, competitor: "Free Send + paid Tresorit" },
@@ -265,10 +271,11 @@ const sendComparisons: Comparison[] = [
       { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: true },
       { label: "Works without an account", tessil: TESSIL.noAccount, competitor: true },
       { label: "Open source", tessil: TESSIL.openSource, competitor: false },
+      { label: "Largest transfer, free", tessil: "1 GB", competitor: "10 GB" },
       { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "United States (Socket)" },
       { label: "Ads & third-party tracking", tessil: TESSIL.tracking, competitor: "None" },
       { label: "Optional accounts / list of transfers", tessil: true, competitor: false },
-      { label: "Configurable link expiry", tessil: TESSIL.expiry, competitor: "Fixed short lifetime" },
+      { label: "Configurable link expiry", tessil: TESSIL.expiry, competitor: "Fixed: 24 hours or 100 downloads" },
       { label: "Price", tessil: TESSIL.price, competitor: "Free" },
     ],
     verdict: [
@@ -290,6 +297,95 @@ const sendComparisons: Comparison[] = [
       },
     ],
   },
+  {
+    slug: "swisstransfer-alternative",
+    competitor: "SwissTransfer",
+    shortName: "SwissTransfer",
+    metaTitle: "End-to-end encrypted SwissTransfer alternative - Tessil",
+    metaDescription:
+      "SwissTransfer is free and keeps files in Switzerland, but it is not end-to-end encrypted. Tessil encrypts in your browser so we cannot read your files. Open source, EU-hosted, free.",
+    heading: "Tessil vs SwissTransfer",
+    summary:
+      "Both are free and need no account. SwissTransfer sends bigger files; Tessil encrypts them so the service cannot read them.",
+    intro: [
+      "SwissTransfer, from the Swiss host Infomaniak, is a generous free transfer service: up to 50 GB per transfer, no account, an optional password, and files stored only in Infomaniak's own data centres in Switzerland. Infomaniak describes the files as encrypted in transit and at rest. It does not describe them as end-to-end encrypted, which means the encryption keys are on its side.",
+      "Tessil encrypts each file in your browser before it is uploaded, and the key travels in the link's fragment, the part after the # that browsers never send to a server. We store only ciphertext we cannot open, in the EU, and the code is open source under AGPL-3.0.",
+    ],
+    rows: [
+      { label: "End-to-end encrypted", tessil: TESSIL.e2e, competitor: "No; encrypted in transit and at rest" },
+      { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: false },
+      { label: "Works without an account", tessil: TESSIL.noAccount, competitor: true },
+      { label: "Largest transfer, free", tessil: "1 GB", competitor: "50 GB" },
+      { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "Switzerland (Infomaniak's data centres)" },
+      { label: "Open source", tessil: TESSIL.openSource, competitor: "No public server code found" },
+      { label: "Password protection", tessil: TESSIL.password, competitor: true },
+      { label: "Price", tessil: TESSIL.price, competitor: "Free" },
+    ],
+    verdict: [
+      "For large files that are not sensitive, SwissTransfer is hard to beat: 50 GB, free, no account, and a host that runs its own Swiss data centres.",
+      "For documents you would not want anyone else to read, the deciding difference is end-to-end encryption. With Tessil the service never has the key; with SwissTransfer it does. Tessil's free transfers are smaller, which is the trade.",
+    ],
+    faq: [
+      {
+        q: "Is SwissTransfer end-to-end encrypted?",
+        a: "Not according to Infomaniak's own description: files are encrypted in transit and at rest, not in your browser. Tessil encrypts in your browser and never receives the key.",
+      },
+      {
+        q: "Can I send 50 GB with Tessil?",
+        a: "No. Free transfers on Tessil go up to 1 GB, and paid plans to 5 GB per file. If you need to send 50 GB of non-sensitive files, SwissTransfer is the better fit.",
+      },
+      {
+        q: "Is Switzerland or the EU better for privacy?",
+        a: "Both have strong data-protection law. Jurisdiction decides who can demand the data a provider holds; end-to-end encryption decides whether that data is readable at all. Tessil is EU-hosted and holds only data it cannot read.",
+      },
+    ],
+    verified: "November 2026",
+    verifiedIso: "2026-11-23",
+  },
+  {
+    slug: "smash-alternative",
+    competitor: "Smash",
+    shortName: "Smash",
+    metaTitle: "Smash alternative with end-to-end encryption - Tessil",
+    metaDescription:
+      "Smash sends files of any size for free. Tessil encrypts files in your browser so the service cannot read them. Open source, EU-hosted, no account needed.",
+    heading: "Tessil vs Smash",
+    summary:
+      "Smash sends files of any size. Tessil sends smaller files that only the recipient can read.",
+    intro: [
+      "Smash is a French transfer service known for having no size limit on free transfers, which last up to 7 days. Its security page describes files as encrypted with AES-256 at rest and with TLS in transit, stored on Amazon Web Services in several regions around the world, with hosting in France as an option for business customers. Some of Smash's pages call its free plan end-to-end encrypted; its security description is of encryption at rest and in transit, which the service itself can undo.",
+      "Tessil encrypts each file in your browser before upload, and the key stays in the link's fragment, which is never sent to a server. We store ciphertext we cannot read, in the EU, and the code is open source under AGPL-3.0.",
+    ],
+    rows: [
+      { label: "Encrypted in your browser, key never on the server", tessil: TESSIL.keyServer, competitor: "Not as its security page describes it" },
+      { label: "Works without an account", tessil: TESSIL.noAccount, competitor: true },
+      { label: "Largest transfer, free", tessil: "1 GB", competitor: "No limit" },
+      { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "AWS, several regions; France on business plans" },
+      { label: "Open source", tessil: TESSIL.openSource, competitor: false },
+      { label: "Password protection", tessil: TESSIL.password, competitor: true },
+      { label: "Price", tessil: TESSIL.price, competitor: "Free tier + paid plans" },
+    ],
+    verdict: [
+      "If you send huge video or design files and the content is not confidential, Smash's unlimited free transfers are the practical choice.",
+      "If what you send should stay between you and the recipient, Tessil's browser-side encryption means the service cannot read it, whatever its policies say. Tessil's free transfers are smaller in return.",
+    ],
+    faq: [
+      {
+        q: "Is Smash end-to-end encrypted?",
+        a: "Its pages differ. Its security page describes AES-256 encryption at rest and TLS in transit on AWS storage, which is encryption the service holds the keys to. Tessil encrypts in your browser and never receives the key. Check Smash's current security page for its own wording.",
+      },
+      {
+        q: "Does Tessil have a file size limit?",
+        a: "Yes: 1 GB per transfer on the free plan and 5 GB per file on paid plans. That is the honest cost of encrypting everything in the browser.",
+      },
+      {
+        q: "Where are files stored?",
+        a: "Tessil stores encrypted files in the EU only. Smash says it stores files on AWS in several regions, close to the user, with France as an option for business customers.",
+      },
+    ],
+    verified: "November 2026",
+    verifiedIso: "2026-11-23",
+  },
 ];
 
 // Portal and form comparisons appear once those products are announced.
@@ -297,7 +393,7 @@ export const comparisons: Comparison[] = [
   ...sendComparisons,
   ...receivingComparisons
     .filter((c) => (c.kind === "form" ? FORMS_ANNOUNCED : PORTALS_ANNOUNCED))
-    .map((c) => ({ ...c, verified: RECEIVING_VERIFIED })),
+    .map((c) => ({ ...c, verified: RECEIVING_VERIFIED, verifiedIso: RECEIVING_VERIFIED_ISO })),
 ];
 
 export function getComparison(slug: string): Comparison | undefined {

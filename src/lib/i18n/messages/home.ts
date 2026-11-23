@@ -3,9 +3,9 @@
 import type { Locale } from "../locale";
 
 const en = {
-  pageTitle: "Tessil - Send anything. We see nothing.",
+  pageTitle: "End-to-end encrypted file transfer, hosted in the EU - Tessil",
   pageDescription:
-    "End-to-end encrypted file transfer. Your browser encrypts before upload - we never see your files or the key.",
+    "Send files end-to-end encrypted, hosted in the EU. Your browser encrypts before upload and the key stays in the link. Free, open source, no account needed.",
   schemaFeatures: [
     "End-to-end encrypted file transfer",
     "Client-side encryption in browser",
@@ -14,7 +14,6 @@ const en = {
   ],
 
   newTag: "New",
-  keepAlive: "Keep Tessil alive",
   heroLine1: "Send anything.",
   heroLine2: "We see nothing.",
   heroSub: "End-to-end encrypted in your browser. The key never reaches our server.",
@@ -140,7 +139,7 @@ const en = {
     p5Paid:
       "Built and run by one person. Sending is free; the paid plans, for receiving, are what keeps it running.",
     p5Free:
-      "Built and run by one person, and free to use. If Tessil saves you a headache, you can support the project. The link's in the footer below.",
+      "Built and run by one person, and free to use.",
   },
 
   faq: {
@@ -182,9 +181,9 @@ const en = {
 
 const nl: typeof en = {
   // What Dutch searchers type, ahead of the slogan.
-  pageTitle: "Bestanden versleuteld versturen - Tessil",
+  pageTitle: "Bestanden versleuteld versturen, gehost in de EU - Tessil",
   pageDescription:
-    "End-to-end versleuteld bestanden versturen. Je browser versleutelt voor de upload, wij zien je bestanden of de sleutel nooit.",
+    "Verstuur bestanden end-to-end versleuteld, gehost in de EU. Je browser versleutelt voor de upload en de sleutel blijft in de link. Gratis, open source, zonder account.",
   schemaFeatures: [
     "End-to-end versleuteld bestanden versturen",
     "Versleuteling in je eigen browser",
@@ -193,7 +192,6 @@ const nl: typeof en = {
   ],
 
   newTag: "Nieuw",
-  keepAlive: "Houd Tessil in de lucht",
   heroLine1: "Verstuur alles.",
   heroLine2: "Wij zien niets.",
   heroSub: "End-to-end versleuteld in je browser. De sleutel komt nooit op onze server.",
@@ -319,7 +317,7 @@ const nl: typeof en = {
     p5Paid:
       "Gebouwd en onderhouden door één persoon. Versturen is gratis; de betaalde abonnementen, om te ontvangen, houden het draaiende.",
     p5Free:
-      "Gebouwd en onderhouden door één persoon, en gratis te gebruiken. Heeft Tessil je geholpen, dan kun je het project steunen. De link staat onderaan de pagina.",
+      "Gebouwd en onderhouden door één persoon, en gratis te gebruiken.",
   },
 
   faq: {

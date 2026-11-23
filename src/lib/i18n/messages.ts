@@ -53,6 +53,9 @@ export interface CompareStrings {
   no: string;
   verdictHeading: string;
   faqHeading: string;
+  chooseHeading: string;
+  chooseThem: (competitor: string) => string;
+  chooseTessil: string;
   moreHeading: string;
   ctaPrimary: string;
   ctaSecondary: string;
@@ -70,6 +73,9 @@ export const compareStrings: Record<Locale, CompareStrings> = {
     no: "No",
     verdictHeading: "The honest verdict",
     faqHeading: "Frequently asked questions",
+    chooseHeading: "Which one to pick",
+    chooseThem: (competitor) => `Choose ${competitor} if`,
+    chooseTessil: "Choose Tessil if",
     moreHeading: "More comparisons",
     ctaPrimary: "Send a file with Tessil - free",
     ctaSecondary: "How the encryption works",
@@ -87,6 +93,9 @@ export const compareStrings: Record<Locale, CompareStrings> = {
     no: "Nee",
     verdictHeading: "Het eerlijke oordeel",
     faqHeading: "Veelgestelde vragen",
+    chooseHeading: "Welke kies je",
+    chooseThem: (competitor) => `Kies ${competitor} als`,
+    chooseTessil: "Kies Tessil als",
     moreHeading: "Meer vergelijkingen",
     ctaPrimary: "Verstuur een bestand met Tessil - gratis",
     ctaSecondary: "Zo werkt de versleuteling",

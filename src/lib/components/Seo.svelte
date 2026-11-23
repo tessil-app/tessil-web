@@ -2,7 +2,9 @@
   import { page } from "$app/state";
   import { SITE_URL } from "$lib/config/site";
   import { DEFAULT_LOCALE, HTML_LANG, localeFromPath, type Locale } from "$lib/i18n/locale";
-import { alternatesOf, localizedPath } from "$lib/i18n/paths";
+import { alternatesOf, hrefFor, localizedPath } from "$lib/i18n/paths";
+  import { homeMessages } from "$lib/i18n/messages/home";
+  import { APP_ID, applicationNode, ORG_ID, organizationNode } from "$lib/seo/schema";
 
   // Per-page head tags. Every route renders exactly one of these: app.html
   // holds only tags that never vary, so the first <title> in document order is
@@ -21,6 +23,8 @@ import { alternatesOf, localizedPath } from "$lib/i18n/paths";
     path = "",
     robots = "index",
     alternates,
+    structured = true,
+    product = false,
   }: {
     title: string;
     description?: string;
@@ -29,6 +33,10 @@ import { alternatesOf, localizedPath } from "$lib/i18n/paths";
     robots?: "index" | "noindex";
     /** Only for pages whose pairs are not in routes.js; normally left out. */
     alternates?: { locale: Locale; path: string }[];
+    /** False on pages that write their own structured data. */
+    structured?: boolean;
+    /** The page is about the product itself: its plans go in as offers. */
+    product?: boolean;
   } = $props();
 
   const locale = $derived(localeFromPath(page.url.pathname));
@@ -37,6 +45,38 @@ import { alternatesOf, localizedPath } from "$lib/i18n/paths";
   const canonical = $derived(here ? `${SITE_URL}${here}` : "");
   const pairs = $derived(alternates ?? (path ? alternatesOf(path) : []));
   const xDefault = $derived(pairs.find((a) => a.locale === DEFAULT_LOCALE)?.path);
+
+  // What every indexable page tells search engines about itself: the page,
+  // who publishes it, and where it sits under the homepage.
+  const jsonLd = $derived.by(() => {
+    if (!structured || !canonical || robots === "noindex") return "";
+    const name = title.replace(/\s+-\s+Tessil$/, "");
+    return JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": canonical,
+          url: canonical,
+          name,
+          ...(description ? { description } : {}),
+          inLanguage: HTML_LANG[locale],
+          isPartOf: { "@id": `${SITE_URL}/#website` },
+          publisher: { "@id": ORG_ID },
+          about: { "@id": APP_ID },
+        },
+        organizationNode(),
+        ...(product ? [applicationNode(homeMessages[locale].schemaFeatures)] : []),
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Tessil", item: `${SITE_URL}${hrefFor("/", locale)}` },
+            { "@type": "ListItem", position: 2, name, item: canonical },
+          ],
+        },
+      ],
+    }).replace(/</g, "\\u003c");
+  });
 </script>
 
 <svelte:head>
@@ -63,5 +103,8 @@ import { alternatesOf, localizedPath } from "$lib/i18n/paths";
   {/each}
   {#if xDefault}
     <link rel="alternate" hreflang="x-default" href={`${SITE_URL}${xDefault}`} />
+  {/if}
+  {#if jsonLd}
+    {@html `<script type="application/ld+json">${jsonLd}</script>`}
   {/if}
 </svelte:head>

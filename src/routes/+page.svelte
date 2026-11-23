@@ -5,13 +5,11 @@
   import SendPanel from "$lib/components/SendPanel.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
-  import SupportModal from "$lib/components/SupportModal.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
   import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
   import { SITE_URL } from "$lib/config/site";
   import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
-  import { hasDismissedPrompt, markPromptDismissed, shouldAutoOpenPrompt } from "$lib/support/prompt";
   import { cn } from "$lib/utils";
   import { page } from "$app/state";
   import { localeFromPath } from "$lib/i18n/locale";
@@ -19,6 +17,7 @@ import { hrefFor } from "$lib/i18n/paths";
   import { homeMessages } from "$lib/i18n/messages/home";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import { onMount } from "svelte";
+  import { applicationNode, ORG_ID, organizationNode } from "$lib/seo/schema";
 
   // English at /, Dutch at /nl; the same page. See src/lib/i18n.
   const locale = $derived(localeFromPath(page.url.pathname));
@@ -30,25 +29,15 @@ import { hrefFor } from "$lib/i18n/paths";
     "@graph": [
       {
         "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
         name: "Tessil",
+        publisher: { "@id": ORG_ID },
         url: SITE_URL,
         description: t.pageDescription,
         inLanguage: locale,
       },
-      {
-        "@type": "WebApplication",
-        name: "Tessil",
-        applicationCategory: "SecurityApplication",
-        operatingSystem: "Any",
-        browserRequirements: "Requires JavaScript and modern browser APIs",
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "EUR",
-        },
-        featureList: t.schemaFeatures,
-        url: SITE_URL,
-      },
+      organizationNode(),
+      applicationNode(t.schemaFeatures, t.pageDescription),
     ],
   });
 
@@ -123,12 +112,6 @@ import { hrefFor } from "$lib/i18n/paths";
   const hasFiles = $derived(uploadStore.files.length > 0);
   const isSuccess = $derived(uploadStore.status === "complete" && !!uploadStore.shareUrl);
 
-  // Gates the modal out of the prerendered homepage; its copy would
-  // otherwise ship in a closed <dialog> on the primary SEO target.
-  let supportMounted = $state(false);
-  let supportOpen = $state(false);
-  let supportPillVisible = $state(false);
-
   onMount(async () => {
     try {
       const res = await fetch("/featured/manifest.json", { cache: "no-cache" });
@@ -143,28 +126,10 @@ import { hrefFor } from "$lib/i18n/paths";
     }
   });
 
-  // Read once on mount so the ask lands on a visit after a completed
-  // transfer, never on top of the share link the user came to copy.
-  onMount(() => {
-    supportMounted = true;
-    // Asking for support and offering paid plans at once sends two
-    // messages. Once the plans are announced, the ask moves to the footer.
-    supportOpen = !PORTALS_ANNOUNCED && shouldAutoOpenPrompt();
-    supportPillVisible = !PORTALS_ANNOUNCED && hasDismissedPrompt();
-  });
-
-  // Dismissing and clicking through both mean "do not ask again"; the pill
-  // stays as the way back in.
-  function closeSupport() {
-    markPromptDismissed();
-    supportOpen = false;
-    supportPillVisible = true;
-  }
-
 
 </script>
 
-<Seo title={t.pageTitle} description={t.pageDescription} path="/" />
+<Seo title={t.pageTitle} description={t.pageDescription} path="/" structured={false} />
 
 <svelte:head>
   {@html `<script type="application/ld+json">${JSON.stringify(homeSchema).replace(/</g, "\\u003c")}</script>`}
@@ -192,18 +157,6 @@ import { hrefFor } from "$lib/i18n/paths";
             <span class="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">{t.newTag}</span>
             {newest.pill}
           </a>
-        {/if}
-        {#if supportPillVisible}
-          <div class="flex justify-center">
-            <button
-              type="button"
-              onclick={() => (supportOpen = true)}
-              class="inline-flex items-center gap-2 rounded-full bg-background/85 backdrop-blur-md border border-border/70 px-3.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-background hover:cursor-pointer transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-              {t.keepAlive}
-            </button>
-          </div>
         {/if}
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground leading-none" style="letter-spacing: -0.035em">
           {t.heroLine1}
@@ -566,8 +519,4 @@ import { hrefFor } from "$lib/i18n/paths";
     </div>
   </div>
 </div>
-
-{#if supportMounted}
-  <SupportModal open={supportOpen} onClose={closeSupport} />
-{/if}
 

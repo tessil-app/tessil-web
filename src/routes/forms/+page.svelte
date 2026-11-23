@@ -6,6 +6,7 @@
   import Button from "$lib/components/Button.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import CompareLinks from "$lib/components/CompareLinks.svelte";
   import TextInput from "$lib/components/TextInput.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
   import { TYPE_ICON, QUESTION_TYPES_SHOWN } from "$lib/components/form/questionTypes";
@@ -94,6 +95,7 @@
   title={t.title}
   description={t.description}
   path="/forms"
+  product
 />
 
 <div class="bg-background">
@@ -335,6 +337,8 @@
       </p>
     </div>
   </section>
+
+  <CompareLinks kind="form" {locale} />
 
   <SiteFooter />
 </div>

@@ -4,7 +4,7 @@ import type { QuestionType } from "$lib/form/questions";
 import type { Locale } from "../locale";
 
 const en = {
-  title: "Forms - Tessil",
+  title: "End-to-end encrypted forms and intake forms - Tessil",
   description:
     "Ask your questions with one link. Questions and answers are encrypted in the browser, so only you can read what people fill in. No account needed to answer.",
   heading: "Forms.",
@@ -117,9 +117,9 @@ const en = {
 };
 
 const nl: typeof en = {
-  title: "Formulieren - Tessil",
+  title: "Versleutelde formulieren en intakeformulieren - Tessil",
   description:
-    "Stel je vragen met één link. Vragen en antwoorden worden in de browser versleuteld, zodat alleen jij kunt lezen wat mensen invullen. Geen account nodig om te antwoorden.",
+    "Stel je vragen met één link. Vragen en antwoorden worden in de browser versleuteld, zodat alleen jij ze kunt lezen. Antwoorden kan zonder account.",
   heading: "Formulieren.",
   sub: "Stel je vragen met één link. De antwoorden komen bij jou aan, en bij niemand anders.",
   tryEditor: "Probeer de editor",

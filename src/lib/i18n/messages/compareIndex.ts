@@ -3,7 +3,7 @@
 import type { Locale } from "../locale";
 
 const en = {
-  seoTitle: "Tessil compared with other tools for sending and receiving files",
+  seoTitle: "Tessil compared: WeTransfer, Zivver, Google Forms and more",
   description:
     "How Tessil compares to WeTransfer, Proton Drive, Zivver, Dropbox file requests, Google Forms, Typeform and others for private, end-to-end encrypted file transfer, portals and forms.",
   title: "How Tessil compares",
@@ -15,6 +15,12 @@ const en = {
     form: "Forms",
   },
   read: "Read the comparison",
+  related: {
+    send: "How sending with Tessil compares",
+    portal: "How portals compare",
+    form: "How forms compare",
+    all: "All comparisons",
+  },
   newBefore: "New to Tessil?",
   send: "Send a file",
   newMiddle: ", no account needed, or read the",
@@ -22,7 +28,7 @@ const en = {
 };
 
 const nl: typeof en = {
-  seoTitle: "Tessil vergeleken met andere tools om bestanden te versturen en te ontvangen",
+  seoTitle: "Tessil vergeleken met WeTransfer, Zivver, Google Forms en meer",
   description:
     "Zo verhoudt Tessil zich tot WeTransfer, Zivver, Dropbox-bestandsverzoeken, Google Forms, Typeform en anderen voor privé, end-to-end versleuteld bestanden versturen, portalen en formulieren.",
   title: "Hoe Tessil zich verhoudt",
@@ -34,6 +40,12 @@ const nl: typeof en = {
     form: "Formulieren",
   },
   read: "Lees de vergelijking",
+  related: {
+    send: "Versturen met Tessil vergeleken",
+    portal: "Portalen vergeleken",
+    form: "Formulieren vergeleken",
+    all: "Alle vergelijkingen",
+  },
   newBefore: "Nieuw bij Tessil?",
   send: "Verstuur een bestand",
   newMiddle: ", zonder account, of lees het",
