@@ -4,6 +4,11 @@
 
   import Badge from "$lib/components/Badge.svelte";
   import { share, type QuestionSummary } from "$lib/form/summary";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { formsAppMessages } from "$lib/i18n/messages/formsApp";
+
+  const f = $derived(formsAppMessages[appLocale()]);
+  const t = $derived(f.summary);
 
   interface Props {
     summaries: QuestionSummary[];
@@ -16,7 +21,7 @@
   let { summaries, total, onPick, onOpen }: Props = $props();
 
   function optionLabel(value: string | boolean): string {
-    return typeof value === "boolean" ? (value ? "Yes" : "No") : value;
+    return typeof value === "boolean" ? (value ? f.responses.yes : f.responses.no) : value;
   }
 </script>
 
@@ -30,13 +35,11 @@
             {s.label}
           </span>
           {#if !s.current}
-            <Badge>No longer asked</Badge>
+            <Badge>{t.noLonger}</Badge>
           {/if}
         </h3>
         <p class="text-xs text-muted-foreground">
-          {s.answered} of {total} answered{s.type === "file" && s.files > 0
-            ? `, ${s.files} ${s.files === 1 ? "file" : "files"}`
-            : ""}
+          {t.answered(s.answered, total, s.type === "file" ? s.files : 0)}
         </p>
       </div>
 
@@ -49,7 +52,7 @@
                 type="button"
                 onclick={() => onPick(s, option.value)}
                 disabled={option.count === 0}
-                aria-label="{optionLabel(option.value)}: {option.count} of {total}. Show these responses"
+                aria-label={t.optionAria(optionLabel(option.value), option.count, total)}
                 class="relative block w-full overflow-hidden rounded-md bg-secondary text-left transition-colors duration-150 ease-out enabled:hover:cursor-pointer enabled:hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <span
@@ -61,7 +64,7 @@
                   <span class="flex min-w-0 items-center gap-2 text-foreground">
                     <span class="truncate">{optionLabel(option.value)}</span>
                     {#if s.current && !option.current}
-                      <span class="shrink-0 text-xs text-muted-foreground">removed</span>
+                      <span class="shrink-0 text-xs text-muted-foreground">{t.removed}</span>
                     {/if}
                   </span>
                   <span class="shrink-0 tabular-nums text-muted-foreground">
@@ -73,7 +76,7 @@
           {/each}
         </ul>
         {#if s.type === "choices"}
-          <p class="text-xs text-muted-foreground">People could pick several, so these add up to more than 100%.</p>
+          <p class="text-xs text-muted-foreground">{t.several}</p>
         {/if}
       {:else if s.latest.length > 0}
         <ul class="space-y-1.5">
@@ -90,7 +93,7 @@
           {/each}
         </ul>
         {#if s.answered > s.latest.length}
-          <p class="text-xs text-muted-foreground">The newest {s.latest.length}. Every answer is in the responses and the export.</p>
+          <p class="text-xs text-muted-foreground">{t.newest(s.latest.length)}</p>
         {/if}
       {/if}
     </li>
