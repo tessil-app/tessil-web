@@ -569,10 +569,11 @@ export class ApiClient {
     return response.arrayBuffer();
   }
 
-  async requestMagicLink(email: string): Promise<RequestMagicLinkResponse> {
+  /** `locale` is the language the email should be in when the account has none set. */
+  async requestMagicLink(email: string, locale?: string): Promise<RequestMagicLinkResponse> {
     return this.request("/api/auth/request-magic-link", {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, locale }),
     });
   }
 

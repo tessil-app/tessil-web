@@ -96,7 +96,7 @@
     errorMessage = null;
     isSubmitting = true;
     try {
-      await api.requestMagicLink(email);
+      await api.requestMagicLink(email, locale);
       submitted = true;
     } catch (err) {
       errorMessage =
