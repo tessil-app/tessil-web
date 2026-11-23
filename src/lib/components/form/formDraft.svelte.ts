@@ -12,7 +12,7 @@ import {
 import { DEFAULT_LOCALE, type Locale } from "$lib/i18n/locale";
 import type { OpenedPortal } from "$lib/portal/deposit";
 import { PORTAL_PASSWORD_MIN, type PortalLogo, type PortalSettings } from "$lib/portal/keys";
-import { prepareLogo } from "$lib/portal/logo";
+import { LogoError, prepareLogo } from "$lib/portal/logo";
 import { formsAppMessages } from "$lib/i18n/messages/formsApp";
 
 type DraftWords = (typeof formsAppMessages)["en"]["draft"];
@@ -255,7 +255,8 @@ export class FormDraft {
     try {
       this.logo = await prepareLogo(file);
     } catch (err) {
-      this.logoError = err instanceof Error ? err.message : this.words.logoFailed;
+      this.logoError =
+        err instanceof LogoError ? this.words.logoErrors[err.code] : err instanceof Error ? err.message : this.words.logoFailed;
     } finally {
       this.logoBusy = false;
     }

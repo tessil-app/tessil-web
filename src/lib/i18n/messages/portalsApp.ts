@@ -289,6 +289,11 @@ const en = {
   },
   editor: {
     logoFailed: "That image could not be used.",
+    logoErrors: {
+      type: "Choose a PNG, JPG or WebP image.",
+      unreadable: "That image could not be read. Try another file.",
+      too_large: "That image is too detailed to store as a logo. Try a simpler one.",
+    },
     leave: "Leave without saving your changes?",
     saveFailed: "Couldn't save. Try again.",
     previewName: "Your portal's name",
@@ -643,6 +648,11 @@ const nl: typeof en = {
   },
   editor: {
     logoFailed: "Die afbeelding kan niet worden gebruikt.",
+    logoErrors: {
+      type: "Kies een PNG-, JPG- of WebP-afbeelding.",
+      unreadable: "Die afbeelding kon niet worden gelezen. Probeer een ander bestand.",
+      too_large: "Die afbeelding is te gedetailleerd om als logo op te slaan. Probeer een eenvoudigere.",
+    },
     leave: "Weggaan zonder je wijzigingen op te slaan?",
     saveFailed: "Opslaan is niet gelukt. Probeer het opnieuw.",
     previewName: "De naam van je portaal",

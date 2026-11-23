@@ -32,7 +32,7 @@
     type PortalLogo,
     type PortalSettings,
   } from "$lib/portal/keys";
-  import { prepareLogo } from "$lib/portal/logo";
+  import { LogoError, prepareLogo } from "$lib/portal/logo";
   import { cn } from "$lib/utils";
   import { untrack } from "svelte";
   import { appLocale } from "$lib/i18n/app.svelte";
@@ -84,7 +84,7 @@
     try {
       logo = await prepareLogo(file);
     } catch (err) {
-      logoError = err instanceof Error ? err.message : t.logoFailed;
+      logoError = err instanceof LogoError ? t.logoErrors[err.code] : err instanceof Error ? err.message : t.logoFailed;
     } finally {
       logoBusy = false;
     }

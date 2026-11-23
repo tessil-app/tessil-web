@@ -199,6 +199,11 @@ const en = {
     untitledQuestion: "Untitled question",
     option1: "Option 1",
     logoFailed: "That image could not be used.",
+    logoErrors: {
+      type: "Choose a PNG, JPG or WebP image.",
+      unreadable: "That image could not be read. Try another file.",
+      too_large: "That image is too detailed to store as a logo. Try a simpler one.",
+    },
     needsName: "Give the form a name first.",
     saveFailed: "Couldn't save. Try again.",
   },
@@ -492,6 +497,11 @@ const nl: typeof en = {
     untitledQuestion: "Vraag zonder titel",
     option1: "Optie 1",
     logoFailed: "Die afbeelding kan niet worden gebruikt.",
+    logoErrors: {
+      type: "Kies een PNG-, JPG- of WebP-afbeelding.",
+      unreadable: "Die afbeelding kon niet worden gelezen. Probeer een ander bestand.",
+      too_large: "Die afbeelding is te gedetailleerd om als logo op te slaan. Probeer een eenvoudigere.",
+    },
     needsName: "Geef het formulier eerst een naam.",
     saveFailed: "Opslaan is niet gelukt. Probeer het opnieuw.",
   },
