@@ -55,7 +55,3 @@ export async function evaluatePassword(input: string): Promise<PasswordStrength>
     suggestions: result.feedback.suggestions ?? [],
   };
 }
-
-export function scoreLabel(score: PasswordStrength["score"]): string {
-  return ["Very weak", "Weak", "Fair", "Strong", "Very strong"][score];
-}
