@@ -18,6 +18,7 @@
   import { RECEIVING_VERIFIED_ISO } from "$lib/compare/receiving";
   import { homeMessages } from "$lib/i18n/messages/home";
   import { APP_ID, applicationNode, ORG_ID, organizationNode } from "$lib/seo/schema";
+  import { comparisonMarkdownPath } from "$lib/seo/agentText";
 
   let {
     comparison,
@@ -126,6 +127,7 @@
 />
 
 <svelte:head>
+  <link rel="alternate" type="text/markdown" href={`${SITE_URL}${comparisonMarkdownPath(c.slug)}`} />
   {@html `<script type="application/ld+json">${jsonLd}</script>`}
 </svelte:head>
 
