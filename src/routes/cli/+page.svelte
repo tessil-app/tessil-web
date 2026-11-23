@@ -72,7 +72,7 @@
     </div>
 
     <div class="mt-10 sm:mt-14">
-      <DemoTerminal />
+      <DemoTerminal text={t.terminal} />
     </div>
 
     <div class="mt-14 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:items-center">
