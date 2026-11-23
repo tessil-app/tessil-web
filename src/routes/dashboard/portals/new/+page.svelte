@@ -20,6 +20,15 @@
   import { isUnlocked, subscribeToVaultState } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import { onDestroy } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
+
+  const locale = $derived(appLocale());
+  const all = $derived(portalsAppMessages[locale]);
+  const l = $derived(all.list);
+  const d = $derived(all.detail);
+  const t = $derived(all.create);
 
   type Phase = "loading" | "no_plan" | "full" | "locked" | "ready";
 
@@ -121,68 +130,59 @@
       result = await createMyPortal(auth.user.id, settings, window.location.origin);
     } catch (err) {
       if (err instanceof ApiError && err.code === "portals_require_paid_plan") {
-        throw new Error("Portals are part of the paid plans.");
+        throw new Error(t.errors.paid);
       }
       if (err instanceof ApiError && err.code === "keypair_required") {
-        throw new Error("Lock and unlock your vault once, then try again.");
+        throw new Error(t.errors.keypair);
       }
       throw err;
     }
     if (!result.ok) {
       unlockPrompt.request();
-      throw new Error("Your vault is locked. Unlock it and try again.");
+      throw new Error(t.errors.locked);
     }
     await goto(`/dashboard/portals/${result.portal.id}`);
   }
 </script>
 
-<Seo title="New portal - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout width="5xl">
   <PageHeader
-    title={copyFrom ? "Duplicate portal" : "New portal"}
-    tagline={copyFrom
-      ? "A new portal with its own link, set up like the one you copied. Deliveries are not copied."
-      : "A link where other people send you files. Set it up the way you want them to see it."}
-    back={{ href: "/dashboard/portals", label: "All portals" }}
+    title={copyFrom ? t.duplicate : t.title}
+    tagline={copyFrom ? t.taglineCopy : t.tagline}
+    back={{ href: "/dashboard/portals", label: d.allPortals }}
     align="left"
   />
 
   {#if phase === "loading"}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
       <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
+      <p class="text-muted-foreground">{l.loading}</p>
     </div>
   {:else if phase === "no_plan"}
-    <EmptyState title="Portals are part of the paid plans">
-      <p>
-        A portal is a link you hand out so clients or colleagues can send you files, encrypted
-        in their browser so only you can open them.
-      </p>
+    <EmptyState title={l.paidTitle}>
+      <p>{l.paidBody}</p>
       {#snippet actions()}
-        <Button href="/pricing" fullWidth={false}>See the plans</Button>
+        <Button href={hrefFor("/pricing", locale)} fullWidth={false}>{l.seePlans}</Button>
       {/snippet}
     </EmptyState>
   {:else if phase === "full"}
-    <EmptyState title="You have all the portals your plan includes">
-      <p>
-        Your plan includes {maxPortals}
-        {maxPortals === 1 ? "portal" : "portals"}. Delete one you no longer use, or move to a
-        plan with more.
-      </p>
+    <EmptyState title={t.fullTitle}>
+      <p>{t.fullBody(maxPortals)}</p>
       {#snippet actions()}
-        <Button href="/pricing" fullWidth={false}>See the plans</Button>
-        <Button href="/dashboard/portals" variant="secondary" fullWidth={false}>Your portals</Button>
+        <Button href={hrefFor("/pricing", locale)} fullWidth={false}>{l.seePlans}</Button>
+        <Button href="/dashboard/portals" variant="secondary" fullWidth={false}>{t.yourPortals}</Button>
       {/snippet}
     </EmptyState>
   {:else if phase === "locked"}
-    <EmptyState title={auth.needsVaultSetup ? "Portals need a vault" : "Your vault is locked"}>
-      <p>A portal's keys are kept in your vault, so only you can open what people send.</p>
+    <EmptyState title={auth.needsVaultSetup ? t.needsVault : t.vaultLocked}>
+      <p>{t.lockedBody}</p>
       {#snippet actions()}
         {#if auth.needsVaultSetup}
-          <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+          <Button fullWidth={false} href="/setup/vault">{l.setUpVault}</Button>
         {:else}
-          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>{l.unlockVault}</Button>
         {/if}
       {/snippet}
     </EmptyState>

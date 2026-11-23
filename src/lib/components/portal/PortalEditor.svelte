@@ -35,6 +35,12 @@
   import { prepareLogo } from "$lib/portal/logo";
   import { cn } from "$lib/utils";
   import { untrack } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
+
+  const uiLocale = $derived(appLocale());
+  const t = $derived(portalsAppMessages[uiLocale].editor);
 
   interface Props {
     initial: PortalSettings;
@@ -78,7 +84,7 @@
     try {
       logo = await prepareLogo(file);
     } catch (err) {
-      logoError = err instanceof Error ? err.message : "That image could not be used.";
+      logoError = err instanceof Error ? err.message : t.logoFailed;
     } finally {
       logoBusy = false;
     }
@@ -157,7 +163,7 @@
   let leaving = false;
   beforeNavigate(({ cancel }) => {
     if (leaving || !dirty) return;
-    if (!confirm("Leave without saving your changes?")) cancel();
+    if (!confirm(t.leave)) cancel();
   });
 
   function addItem(e?: Event) {
@@ -181,7 +187,7 @@
       saved = true;
     } catch (err) {
       leaving = false;
-      saveError = err instanceof Error ? err.message : "Couldn't save. Try again.";
+      saveError = err instanceof Error ? err.message : t.saveFailed;
     } finally {
       isSaving = false;
     }
@@ -190,7 +196,7 @@
   // The preview is the real page, fed from the form instead of a link.
   const previewPortal = $derived<OpenedPortal>({
     id: "preview",
-    title: settings.title || "Your portal's name",
+    title: settings.title || t.previewName,
     publicKey: new Uint8Array(),
     linkKey: new Uint8Array(),
     accepting: true,
@@ -225,8 +231,8 @@
       <p id="{id}-name" class="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
         {name}
         {#if locked}
-          <a href="/pricing" class="focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-full">
-            <Badge tone="info">Max plan</Badge>
+          <a href={hrefFor("/pricing", uiLocale)} class="focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-full">
+            <Badge tone="info">{t.maxPlan}</Badge>
           </a>
         {/if}
       </p>
@@ -247,20 +253,19 @@
     <section class={cn(card, "space-y-4")}>
       <TextInput
         id="portal-title"
-        label="Name"
-        placeholder="For example: Documents for Jansen Administratie"
+        label={t.name}
+        placeholder={t.namePlaceholder}
         maxlength={PORTAL_TITLE_MAX}
         required
         bind:value={title}
         disabled={isSaving}
       />
       <p class="-mt-2 text-xs text-muted-foreground">
-        People who open the link see this name, so they know who they're sending to. It is
-        encrypted, like everything else on this page: we can't read it.
+        {t.nameNote}
       </p>
 
       <fieldset class="space-y-2" disabled={isSaving}>
-        <legend class="text-sm font-medium text-foreground">Language of the page they see</legend>
+        <legend class="text-sm font-medium text-foreground">{t.language}</legend>
         <div class="flex flex-wrap gap-x-5 gap-y-2">
           {#each LOCALES as choice (choice)}
             <label class="flex items-center gap-2 text-sm text-foreground cursor-pointer">
@@ -275,17 +280,14 @@
             </label>
           {/each}
         </div>
-        <p class="text-xs text-muted-foreground">Visitors can still switch on the page itself.</p>
+        <p class="text-xs text-muted-foreground">{t.languageNote}</p>
       </fieldset>
     </section>
 
     <section class={cn(card, "space-y-3")} aria-labelledby="ask-heading">
       <div class="space-y-0.5">
-        <h2 id="ask-heading" class="text-sm font-medium text-foreground">What you ask for</h2>
-        <p class="text-sm text-muted-foreground">
-          A list of things to send. People attach a file to each item, so you see at a glance
-          what is still missing. Leave it empty to accept anything.
-        </p>
+        <h2 id="ask-heading" class="text-sm font-medium text-foreground">{t.askTitle}</h2>
+        <p class="text-sm text-muted-foreground">{t.askBody}</p>
       </div>
 
       {#if checklist.length > 0}
@@ -298,7 +300,7 @@
                 disabled={isSaving}
                 class="shrink-0 text-xs text-muted-foreground"
               >
-                Remove<span class="sr-only"> {item.label}</span>
+                {t.remove}<span class="sr-only"> {item.label}</span>
               </TextLink>
             </li>
           {/each}
@@ -310,8 +312,8 @@
           <div class="min-w-0 flex-1">
             <TextInput
               id="checklist-new"
-              label="Add an item"
-              placeholder="For example: Copy of your ID"
+              label={t.addItem}
+              placeholder={t.addPlaceholder}
               maxlength={CHECKLIST_LABEL_MAX}
               bind:value={newLabel}
               disabled={isSaving}
@@ -328,20 +330,20 @@
             onclick={() => addItem()}
             disabled={isSaving || newLabel.trim().length === 0}
           >
-            Add
+            {t.add}
           </Button>
         </div>
       {/if}
     </section>
 
     <section class={cn(card, "space-y-4")} aria-labelledby="options-heading">
-      <h2 id="options-heading" class="text-sm font-medium text-foreground">Options</h2>
+      <h2 id="options-heading" class="text-sm font-medium text-foreground">{t.options}</h2>
 
       <div>
         {@render option(
           "opt-message",
-          "Welcome message",
-          "A few lines under the name: what to send, and by when.",
+          t.message,
+          t.messageAbout,
           messageOn,
           (v) => {
             messageOn = v;
@@ -352,7 +354,7 @@
           <Textarea
             id="portal-message"
             aria-labelledby="opt-message-name"
-            placeholder="For example: Please send the documents for your 2025 tax return before 1 April."
+            placeholder={t.messagePlaceholder}
             rows={3}
             maxlength={PORTAL_MESSAGE_MAX}
             bind:value={message}
@@ -365,8 +367,8 @@
       <div class="border-t border-border pt-5">
         {@render option(
           "opt-field",
-          "Extra field",
-          "One thing they fill in before sending, such as their name or client number. You see it with each delivery.",
+          t.field,
+          t.fieldAbout,
           fieldOn,
           (v) => {
             fieldOn = v;
@@ -379,7 +381,7 @@
         <Reveal open={fieldOn}>
           <TextInput
             id="portal-field"
-            label="What the field is called"
+            label={t.fieldName}
             placeholder={depositStrings[lang].fieldDefault}
             maxlength={PORTAL_FIELD_LABEL_MAX}
             bind:value={fieldLabel}
@@ -392,8 +394,8 @@
       <div class="border-t border-border pt-5">
         {@render option(
           "opt-thanks",
-          "Thank-you note",
-          "Shown after sending: what happens next, or when they will hear from you.",
+          t.thanks,
+          t.thanksAbout,
           thanksOn,
           (v) => {
             thanksOn = v;
@@ -404,7 +406,7 @@
           <Textarea
             id="portal-thanks"
             aria-labelledby="opt-thanks-name"
-            placeholder="For example: Thank you. You will hear from us within five working days."
+            placeholder={t.thanksPlaceholder}
             rows={2}
             maxlength={PORTAL_THANKS_MAX}
             bind:value={thanks}
@@ -417,8 +419,8 @@
       <div class="border-t border-border pt-5">
         {@render option(
           "opt-logo",
-          "Your logo",
-          "Shown above the name on the upload page. Encrypted like the name: we can't see it.",
+          t.logo,
+          t.logoAbout,
           logoOn,
           (v) => {
             logoOn = v;
@@ -437,7 +439,7 @@
           <div class="flex flex-wrap items-center gap-3">
             {#if logo}
               <span class="flex h-14 items-center rounded-md border border-border bg-background px-3">
-                <img src={logoSrc(logo)} alt="Your logo" class="max-h-9 max-w-[140px] object-contain" />
+                <img src={logoSrc(logo)} alt={t.logoAlt} class="max-h-9 max-w-[140px] object-contain" />
               </span>
             {/if}
             {#if canBrand || !logo}
@@ -448,7 +450,7 @@
                 onclick={() => logoInput?.click()}
                 disabled={isSaving || logoBusy || !canBrand}
               >
-                {logoBusy ? "Preparing…" : logo ? "Replace" : "Choose image"}
+                {logoBusy ? t.preparing : logo ? t.replace : t.chooseImage}
               </Button>
             {/if}
             {#if logo}
@@ -457,12 +459,12 @@
                 disabled={isSaving}
                 class="text-sm text-muted-foreground"
               >
-                Remove
+                {t.remove}
               </TextLink>
             {/if}
           </div>
           <p class="mt-2 text-xs text-muted-foreground">
-            PNG, JPG or WebP. It is made smaller here in your browser before it is stored.
+            {t.logoNote}
           </p>
           {#if logoError}
             <p role="alert" class="mt-1 text-xs text-destructive-foreground">{logoError}</p>
@@ -473,8 +475,8 @@
       <div class="border-t border-border pt-5">
         {@render option(
           "opt-twoway",
-          "Send files back",
-          "You can put files on the portal for the other side to download, such as a finished report.",
+          t.twoWay,
+          t.twoWayAbout,
           twoWay,
           (v) => {
             twoWay = v;
@@ -484,7 +486,7 @@
         )}
         <Reveal open={twoWay}>
           <Alert tone="warning">
-            Everyone who has this portal's link can download what you put on it.
+            {t.twoWayWarning}
           </Alert>
         </Reveal>
       </div>
@@ -492,8 +494,8 @@
       <div class="border-t border-border pt-5">
         {@render option(
           "opt-password",
-          "Password",
-          "The page asks for it before showing anything or taking files. Pass it on separately from the link.",
+          t.password,
+          t.passwordAbout,
           passwordOn,
           (v) => (passwordOn = v),
           passwordLocked,
@@ -501,18 +503,17 @@
         <Reveal open={passwordOn}>
           <PasswordInput
             id="portal-new-password"
-            label={start.hasPassword ? "New password (leave empty to keep the current one)" : "Password"}
+            label={start.hasPassword ? t.newPassword : t.password}
             autocomplete="new-password"
             minlength={PORTAL_PASSWORD_MIN}
             maxlength={PORTAL_PASSWORD_MAX}
             bind:value={newPassword}
             disabled={isSaving}
-            error={passwordShort ? `Use at least ${PORTAL_PASSWORD_MIN} characters.` : undefined}
+            error={passwordShort ? t.passwordShort(PORTAL_PASSWORD_MIN) : undefined}
             class="max-w-xs"
           />
           <p class="mt-2 text-xs text-muted-foreground">
-            We never see it and can't show it to you again, so keep it somewhere. The link stays
-            the same.
+            {t.passwordNote}
           </p>
         </Reveal>
       </div>
@@ -520,8 +521,8 @@
       <div class="border-t border-border pt-5">
         {@render option(
           "opt-close",
-          "Closing date",
-          "The portal takes files up to and including this day, then closes by itself.",
+          t.close,
+          t.closeAbout,
           closeOn,
           (v) => {
             closeOn = v;
@@ -535,7 +536,7 @@
           <TextInput
             id="portal-close"
             type="date"
-            label="Last day"
+            label={t.lastDay}
             min={today}
             bind:value={closeDay}
             onfocus={() => (view = "form")}
@@ -548,8 +549,8 @@
       <div class="border-t border-border pt-5">
         {@render option(
           "opt-notify",
-          "Email when files arrive",
-          "One email per portal per hour at most, to you and whoever you share the portal with. It can't say what was sent: we can't read that.",
+          t.notify,
+          t.notifyAbout,
           notify,
           (v) => (notify = v),
         )}
@@ -564,25 +565,25 @@
       <Button type="submit" fullWidth={false} disabled={!canSave}>
         {#if isSaving}
           <Spinner aria-hidden="true" />
-          {mode === "create" ? "Creating…" : "Saving…"}
+          {mode === "create" ? t.creating : t.saving}
         {:else}
-          {mode === "create" ? "Create portal" : "Save changes"}
+          {mode === "create" ? t.create : t.save}
         {/if}
       </Button>
       <Button variant="ghost" fullWidth={false} href={cancelHref}>
-        {mode === "create" || dirty ? "Cancel" : "Back"}
+        {mode === "create" || dirty ? t.cancel : t.back}
       </Button>
       {#if saved && !dirty}
-        <p class="text-sm text-muted-foreground" role="status">Saved. The link stays the same.</p>
+        <p class="text-sm text-muted-foreground" role="status">{t.saved}</p>
       {/if}
     </div>
   </form>
 
-  <aside class="space-y-3 lg:sticky lg:top-24" aria-label="Preview">
+  <aside class="space-y-3 lg:sticky lg:top-24" aria-label={t.preview}>
     <div class="flex items-center justify-between gap-3">
-      <h2 class="text-sm font-medium text-foreground">What they see</h2>
-      <div role="group" aria-label="Preview of" class="flex gap-1 rounded-full bg-card p-1 text-xs">
-        {#each [{ id: "form", label: "Upload page" }, { id: "sent", label: "After sending" }] as const as tab (tab.id)}
+      <h2 class="text-sm font-medium text-foreground">{t.theySee}</h2>
+      <div role="group" aria-label={t.previewOf} class="flex gap-1 rounded-full bg-card p-1 text-xs">
+        {#each [{ id: "form", label: t.uploadPage }, { id: "sent", label: t.afterSending }] as const as tab (tab.id)}
           <button
             type="button"
             aria-pressed={view === tab.id}

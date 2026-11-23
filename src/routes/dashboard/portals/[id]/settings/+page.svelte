@@ -21,6 +21,14 @@
   import { subscribeToVaultState } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import { onDestroy } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
+
+  const locale = $derived(appLocale());
+  const all = $derived(portalsAppMessages[locale]);
+  const l = $derived(all.list);
+  const d = $derived(all.detail);
+  const t = $derived(all.edit);
 
   type Phase = "loading" | "locked" | "missing" | "not_owner" | "ready";
 
@@ -75,39 +83,39 @@
   }
 </script>
 
-<Seo title="Settings - {portal?.title ?? 'Portal'} - Tessil" robots="noindex" />
+<Seo title={t.seoTitle(portal?.title ?? null)} robots="noindex" />
 
 <PageLayout width="5xl">
   <PageHeader
-    title="Portal settings"
+    title={t.title}
     tagline={portal ? portal.title : undefined}
-    back={{ href: backHref, label: "Back to deliveries" }}
+    back={{ href: backHref, label: t.back }}
     align="left"
   />
 
   {#if phase === "loading"}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
       <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
+      <p class="text-muted-foreground">{l.loading}</p>
     </div>
   {:else if phase === "locked"}
-    <EmptyState title={auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"}>
-      <p>A portal's settings are encrypted with a key kept in your vault.</p>
+    <EmptyState title={auth.needsVaultSetup ? d.needsVault : d.vaultLocked}>
+      <p>{t.lockedBody}</p>
       {#snippet actions()}
         {#if auth.needsVaultSetup}
-          <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+          <Button fullWidth={false} href="/setup/vault">{l.setUpVault}</Button>
         {:else}
-          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>{l.unlockVault}</Button>
         {/if}
       {/snippet}
     </EmptyState>
   {:else if phase === "missing"}
-    <EmptyState title="Portal not found">
-      <p>It may have been deleted, or its keys did not open with your vault.</p>
+    <EmptyState title={d.notFound}>
+      <p>{t.notFoundBody}</p>
     </EmptyState>
   {:else if phase === "not_owner"}
-    <EmptyState title="Only the owner can change this portal">
-      <p>It was shared with you, so you can see and download what people send.</p>
+    <EmptyState title={t.notOwner}>
+      <p>{t.notOwnerBody}</p>
     </EmptyState>
   {:else if portal}
     <PortalEditor
