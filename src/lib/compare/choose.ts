@@ -9,7 +9,7 @@ export const CHOOSE: Record<string, Record<Locale, Choose>> = {
   "wetransfer-alternative": {
     en: {
       them: [
-        "You send large, non-sensitive files and want the biggest transfer limits.",
+        "You send very large, non-sensitive files and pay for a plan with big limits.",
         "You don't mind the service being able to read what you upload.",
       ],
       tessil: [
@@ -20,7 +20,7 @@ export const CHOOSE: Record<string, Record<Locale, Choose>> = {
     },
     nl: {
       them: [
-        "Je verstuurt grote, niet-gevoelige bestanden en wilt de hoogste limieten.",
+        "Je verstuurt heel grote, niet-gevoelige bestanden en betaalt voor een abonnement met hoge limieten.",
         "Het maakt je niet uit dat de dienst kan lezen wat je uploadt.",
       ],
       tessil: [
@@ -78,6 +78,7 @@ export const CHOOSE: Record<string, Record<Locale, Choose>> = {
     en: {
       them: [
         "You already work in the Tresorit ecosystem.",
+        "You send up to 5 GB at once for free.",
         "Swiss hosting suits you better than EU hosting.",
       ],
       tessil: [
@@ -88,6 +89,7 @@ export const CHOOSE: Record<string, Record<Locale, Choose>> = {
     nl: {
       them: [
         "Je werkt al met Tresorit.",
+        "Je verstuurt gratis tot 5 GB in één keer.",
         "Hosting in Zwitserland past je beter dan hosting in de EU.",
       ],
       tessil: [
@@ -99,7 +101,7 @@ export const CHOOSE: Record<string, Record<Locale, Choose>> = {
   "wormhole-alternative": {
     en: {
       them: [
-        "You want the most short-lived, fire-and-forget transfer.",
+        "You want the most short-lived, fire-and-forget transfer, up to 10 GB.",
         "US hosting is fine for you.",
       ],
       tessil: [
@@ -109,7 +111,7 @@ export const CHOOSE: Record<string, Record<Locale, Choose>> = {
     },
     nl: {
       them: [
-        "Je wilt de meest kortstondige transfer: versturen en vergeten.",
+        "Je wilt de meest kortstondige transfer, tot 10 GB: versturen en vergeten.",
         "Hosting in de Verenigde Staten is voor jou geen probleem.",
       ],
       tessil: [

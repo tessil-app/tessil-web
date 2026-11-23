@@ -50,9 +50,9 @@ export type Comparison = {
 };
 
 /** Shown on every page so competitor facts are dated, not presented as eternal truth. */
-export const LAST_VERIFIED = "June 2026";
+export const LAST_VERIFIED = "November 2026";
 /** The same, for structured data. */
-export const LAST_VERIFIED_ISO = "2026-06-01";
+export const LAST_VERIFIED_ISO = "2026-11-23";
 
 // Tessil's column is identical across comparisons.
 const TESSIL = {
@@ -79,14 +79,15 @@ const sendComparisons: Comparison[] = [
     summary:
       "A private, end-to-end encrypted alternative to WeTransfer. Your files are unreadable to us by design.",
     intro: [
-      "WeTransfer is the default way most people send big files: drop them in, share a link. It's convenient, but it isn't end-to-end encrypted - WeTransfer holds the keys, so the service (and anyone who compels it) can in principle access what you upload. The free tier also shows ads and runs analytics, and its terms drew criticism in 2025 over language that appeared to grant broad rights over uploaded content (later revised).",
+      "WeTransfer is the default way most people send big files: drop them in, share a link. It's convenient, but on the free and standard plans it isn't end-to-end encrypted - WeTransfer holds the keys, so the service (and anyone who compels it) can in principle access what you upload. WeTransfer lists end-to-end encryption on its Enterprise plan only, which starts at 50 seats. The free plan allows 3 GB or 10 transfers per 30 days with links that last 3 days, shows ads and runs analytics, and its terms drew criticism in 2025 over language that appeared to grant broad rights over uploaded content (later revised).",
       "Tessil is built for the case where that matters. Files are encrypted in your browser with AES-GCM before they ever leave your device, and the decryption key lives in the share link's URL fragment - the part after the # that browsers never send to a server. We store only ciphertext we can't read.",
       "It's open source (AGPL-3.0), hosted entirely in the EU, free, and needs no account to send.",
     ],
     rows: [
-      { label: "End-to-end encrypted", tessil: TESSIL.e2e, competitor: false },
-      { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: false },
+      { label: "End-to-end encrypted", tessil: TESSIL.e2e, competitor: "Enterprise plan only (50+ seats)" },
+      { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: "Not on free or standard plans" },
       { label: "Works without an account", tessil: TESSIL.noAccount, competitor: true },
+      { label: "Free limits", tessil: "1 GB per transfer, 2 GB a month, links up to 7 days", competitor: "3 GB or 10 transfers per 30 days, links 3 days" },
       { label: "Open source", tessil: TESSIL.openSource, competitor: false },
       { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "EU (NL); owned by Bending Spoons" },
       { label: "Ads & third-party tracking", tessil: TESSIL.tracking, competitor: "Ads on the free tier" },
@@ -96,16 +97,16 @@ const sendComparisons: Comparison[] = [
     ],
     verdict: [
       "If you just want to lob a file at someone and privacy isn't a concern, WeTransfer is fine and frictionless. If you'd rather the service physically can't read what you send - for client work, documents, anything sensitive - Tessil gives you that without giving up the simple link-based flow.",
-      "Tessil's free tier caps transfers smaller than WeTransfer's, which is the honest trade for zero-knowledge encryption and no ads.",
+      "The free limits are now close: WeTransfer allows 3 GB per 30 days, Tessil 1 GB per transfer and 2 GB a month. WeTransfer's paid plans send far larger files; Tessil's answer is end-to-end encryption on every plan, including the free one, and no ads.",
     ],
     faq: [
       {
         q: "Is WeTransfer end-to-end encrypted?",
-        a: "No. WeTransfer encrypts files in transit and at rest, but it controls the keys, so the service can access your files. Tessil encrypts in your browser and never receives the key.",
+        a: "Not on its free or standard paid plans: files are encrypted in transit and at rest with keys WeTransfer controls, so the service can access them. WeTransfer lists end-to-end encryption as a feature of its Enterprise plan, which needs at least 50 seats. Tessil encrypts in your browser and never receives the key, on every plan.",
       },
       {
         q: "Can Tessil send large files like WeTransfer?",
-        a: "Tessil supports multi-part uploads up to its current per-transfer limit. The cap is smaller than WeTransfer's paid plans, in exchange for true end-to-end encryption and no ads.",
+        a: "Up to 1 GB per transfer for free and 5 GB per file on paid plans. WeTransfer's paid plans go much larger; its free plan allows 3 GB in total per 30 days.",
       },
       {
         q: "Do I need an account to use Tessil?",
@@ -224,6 +225,7 @@ const sendComparisons: Comparison[] = [
       { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: true },
       { label: "Works without an account", tessil: TESSIL.noAccount, competitor: true },
       { label: "Open source", tessil: TESSIL.openSource, competitor: false },
+      { label: "Largest transfer, free", tessil: "1 GB", competitor: "5 GB" },
       { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "Switzerland (Tresorit / Swiss Post)" },
       { label: "Ads & third-party tracking", tessil: TESSIL.tracking, competitor: "None" },
       { label: "Price", tessil: TESSIL.price, competitor: "Free Send + paid Tresorit" },
@@ -269,10 +271,11 @@ const sendComparisons: Comparison[] = [
       { label: "Key never reaches the server", tessil: TESSIL.keyServer, competitor: true },
       { label: "Works without an account", tessil: TESSIL.noAccount, competitor: true },
       { label: "Open source", tessil: TESSIL.openSource, competitor: false },
+      { label: "Largest transfer, free", tessil: "1 GB", competitor: "10 GB" },
       { label: "Hosting / jurisdiction", tessil: TESSIL.hosting, competitor: "United States (Socket)" },
       { label: "Ads & third-party tracking", tessil: TESSIL.tracking, competitor: "None" },
       { label: "Optional accounts / list of transfers", tessil: true, competitor: false },
-      { label: "Configurable link expiry", tessil: TESSIL.expiry, competitor: "Fixed short lifetime" },
+      { label: "Configurable link expiry", tessil: TESSIL.expiry, competitor: "Fixed: 24 hours or 100 downloads" },
       { label: "Price", tessil: TESSIL.price, competitor: "Free" },
     ],
     verdict: [
