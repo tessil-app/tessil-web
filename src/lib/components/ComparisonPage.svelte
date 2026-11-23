@@ -126,6 +126,7 @@
   title={c.metaTitle}
   description={c.metaDescription}
   path={canonicalPath}
+  structured={false}
 />
 
 <svelte:head>

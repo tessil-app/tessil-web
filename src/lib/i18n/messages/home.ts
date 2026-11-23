@@ -3,9 +3,9 @@
 import type { Locale } from "../locale";
 
 const en = {
-  pageTitle: "Tessil - Send anything. We see nothing.",
+  pageTitle: "End-to-end encrypted file transfer, hosted in the EU - Tessil",
   pageDescription:
-    "End-to-end encrypted file transfer. Your browser encrypts before upload - we never see your files or the key.",
+    "Send files end-to-end encrypted, hosted in the EU. Your browser encrypts before upload and the key stays in the link. Free, open source, no account needed.",
   schemaFeatures: [
     "End-to-end encrypted file transfer",
     "Client-side encryption in browser",
@@ -182,9 +182,9 @@ const en = {
 
 const nl: typeof en = {
   // What Dutch searchers type, ahead of the slogan.
-  pageTitle: "Bestanden versleuteld versturen - Tessil",
+  pageTitle: "Bestanden versleuteld versturen, gehost in de EU - Tessil",
   pageDescription:
-    "End-to-end versleuteld bestanden versturen. Je browser versleutelt voor de upload, wij zien je bestanden of de sleutel nooit.",
+    "Verstuur bestanden end-to-end versleuteld, gehost in de EU. Je browser versleutelt voor de upload en de sleutel blijft in de link. Gratis, open source, zonder account.",
   schemaFeatures: [
     "End-to-end versleuteld bestanden versturen",
     "Versleuteling in je eigen browser",

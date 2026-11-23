@@ -3,9 +3,9 @@
 import type { Locale } from "../locale";
 
 const en = {
-  title: "Portals - Tessil",
+  title: "Receive files from clients, end-to-end encrypted - Tessil",
   description:
-    "A link where people send you files that only you can open. Encrypted in their browser, deleted automatically after 30 days, or 90 on the larger plan, no account needed to send.",
+    "A portal is one link where clients send you files that only you can open. Encrypted in their browser, deleted automatically, and no account needed to send.",
   heading: "Portals.",
   sub: "Hand out one link. Files find their way to you, and nobody else.",
 
@@ -128,9 +128,9 @@ const en = {
 };
 
 const nl: typeof en = {
-  title: "Portalen - Tessil",
+  title: "Veilig bestanden ontvangen van klanten - Tessil",
   description:
-    "Een link waarmee mensen jou bestanden sturen die alleen jij kunt openen. Versleuteld in hun browser, automatisch verwijderd na 30 dagen, of na 90 bij het grotere abonnement, en geen account nodig om te versturen.",
+    "Een portaal is één link waarmee klanten jou bestanden sturen die alleen jij kunt openen. Versleuteld in hun browser, vanzelf verwijderd, en zonder account te versturen.",
   heading: "Portalen.",
   sub: "Geef één link. Bestanden vinden de weg naar jou, en naar niemand anders.",
 

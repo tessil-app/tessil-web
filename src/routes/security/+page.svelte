@@ -11,14 +11,14 @@
   const locale = $derived(localeFromPath(page.url.pathname));
   const meta = {
     en: {
-      seoTitle: "Security Overview - Tessil",
+      seoTitle: "Security: how the end-to-end encryption works - Tessil",
       description: "How Tessil's encryption works, what we can and cannot see, and how to report vulnerabilities.",
       title: "Security Overview",
       tagline: "How end-to-end encryption works on Tessil, and how to report a vulnerability.",
       updated: "November 18, 2026",
     },
     nl: {
-      seoTitle: "Beveiliging - Tessil",
+      seoTitle: "Beveiliging: zo werkt de end-to-end versleuteling - Tessil",
       description: "Hoe de versleuteling van Tessil werkt, wat wij wel en niet kunnen zien, en hoe je een kwetsbaarheid meldt.",
       title: "Beveiliging",
       tagline: "Hoe end-to-end versleuteling werkt bij Tessil, en hoe je een kwetsbaarheid meldt.",

@@ -127,7 +127,7 @@ export const receivingComparisonsNl: LocalizedComparison[] = [
     kind: "form",
     competitor: "Google Forms",
     shortName: "Google Forms",
-    metaTitle: "Privacyvriendelijk Google Forms alternatief, end-to-end versleuteld - Tessil",
+    metaTitle: "Google Forms alternatief, end-to-end versleuteld - Tessil",
     metaDescription:
       "Een formulierenbouwer waarbij vragen en antwoorden in de browser worden versleuteld, zodat alleen jij de reacties kunt lezen. Zo verhouden Tessil-formulieren zich tot Google Forms.",
     heading: "Tessil vs Google Forms",
@@ -346,7 +346,7 @@ export const receivingComparisonsNl: LocalizedComparison[] = [
     kind: "form",
     competitor: "CryptPad Form",
     shortName: "CryptPad",
-    metaTitle: "Alternatief voor CryptPad Form voor versleutelde intakeformulieren - Tessil",
+    metaTitle: "CryptPad Form alternatief voor intakeformulieren - Tessil",
     metaDescription:
       "Twee open-source formulierbouwers met end-to-end versleuteling. Zo verhouden Tessil-formulieren zich tot CryptPad Form, en wanneer je welke kiest.",
     heading: "Tessil vs CryptPad Form",

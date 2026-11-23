@@ -44,7 +44,7 @@
   );
 </script>
 
-<Seo title={t.seoTitle} description={t.description} path="/compare" />
+<Seo title={t.seoTitle} description={t.description} path="/compare" structured={false} />
 
 <svelte:head>
   {@html `<script type="application/ld+json">${jsonLd}</script>`}

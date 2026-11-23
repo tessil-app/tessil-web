@@ -1,13 +1,10 @@
 # Search engines and AI assistants are welcome on every public page.
+# Portal, form and app pages are kept out of indexes by a noindex header,
+# which a crawler can only see when it is allowed to fetch them.
 User-agent: *
 Allow: /
-# Temporary transfer links, portal and form pages, and the signed-in app.
+# Temporary transfer links.
 Disallow: /d/
-Disallow: /p/
-Disallow: /f/
-Disallow: /dashboard
-Disallow: /setup/
-Disallow: /signin/
 
 # AI search and answer engines, named so a default block elsewhere cannot catch them.
 User-agent: OAI-SearchBot
@@ -23,11 +20,6 @@ User-agent: Applebot-Extended
 User-agent: bingbot
 Allow: /
 Disallow: /d/
-Disallow: /p/
-Disallow: /f/
-Disallow: /dashboard
-Disallow: /setup/
-Disallow: /signin/
 
 # A plain-text summary of the site for AI agents: https://tessil.app/llms.txt
 Sitemap: https://tessil.app/sitemap.xml

@@ -3,7 +3,7 @@
 import type { Locale } from "../locale";
 
 const en = {
-  title: "Pricing - Tessil",
+  title: "Pricing: free encrypted sending, plans from €9 - Tessil",
   description:
     "Sending files is free and encrypted. A plan adds portals: links where people send files that only you can open. You never pay for privacy.",
   heading1: "Pay for more.",
@@ -78,9 +78,9 @@ const en = {
 };
 
 const nl: typeof en = {
-  title: "Prijzen - Tessil",
+  title: "Prijzen: gratis versleuteld versturen, vanaf €9 - Tessil",
   description:
-    "Bestanden versturen is gratis en versleuteld. Een abonnement voegt portalen toe: links waarmee mensen jou bestanden sturen die alleen jij kunt openen. Voor privacy betaal je nooit.",
+    "Bestanden versturen is gratis en versleuteld. Een abonnement voegt portalen en formulieren toe om bestanden en antwoorden te ontvangen. Voor privacy betaal je nooit.",
   heading1: "Betaal voor meer.",
   heading2: "Nooit voor privacy.",
   introForms:

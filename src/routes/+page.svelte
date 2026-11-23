@@ -155,7 +155,7 @@ import { hrefFor } from "$lib/i18n/paths";
 
 </script>
 
-<Seo title={t.pageTitle} description={t.pageDescription} path="/" />
+<Seo title={t.pageTitle} description={t.pageDescription} path="/" structured={false} />
 
 <svelte:head>
   {@html `<script type="application/ld+json">${JSON.stringify(homeSchema).replace(/</g, "\\u003c")}</script>`}

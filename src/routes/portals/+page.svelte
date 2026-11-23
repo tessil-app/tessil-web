@@ -6,6 +6,7 @@
   import Button from "$lib/components/Button.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import CompareLinks from "$lib/components/CompareLinks.svelte";
   import TextLink from "$lib/components/TextLink.svelte";
   import { encryptFilename } from "$lib/crypto/encrypt";
   import { generateKey } from "$lib/crypto/key";
@@ -99,6 +100,7 @@
   title={t.title}
   description={t.description}
   path="/portals"
+  product
 />
 
 <!-- A file dropped beside the portal should not make the browser open it. -->
@@ -340,6 +342,8 @@
       </p>
     </div>
   </section>
+
+  <CompareLinks kind="portal" {locale} />
 
   <SiteFooter />
 </div>

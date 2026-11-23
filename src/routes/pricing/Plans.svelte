@@ -96,6 +96,7 @@
   title={t.title}
   description={t.description}
   path="/pricing"
+  product
 />
 
 <div class="bg-background text-foreground">
