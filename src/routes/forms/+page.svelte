@@ -17,6 +17,14 @@
   import { auth } from "$lib/stores/auth.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
   import { onMount } from "svelte";
+  import { page } from "$app/state";
+  import { localeFromPath } from "$lib/i18n/locale";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { formsMessages } from "$lib/i18n/messages/forms";
+
+  const locale = $derived(localeFromPath(page.url.pathname));
+  const t = $derived(formsMessages[locale]);
+  const href = (canonical: string) => hrefFor(canonical, locale);
 
   // ─── the film ─────────────────────────────────────────────────────────────
   // Recorded from /forms/try by scripts/record-forms-film.ts.
@@ -37,17 +45,12 @@
   // ─── the form that encrypts as you type ───────────────────────────────────
   // The same code a real form runs when someone presses send. Nothing
   // leaves the page.
-  const demo: Question[] = [
-    { id: "demo01", type: "short", label: "What should we call you?" },
-    {
-      id: "demo02",
-      type: "choice",
-      label: "What would you use a form for?",
-      options: ["Client intake", "Sign-ups", "Feedback", "Something else"],
-    },
-    { id: "demo03", type: "yesno", label: "Should we be able to read your answers?" },
-  ];
-  const purposes = demo[1].options ?? [];
+  const demo: Question[] = $derived([
+    { id: "demo01", type: "short", label: t.demo.name },
+    { id: "demo02", type: "choice", label: t.demo.purpose, options: t.demo.purposes },
+    { id: "demo03", type: "yesno", label: t.demo.read },
+  ]);
+  const purposes = $derived(demo[1].options ?? []);
 
   let draft = $state<AnswerDraft>({});
   let sealed = $state<{ hex: string; bytes: number } | null>(null);
@@ -85,48 +88,11 @@
   const radio =
     "size-4 shrink-0 accent-primary cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-  // What a form's owner can switch on. `max` marks what only that plan has.
-  const options: { name: string; about: string; max?: boolean }[] = [
-    {
-      name: "Files as answers",
-      about: "Ask for a copy of an ID or a signed contract between the other questions. It is encrypted like the rest.",
-    },
-    {
-      name: "A welcome and a thank-you",
-      about: "A few lines above the questions, and a note after sending that says what happens next.",
-    },
-    {
-      name: "A closing date",
-      about: "The page says until when, and the form closes by itself when the day ends.",
-    },
-    {
-      name: "An email when someone answers",
-      about: "One per form per hour at most. It can't say what was answered, because we can't read that.",
-    },
-    {
-      name: "Try it first",
-      about: "Fill in your own form from the editor, exactly as others will see it. Nothing is sent.",
-    },
-    {
-      name: "English or Dutch",
-      about: "Pick the language of the page. Visitors can switch to the other one themselves.",
-    },
-    {
-      name: "Your logo",
-      about: "Above the name, so the page looks like yours and not like ours.",
-      max: true,
-    },
-    {
-      name: "A password",
-      about: "The page shows nothing until it is entered. Change it whenever you like; the link stays.",
-      max: true,
-    },
-  ];
 </script>
 
 <Seo
-  title="Forms - Tessil"
-  description="Ask your questions with one link. Questions and answers are encrypted in the browser, so only you can read what people fill in. No account needed to answer."
+  title={t.title}
+  description={t.description}
   path="/forms"
 />
 
@@ -136,18 +102,18 @@
     <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
       <div class="space-y-5">
         <h1 class="text-6xl font-semibold leading-none text-foreground sm:text-7xl lg:text-8xl" style="letter-spacing: -0.045em">
-          Forms.
+          {t.heading}
         </h1>
         <p class="max-w-lg text-lg leading-relaxed text-muted-foreground sm:text-xl">
-          Ask your questions with one link. The answers reach you, and nobody else.
+          {t.sub}
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
-        <Button href="/forms/try" fullWidth={false}>Try the editor</Button>
+        <Button href="/forms/try" fullWidth={false}>{t.tryEditor}</Button>
         {#if auth.user}
-          <Button href="/dashboard/forms" variant="secondary" fullWidth={false}>Open your forms</Button>
+          <Button href="/dashboard/forms" variant="secondary" fullWidth={false}>{t.yourForms}</Button>
         {:else}
-          <Button href="/pricing" variant="secondary" fullWidth={false}>See the plans</Button>
+          <Button href={href("/pricing")} variant="secondary" fullWidth={false}>{t.plans}</Button>
         {/if}
       </div>
     </div>
@@ -163,7 +129,7 @@
           loop
           playsinline
           preload="metadata"
-          aria-label="The form editor: two questions are added, then the form is filled in and sent."
+          aria-label={t.filmLabel}
           onplay={() => (playing = true)}
           onpause={() => (playing = false)}
         >
@@ -171,8 +137,8 @@
         </video>
       </div>
       <figcaption class="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-sm text-muted-foreground">
-        <span>The editor, recorded as it is. Add questions, try the form as a visitor, send.</span>
-        <TextLink onclick={toggleFilm}>{playing ? "Pause" : "Play"}</TextLink>
+        <span>{t.filmCaption}</span>
+        <TextLink onclick={toggleFilm}>{playing ? t.pause : t.play}</TextLink>
       </figcaption>
     </figure>
   </section>
@@ -182,17 +148,16 @@
     <div class="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28">
       <div class="max-w-2xl space-y-4">
         <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-          Type something. Watch what we get.
+          {t.typeHeading}
         </h2>
         <p class="text-lg leading-relaxed text-muted-foreground">
-          The left side is a form. The right side is what would reach our servers, encrypted
-          again with every key you press by the code a real form uses. Nothing leaves this page.
+          {t.typeBody}
         </p>
       </div>
 
       <div class="mt-10 grid overflow-hidden rounded-2xl border border-border lg:grid-cols-2">
         <div class="space-y-5 bg-card p-5 sm:p-8">
-          <p class="text-sm font-medium text-muted-foreground">In your browser</p>
+          <p class="text-sm font-medium text-muted-foreground">{t.inBrowser}</p>
           <TextInput
             id="demo-name"
             label={demo[0].label}
@@ -219,7 +184,7 @@
           <fieldset class="space-y-2">
             <legend class="text-sm font-medium text-foreground">{demo[2].label}</legend>
             <div class="flex gap-6">
-              {#each [{ value: true, label: "Yes" }, { value: false, label: "No" }] as option (option.label)}
+              {#each [{ value: true, label: t.demo.yes }, { value: false, label: t.demo.no }] as option (option.label)}
                 <label class="flex items-center gap-3 text-sm text-foreground cursor-pointer">
                   <input
                     type="radio"
@@ -237,32 +202,31 @@
 
         <div class="server flex flex-col gap-4 p-5 sm:p-8">
           <p class="flex items-baseline justify-between gap-3 text-sm font-medium">
-            <span>On our servers</span>
+            <span>{t.onServers}</span>
             <span class="font-normal tabular-nums opacity-70">
-              {sealed ? `${sealed.bytes.toLocaleString("en")} bytes` : ""}
+              {sealed ? t.bytes(sealed.bytes) : ""}
             </span>
           </p>
-          <p class="bytes" aria-label="Encrypted bytes, unreadable">{sealed?.hex ?? ""}</p>
+          <p class="bytes" aria-label={t.bytesLabel}>{sealed?.hex ?? ""}</p>
           <p class="text-sm leading-relaxed opacity-80" aria-live="polite">
             {#if draft.demo03 === true}
-              You said we should be able to read it. We still can't.
+              {t.saidYes}
             {:else if draft.demo03 === false}
-              You said we shouldn't be able to read it. We can't.
+              {t.saidNo}
             {:else if touched}
-              Every key changes all of it, and the size stays the same however much you write.
+              {t.typing}
             {:else}
-              This is an empty form. It already looks like any other.
+              {t.empty}
             {/if}
           </p>
         </div>
       </div>
 
       <p class="mt-6 max-w-2xl text-muted-foreground">
-        Your questions get the same treatment before they are stored, and so do files people
-        add. The key that opens the answers lives in your vault, not with us.
-        <TextLink href="/security#forms">Read how it works</TextLink>
-        or
-        <TextLink href="/verify">check it yourself</TextLink>.
+        {t.sameTreatment}
+        <TextLink href="{href('/security')}#forms">{t.readHow}</TextLink>
+        {t.or}
+        <TextLink href={href("/verify")}>{t.checkYourself}</TextLink>.
       </p>
     </div>
   </section>
@@ -271,15 +235,13 @@
     <div class="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 py-20 sm:py-28 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-center">
       <div class="space-y-5">
         <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-          Ask once.<br />See it add up.
+          {t.askOnce}<br />{t.addUp}
         </h2>
         <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
-          Every response opens on its own, and together they become a summary: how many
-          answered each question and what they chose. It is counted in your browser, after
-          your vault has opened the answers. Pick an option to see who chose it.
+          {t.summaryBody}
         </p>
         <ul class="space-y-2.5 text-foreground">
-          {#each ["Search across every answer", "Export everything to a spreadsheet", "A record of each response, with its reference", "Share a form with one colleague"] as point (point)}
+          {#each t.summaryPoints as point (point)}
             <li class="flex items-center gap-2.5">
               <IconCheckRegular class="size-4 shrink-0 text-primary" />
               {point}
@@ -290,7 +252,7 @@
 
       <!-- What the owner sees, fed by the form above. -->
       <div class="space-y-3.5 rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <p class="text-xs text-muted-foreground">Summary of {total} responses</p>
+        <p class="text-xs text-muted-foreground">{t.summaryOf(total)}</p>
         <p class="text-xl font-semibold tracking-tight text-foreground">{demo[1].label}</p>
         {#each bars as bar (bar.label)}
           {@const percent = share(bar.count, total)}
@@ -300,7 +262,7 @@
               <span class="flex items-center gap-2 text-foreground">
                 {bar.label}
                 {#if bar.mine}
-                  <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">You</span>
+                  <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{t.you}</span>
                 {/if}
               </span>
               <span class="tabular-nums text-muted-foreground">
@@ -310,7 +272,7 @@
           </div>
         {/each}
         <p class="text-xs text-muted-foreground">
-          {draft.demo02 ? "Example numbers, with your answer added." : "Example numbers. Pick an answer in the form above and yours is added."}
+          {draft.demo02 ? t.examplesMine : t.examples}
         </p>
       </div>
     </div>
@@ -320,11 +282,10 @@
     <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
       <div class="max-w-2xl space-y-5">
         <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-          Seven kinds of question.
+          {t.kinds}
         </h2>
         <p class="text-lg leading-relaxed text-muted-foreground">
-          Mark the ones that must be answered. Reorder, reword and add questions later; the
-          link stays the same, and answers already in keep the wording they were given under.
+          {t.kindsBody}
         </p>
       </div>
       <ul class="mt-8 flex flex-wrap gap-2.5">
@@ -332,13 +293,13 @@
           {@const Icon = TYPE_ICON[type.value]}
           <li class="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground">
             <Icon class="size-4 text-primary" />
-            {type.label}
+            {t.types[type.value]}
           </li>
         {/each}
       </ul>
 
       <ul class="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {#each options as option (option.name)}
+        {#each t.options as option (option.name)}
           <li class="space-y-2 bg-card p-6">
             <p class="flex items-center gap-2 font-medium text-foreground">
               {option.name}
@@ -351,8 +312,7 @@
         {/each}
       </ul>
       <p class="mt-6 text-sm text-muted-foreground">
-        People who answer need no account. Responses are deleted after 30 days, or 90 on
-        Max, so export what you want to keep.
+        {t.optionsNote}
       </p>
     </div>
   </section>
@@ -360,19 +320,18 @@
   <section class="border-t border-border">
     <div class="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-24 text-center sm:py-32">
       <h2 class="text-4xl font-semibold leading-none tracking-tight text-foreground sm:text-6xl">
-        Ask away.
+        {t.askAway}
       </h2>
       <p class="max-w-lg text-lg text-muted-foreground">
-        Build one now, without an account. Publishing it needs a paid plan: 3 forms of up to
-        15 questions on Pro, 10 forms of up to 50 on Max.
+        {t.askAwayBody}
       </p>
       <div class="flex flex-wrap items-center justify-center gap-3">
-        <Button href="/forms/try" fullWidth={false}>Try the editor</Button>
-        <Button href="/pricing" variant="secondary" fullWidth={false}>See the plans</Button>
+        <Button href="/forms/try" fullWidth={false}>{t.tryEditor}</Button>
+        <Button href={href("/pricing")} variant="secondary" fullWidth={false}>{t.plans}</Button>
       </div>
       <p class="text-sm text-muted-foreground">
-        Only need files from people?
-        <TextLink href="/portals">Have a look at portals</TextLink>
+        {t.onlyFiles}
+        <TextLink href={href("/portals")}>{t.seePortals}</TextLink>
       </p>
     </div>
   </section>

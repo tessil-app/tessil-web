@@ -4,6 +4,9 @@
 // pricing/features often. Keep claims fair and checkable: this is a
 // privacy-principled, AGPL project, not a hit piece.
 
+import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
+import { RECEIVING_VERIFIED, receivingComparisons } from "./receiving";
+
 /** A cell is a yes/no (rendered as a check/cross) or a short string. */
 export type Cell = boolean | string;
 
@@ -36,6 +39,12 @@ export type Comparison = {
   /** Honest verdict paragraphs. */
   verdict: string[];
   faq: Faq[];
+  /** What is compared: sending (the default), portals or forms. */
+  kind?: "send" | "portal" | "form";
+  /** The main button, when it is not "send a file". `href` is the English address. */
+  cta?: { label: string; href: string };
+  /** When the competitor's details were last checked, when not LAST_VERIFIED. */
+  verified?: string;
 };
 
 /** Shown on every page so competitor facts are dated, not presented as eternal truth. */
@@ -54,7 +63,7 @@ const TESSIL = {
   password: true,
 };
 
-export const comparisons: Comparison[] = [
+const sendComparisons: Comparison[] = [
   {
     slug: "wetransfer-alternative",
     competitor: "WeTransfer",
@@ -137,7 +146,7 @@ export const comparisons: Comparison[] = [
       },
       {
         q: "What does Boomerang cost compared to Tessil?",
-        a: "Boomerang has a free tier and a paid plan around EUR 6.99/month for more storage and larger files. Tessil is currently free. Check Boomerang's site for up-to-date pricing.",
+        a: "Boomerang has a free tier and a paid plan around EUR 6.99/month for more storage and larger files. Sending with Tessil is free, with or without an account; paid plans add portals and forms for receiving. Check Boomerang's site for up-to-date pricing.",
       },
       {
         q: "Is Tessil also made in the Netherlands?",
@@ -218,7 +227,7 @@ export const comparisons: Comparison[] = [
       { label: "Password protection", tessil: TESSIL.password, competitor: true },
     ],
     verdict: [
-      "Tresorit Send is a solid, trustworthy option, especially if you're already in the Tresorit ecosystem. Tessil gives you the same encrypted, link-based experience with the added assurances that come from being fully open source and EU-hosted - and it's free.",
+      "Tresorit Send is a solid, trustworthy option, especially if you're already in the Tresorit ecosystem. Tessil gives you the same encrypted, link-based experience with the added assurances that come from being fully open source and EU-hosted - and sending is free.",
       "If auditability matters to you, that's the deciding line: Tessil's code is public.",
     ],
     faq: [
@@ -228,7 +237,7 @@ export const comparisons: Comparison[] = [
       },
       {
         q: "Is Tessil really free?",
-        a: "Yes. The current version is free with no paid tier. There are no ads and no third-party trackers.",
+        a: "Sending is free and stays free, with or without an account. Paid plans add portals and forms for receiving. There are no ads and no third-party trackers.",
       },
       {
         q: "Can I verify Tessil's encryption?",
@@ -281,6 +290,14 @@ export const comparisons: Comparison[] = [
       },
     ],
   },
+];
+
+// Portal and form comparisons appear once those products are announced.
+export const comparisons: Comparison[] = [
+  ...sendComparisons,
+  ...receivingComparisons
+    .filter((c) => (c.kind === "form" ? FORMS_ANNOUNCED : PORTALS_ANNOUNCED))
+    .map((c) => ({ ...c, verified: RECEIVING_VERIFIED })),
 ];
 
 export function getComparison(slug: string): Comparison | undefined {

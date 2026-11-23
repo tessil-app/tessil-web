@@ -24,9 +24,11 @@
   interface Props {
     features: Feature[];
     class?: string;
+    /** Words of the tag and the button names, in the page's language. */
+    words?: { fresh: string; show: (name: string) => string };
   }
 
-  let { features, class: className }: Props = $props();
+  let { features, class: className, words = { fresh: "New", show: (name) => `Show ${name}` } }: Props = $props();
 
   // The newest thing starts open.
   // Written without findLastIndex, which older Safari does not have.
@@ -67,7 +69,7 @@
       <button
         type="button"
         class="opener"
-        aria-label="Show {feature.name}"
+        aria-label={words.show(feature.name)}
         aria-expanded={on}
         aria-controls="feature-{feature.id}"
         inert={on}
@@ -94,7 +96,7 @@
       <span class="mark" aria-hidden="true">{@render glyph(feature.id)}</span>
       <span class="name" aria-hidden="true" bind:offsetWidth={nameWidths[i]}>{feature.name}</span>
       {#if feature.fresh}
-        <span class="tag" aria-hidden="true" bind:offsetWidth={tagWidths[i]}>New</span>
+        <span class="tag" aria-hidden="true" bind:offsetWidth={tagWidths[i]}>{words.fresh}</span>
       {/if}
     </div>
   {/each}

@@ -28,10 +28,14 @@
     type VaultHoldDays,
   } from "$lib/vault/session";
   import { onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { vaultMessages } from "$lib/i18n/messages/vault";
+
+  const m = $derived(vaultMessages[appLocale()]);
+  const t = $derived(m.settings);
   import {
     evaluatePassword,
     MIN_PASSWORD_LENGTH,
-    scoreLabel,
     type PasswordStrength,
   } from "$lib/vault/strength";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
@@ -114,7 +118,7 @@
       pwConfirm = "";
     } catch (err) {
       changePwError =
-        err instanceof Error ? err.message : "Couldn't change your password.";
+        err instanceof Error ? err.message : t.changeFailedBody;
     } finally {
       isChangingPassword = false;
     }
@@ -165,7 +169,7 @@
       regenRevealed = false;
     } catch (err) {
       regenError =
-        err instanceof Error ? err.message : "Couldn't regenerate the phrase.";
+        err instanceof Error ? err.message : t.regenFailedBody;
     } finally {
       isRegenerating = false;
     }
@@ -184,12 +188,7 @@
 
   function downloadRegenPhrase() {
     if (!regenNewPhrase) return;
-    const body =
-      "Tessil recovery phrase\n" +
-      "Keep this somewhere safe. If you forget your vault password, this\n" +
-      "is the only way to recover access to your files.\n\n" +
-      regenNewPhrase +
-      "\n";
+    const body = m.phrase.file(regenNewPhrase);
     const blob = new Blob([body], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -211,7 +210,7 @@
   // ─── how long the vault stays open on this device ─────────────────────────
   let holdDays = $state<VaultHoldDays>(1);
   let openUntil = $state<Date | null>(null);
-  const untilFmt = new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  const untilFmt = $derived(new Intl.DateTimeFormat(appLocale() === "nl" ? "nl-NL" : undefined, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }));
 
   async function refreshOpenUntil() {
     openUntil = auth.user ? await vaultOpenUntil(auth.user.id) : null;
@@ -232,27 +231,23 @@
 
 <Frame.Root>
   <Frame.Header>
-    <Frame.Title class="text-base">Stay unlocked on this device</Frame.Title>
-    <Frame.Description class="mt-1 block">
-      How long your vault stays open in this browser before it asks again. Anyone using
-      this device while it is open can see the names and links of what you sent, so pick
-      a short time on a shared or work computer.
-    </Frame.Description>
+    <Frame.Title class="text-base">{t.holdTitle}</Frame.Title>
+    <Frame.Description class="mt-1 block">{t.holdBody}</Frame.Description>
   </Frame.Header>
   <Frame.Panel>
     <div class="space-y-3">
       <SegmentedControl
-        label="Stay unlocked for"
-        options={VAULT_HOLD_DAYS.map((d) => ({ value: d, label: d === 1 ? "1 day" : `${d} days` }))}
+        label={t.holdLabel}
+        options={VAULT_HOLD_DAYS.map((d) => ({ value: d, label: t.days(d) }))}
         value={holdDays}
         onChange={(v: VaultHoldDays) => void chooseHold(v)}
         class="max-w-sm"
       />
       <p class="text-sm text-muted-foreground" aria-live="polite">
         {#if openUntil}
-          Open now, until {untilFmt.format(openUntil)}. Locking it from the account menu closes it at once.
+          {t.openUntil(untilFmt.format(openUntil))}
         {:else}
-          Locked now. The choice applies the next time you unlock it here.
+          {t.locked}
         {/if}
       </p>
     </div>
@@ -262,15 +257,13 @@
 <Frame.Root>
   <Frame.Header>
     <Frame.Title class="text-base">
-      {hasPassword ? "Change vault password" : "Add a vault password"}
+      {hasPassword ? t.changeTitle : t.addTitle}
     </Frame.Title>
     <Frame.Description class="mt-1 block">
       {#if hasPassword}
-        Your recovery phrase and any passkeys keep working after this. Forgot the
-        password? Use your recovery phrase below to set a new one.
+        {t.changeBody}
       {:else}
-        Your vault opens with a passkey and your recovery phrase. A password is
-        optional: it gives you another way in on a device without your passkey.
+        {t.addBody}
       {/if}
     </Frame.Description>
   </Frame.Header>
@@ -281,14 +274,14 @@
         bind:this={pwProofField}
         bind:access={pwProof}
         idPrefix="vault-current"
-        passwordLabel="Current password"
+        passwordLabel={t.currentPassword}
         disabled={isChangingPassword}
       />
 
       <div class="space-y-2">
         <PasswordInput
           id="vault-new-password"
-          label="New password"
+          label={t.newPassword}
           autocomplete="new-password"
           required
           bind:value={pwNew}
@@ -304,19 +297,19 @@
           <div class="flex items-center justify-between text-xs text-muted-foreground">
             <span>
               {#if pwNew.length === 0}
-                At least {MIN_PASSWORD_LENGTH} characters, and not easy to guess
+                {m.strength.hint(MIN_PASSWORD_LENGTH)}
               {:else if isEvaluatingPw}
-                Checking…
+                {m.strength.checking}
               {:else}
-                {scoreLabel(pwStrength.score)}
+                {m.strength.scores[pwStrength.score]}
                 {#if pwNew.length < MIN_PASSWORD_LENGTH}
-                  · {MIN_PASSWORD_LENGTH - pwNew.length} more
+                  · {m.strength.more(MIN_PASSWORD_LENGTH - pwNew.length)}
                 {/if}
               {/if}
             </span>
             {#if pwStrength.acceptable}
               <span class="inline-flex items-center gap-1 text-success-foreground">
-                <IconCheckRegular class="size-3.5" /> OK
+                <IconCheckRegular class="size-3.5" /> {m.strength.ok}
               </span>
             {/if}
           </div>
@@ -325,7 +318,7 @@
           {/if}
           {#if pwSameAsCurrent}
             <p class="text-xs text-warning-foreground">
-              That's the same as your current password.
+              {t.sameAsCurrent}
             </p>
           {/if}
         </div>
@@ -333,32 +326,29 @@
 
       <PasswordInput
         id="vault-confirm-password"
-        label="Confirm new password"
+        label={t.confirmNew}
         autocomplete="new-password"
         required
         bind:value={pwConfirm}
         disabled={isChangingPassword}
         error={pwConfirm.length > 0 && !pwMatches
-          ? "Passwords don't match yet."
+          ? m.strength.noMatch
           : undefined}
       />
 
       {#if changePwError}
-        <Alert tone="destructive" title="Couldn't change password">{changePwError}</Alert>
+        <Alert tone="destructive" title={t.changeFailed}>{changePwError}</Alert>
       {/if}
       {#if changePwSuccess}
-        <Alert tone="success" title="Password updated">
-          Your new password is now in effect on every device. The old one no
-          longer works.
-        </Alert>
+        <Alert tone="success" title={t.updatedTitle}>{t.updatedBody}</Alert>
       {/if}
 
       <Button type="submit" disabled={!canChangePassword}>
         {#if isChangingPassword}
           <Spinner aria-hidden="true" />
-          Updating password…
+          {t.updating}
         {:else}
-          {hasPassword ? "Update password" : "Add password"}
+          {hasPassword ? t.update : t.add}
         {/if}
       </Button>
     </form>
@@ -367,11 +357,8 @@
 
 <Frame.Root>
   <Frame.Header>
-    <Frame.Title class="text-base">Recovery phrase</Frame.Title>
-    <Frame.Description class="mt-1 block">
-      Regenerating retires the old 12-word phrase immediately. Use this if
-      you think the previous phrase was seen by someone else.
-    </Frame.Description>
+    <Frame.Title class="text-base">{t.phraseTitle}</Frame.Title>
+    <Frame.Description class="mt-1 block">{t.phraseBody}</Frame.Description>
   </Frame.Header>
 
   <Frame.Panel>
@@ -382,11 +369,11 @@
           bind:access={regenProof}
           allow={["password", "passkey"]}
           idPrefix="regen-current"
-          passwordLabel="Confirm your password"
+          passwordLabel={t.confirmPassword}
           disabled={isRegenerating}
         />
         {#if regenError}
-          <Alert tone="destructive" title="Couldn't regenerate phrase">{regenError}</Alert>
+          <Alert tone="destructive" title={t.regenFailed}>{regenError}</Alert>
         {/if}
         <Button
           type="submit"
@@ -396,31 +383,28 @@
         >
           {#if isRegenerating}
             <Spinner aria-hidden="true" />
-            Generating…
+            {t.generating}
           {:else}
-            Generate a new phrase
+            {t.generate}
           {/if}
         </Button>
       </form>
     {:else}
       <div class="space-y-4">
-        <Alert tone="warning" title="Save the new phrase before leaving this page">
-          The old phrase no longer works. If you lose this one and forget your
-          password, your vault is unrecoverable.
-        </Alert>
+        <Alert tone="warning" title={t.saveNewTitle}>{t.saveNewBody}</Alert>
 
         <div class="rounded-md border border-border bg-muted/30 p-4">
           {#if !regenRevealed}
             <div class="flex items-center justify-between">
               <p class="text-sm text-muted-foreground">
-                Phrase is hidden. Reveal it when you're ready to write it down.
+                {m.phrase.hidden}
               </p>
               <Button
                 variant="secondary"
                 fullWidth={false}
                 onclick={() => (regenRevealed = true)}
               >
-                <IconEyeRegular class="size-4" /> Reveal
+                <IconEyeRegular class="size-4" /> {m.phrase.reveal}
               </Button>
             </div>
           {:else}
@@ -437,20 +421,20 @@
             <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
               <Button variant="secondary" fullWidth={false} onclick={copyRegenPhrase}>
                 {#if regenCopied}
-                  <IconCheckRegular class="size-4" /> Copied
+                  <IconCheckRegular class="size-4" /> {m.phrase.copied}
                 {:else}
-                  <IconCopyRegular class="size-4" /> Copy
+                  <IconCopyRegular class="size-4" /> {m.phrase.copy}
                 {/if}
               </Button>
               <Button variant="secondary" fullWidth={false} onclick={downloadRegenPhrase}>
-                <IconDownloadSimpleRegular class="size-4" /> Download .txt
+                <IconDownloadSimpleRegular class="size-4" /> {m.phrase.download}
               </Button>
               <Button
                 variant="ghost"
                 fullWidth={false}
                 onclick={() => (regenRevealed = false)}
               >
-                <IconEyeSlashRegular class="size-4" /> Hide
+                <IconEyeSlashRegular class="size-4" /> {m.phrase.hide}
               </Button>
             </div>
           {/if}
@@ -460,11 +444,11 @@
           onclick={() => (regenDoneModalOpen = true)}
           disabled={!regenRevealed}
         >
-          I've saved the new phrase
+          {t.savedNew}
         </Button>
         {#if !regenRevealed}
           <p class="text-xs text-muted-foreground text-center">
-            Reveal the phrase first - we need you to look at it before confirming.
+            {t.revealFirst}
           </p>
         {/if}
       </div>
@@ -474,8 +458,8 @@
 
 <Modal
   open={regenDoneModalOpen}
-  title="Have you saved the new phrase?"
-  description="The old phrase is already retired. Without this new one, a forgotten password means losing access to your vault."
+  title={t.modalTitle}
+  description={t.modalBody}
   onClose={() => {
     regenDoneModalOpen = false;
     regenDoneChecked = false;
@@ -488,8 +472,7 @@
       class="mt-0.5 size-4 rounded border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     />
     <span class="text-sm text-foreground leading-relaxed">
-      I've written down or stored the new 12-word recovery phrase somewhere I
-      can get back to. I understand Tessil can't recover it for me.
+      {t.modalCheck}
     </span>
   </label>
 
@@ -502,10 +485,10 @@
         regenDoneChecked = false;
       }}
     >
-      Not yet
+      {m.phrase.notYet}
     </Button>
     <Button fullWidth={false} disabled={!regenDoneChecked} onclick={finishRegen}>
-      Done
+      {t.done}
     </Button>
   {/snippet}
 </Modal>

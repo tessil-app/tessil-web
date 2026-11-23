@@ -12,7 +12,10 @@ import {
 import { DEFAULT_LOCALE, type Locale } from "$lib/i18n/locale";
 import type { OpenedPortal } from "$lib/portal/deposit";
 import { PORTAL_PASSWORD_MIN, type PortalLogo, type PortalSettings } from "$lib/portal/keys";
-import { prepareLogo } from "$lib/portal/logo";
+import { LogoError, prepareLogo } from "$lib/portal/logo";
+import { formsAppMessages } from "$lib/i18n/messages/formsApp";
+
+type DraftWords = (typeof formsAppMessages)["en"]["draft"];
 
 export interface EditorProps {
   initial: PortalSettings;
@@ -21,6 +24,8 @@ export interface EditorProps {
   cancelHref: string;
   questionLimit: number;
   canBrand?: boolean;
+  /** The language of the editor itself, not of the form. */
+  uiLocale?: Locale;
 }
 
 function dayOf(date: Date): string {
@@ -34,9 +39,9 @@ function endOfDay(day: string): string | null {
   return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
 }
 
-export function problemOf(q: Question): string | null {
-  if (!q.label.trim()) return "Write the question.";
-  if (hasOptions(q.type) && !(q.options ?? []).some((o) => o.trim())) return "Add at least one option.";
+export function problemOf(q: Question, words: DraftWords = formsAppMessages.en.draft): string | null {
+  if (!q.label.trim()) return words.writeQuestion;
+  if (hasOptions(q.type) && !(q.options ?? []).some((o) => o.trim())) return words.addOption;
   return null;
 }
 
@@ -48,6 +53,7 @@ export class FormDraft {
   readonly today = dayOf(new Date());
   private readonly onSave: EditorProps["onSave"];
   private readonly questionLimit: number;
+  readonly words: DraftWords;
 
   title = $state("");
   lang = $state<Locale>(DEFAULT_LOCALE);
@@ -77,6 +83,7 @@ export class FormDraft {
     this.canBrand = props.canBrand ?? false;
     this.onSave = props.onSave;
     this.questionLimit = props.questionLimit;
+    this.words = formsAppMessages[props.uiLocale ?? "en"].draft;
     this.hadPassword = start.hasPassword;
     this.hadLogo = start.logo !== null;
     this.title = start.title;
@@ -147,7 +154,7 @@ export class FormDraft {
     newPassword: this.passwordOn ? this.newPassword : "",
   }));
 
-  problems = $derived(this.questions.map(problemOf));
+  problems = $derived(this.questions.map((q) => problemOf(q, this.words)));
   formReady = $derived(this.questions.length > 0 && this.problems.every((p) => p === null));
   baseline = $state("");
   dirty = $derived(JSON.stringify(this.settings) !== this.baseline);
@@ -162,7 +169,7 @@ export class FormDraft {
 
   previewForm = $derived.by<OpenedPortal>(() => ({
     id: "preview",
-    title: this.settings.title || "Your form's name",
+    title: this.settings.title || this.words.previewName,
     publicKey: new Uint8Array(),
     linkKey: new Uint8Array(),
     accessToken: null,
@@ -180,8 +187,8 @@ export class FormDraft {
     kind: "form",
     questions: (this.settings.questions ?? []).map((q) => ({
       ...q,
-      label: q.label || "Untitled question",
-      ...(hasOptions(q.type) && !q.options?.length ? { options: ["Option 1"] } : {}),
+      label: q.label || this.words.untitledQuestion,
+      ...(hasOptions(q.type) && !q.options?.length ? { options: [this.words.option1] } : {}),
     })),
   }));
 
@@ -248,7 +255,8 @@ export class FormDraft {
     try {
       this.logo = await prepareLogo(file);
     } catch (err) {
-      this.logoError = err instanceof Error ? err.message : "That image could not be used.";
+      this.logoError =
+        err instanceof LogoError ? this.words.logoErrors[err.code] : err instanceof Error ? err.message : this.words.logoFailed;
     } finally {
       this.logoBusy = false;
     }
@@ -261,7 +269,7 @@ export class FormDraft {
     if (!this.canSave) return;
     this.triedSave = true;
     if (this.settings.title.length === 0) {
-      this.saveError = "Give the form a name first.";
+      this.saveError = this.words.needsName;
       return { firstProblem: "start" };
     }
     this.saveError = null;
@@ -278,7 +286,7 @@ export class FormDraft {
       this.triedSave = false;
     } catch (err) {
       this.leaving = false;
-      this.saveError = err instanceof Error ? err.message : "Couldn't save. Try again.";
+      this.saveError = err instanceof Error ? err.message : this.words.saveFailed;
     } finally {
       this.isSaving = false;
     }

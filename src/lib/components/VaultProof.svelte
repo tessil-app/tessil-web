@@ -13,6 +13,10 @@
   } from "$lib/vault/client";
   import { passkeyUnlockPossible } from "$lib/vault/passkeyUnlock";
   import { onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { settingsMessages } from "$lib/i18n/messages/settings";
+
+  const t = $derived(settingsMessages[appLocale()].proof);
 
   type Kind = VaultAccess["kind"];
 
@@ -32,19 +36,13 @@
     allow = ["password", "phrase", "passkey"],
     idPrefix,
     disabled = false,
-    passwordLabel = "Vault password",
+    passwordLabel,
   }: Props = $props();
 
   let available = $state<Kind[]>([]);
   let kind = $state<Kind | null>(null);
   let password = $state("");
   let phrase = $state("");
-
-  const LABELS: Record<Kind, string> = {
-    password: "your vault password",
-    phrase: "your recovery phrase",
-    passkey: "a passkey",
-  };
 
   onMount(async () => {
     const [hasPassword, passkeys] = await Promise.all([
@@ -76,7 +74,7 @@
 {#if kind === "password"}
   <PasswordInput
     id="{idPrefix}-password"
-    label={passwordLabel}
+    label={passwordLabel ?? t.vaultPassword}
     autocomplete="current-password"
     required
     bind:value={password}
@@ -85,15 +83,15 @@
 {:else if kind === "phrase"}
   <Textarea
     id="{idPrefix}-phrase"
-    label="Recovery phrase"
-    placeholder="word word word …"
+    label={t.phrase}
+    placeholder={t.phrasePlaceholder}
     rows={3}
     bind:value={phrase}
     {disabled}
   />
 {:else if kind === "passkey"}
   <p class="text-sm text-muted-foreground">
-    You'll confirm with your passkey when you continue.
+    {t.passkeyNote}
   </p>
 {/if}
 
@@ -105,7 +103,7 @@
         onclick={() => (kind = other)}
         {disabled}
       >
-        Use {LABELS[other]} instead
+        {t.useInstead[other]}
       </TextLink>
     {/each}
   </p>

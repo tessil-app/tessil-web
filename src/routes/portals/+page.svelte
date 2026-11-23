@@ -12,8 +12,16 @@
   import { encryptFileStream } from "$lib/crypto/streaming";
   import { depositReference } from "$lib/portal/receipt";
   import { auth } from "$lib/stores/auth.svelte";
+  import { page } from "$app/state";
+  import { localeFromPath } from "$lib/i18n/locale";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { portalsMessages } from "$lib/i18n/messages/portals";
   import { formatSize } from "$lib/utils";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
+
+  const locale = $derived(localeFromPath(page.url.pathname));
+  const t = $derived(portalsMessages[locale]);
+  const href = (canonical: string) => hrefFor(canonical, locale);
 
   // Files on their way in: where each starts (in % of the stage), how it
   // is turned, and when it sets off.
@@ -26,22 +34,6 @@
     { label: "MOV", x: 10, y: 50, r: -24, d: 3.5 },
     { label: "XLS", x: -40, y: 46, r: 30, d: 4.2 },
     { label: "TXT", x: 36, y: -8, r: -6, d: 4.9 },
-  ];
-
-  // What happens, in the order it happens.
-  const sequence = [
-    {
-      title: "You hand out one link",
-      text: "With a list of what you need, if you like. The link holds the key that lets a browser encrypt for you, and it never reaches us.",
-    },
-    {
-      title: "They send, without an account",
-      text: "They open the link, pick their files and press send. They see what is still missing, and get a confirmation with a reference.",
-    },
-    {
-      title: "It arrives for you alone",
-      text: "You open it with the key in your vault. After 30 days, or 90 on Max, it is gone automatically, so download what you want to keep.",
-    },
   ];
 
   // ─── a file of the visitor's own, through the portal ──────────────────────
@@ -98,52 +90,14 @@
   }
 
   function sample() {
-    void take(new File(["Signed on 14 November 2026.\n".repeat(400)], "contract-signed.pdf", { type: "application/pdf" }));
+    void take(new File([t.demo.sampleText.repeat(400)], t.demo.sampleName, { type: "application/pdf" }));
   }
 
-  // What a portal's owner can switch on. `max` marks what only that plan has.
-  const options: { name: string; about: string; max?: boolean }[] = [
-    {
-      name: "A welcome and a thank-you",
-      about: "A few lines above the upload box, and a note after sending that says what happens next.",
-    },
-    {
-      name: "A field of your own",
-      about: "Ask for a name, a client number or an order reference. You see it with everything that person sends.",
-    },
-    {
-      name: "A closing date",
-      about: "The page says until when, and the portal closes by itself when the day ends.",
-    },
-    {
-      name: "An email when files arrive",
-      about: "One per portal per hour at most. It can't say what came in, because we can't read that.",
-    },
-    {
-      name: "Your logo",
-      about: "Above the name, so the page looks like yours and not like ours.",
-      max: true,
-    },
-    {
-      name: "Files going back",
-      about: "Put a form, a quote or a finished report on the portal for the other side to download.",
-      max: true,
-    },
-    {
-      name: "A password",
-      about: "The page shows nothing until it is entered. Change it whenever you like; the link stays.",
-      max: true,
-    },
-    {
-      name: "Duplicate",
-      about: "Set one up the way you like it, then make the next one from it with a new link.",
-    },
-  ];
 </script>
 
 <Seo
-  title="Portals - Tessil"
-  description="A link where people send you files that only you can open. Encrypted in their browser, deleted automatically after 30 days, or 90 on the larger plan, no account needed to send."
+  title={t.title}
+  description={t.description}
   path="/portals"
 />
 
@@ -154,29 +108,29 @@
 <div class="hero -mt-16" data-header-tone="dark">
   <div class="mx-auto flex min-h-[100svh] max-w-6xl flex-col items-center justify-center gap-4 px-4 sm:px-6 pt-24 pb-10 text-center sm:gap-5">
     <h1 class="text-6xl font-semibold leading-none text-white sm:text-7xl lg:text-8xl" style="letter-spacing: -0.045em">
-      Portals.
+      {t.heading}
     </h1>
     <p class="max-w-md text-base text-white/70 sm:text-lg">
-      Hand out one link. Files find their way to you, and nobody else.
+      {t.sub}
     </p>
 
     <div class="grid w-full items-center gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
       <!-- Our side of what went in. -->
       <div class="side order-2 lg:order-1 lg:text-right" class:shown={passed !== null} aria-live="polite">
         {#if passed}
-          <p class="text-sm font-medium text-white">What we would hold</p>
+          <p class="text-sm font-medium text-white">{t.demo.weHold}</p>
           <dl class="mt-3 space-y-2.5 text-sm">
             <div>
-              <dt class="text-white/50">Its name</dt>
+              <dt class="text-white/50">{t.demo.itsName}</dt>
               <dd class="sealed truncate">{passed.sealedName}</dd>
             </div>
             <div>
-              <dt class="text-white/50">What is in it</dt>
+              <dt class="text-white/50">{t.demo.whatIsIn}</dt>
               <dd class="sealed line-clamp-3">{passed.hex}</dd>
             </div>
             <div>
-              <dt class="text-white/50">Its size and when it came, which we can read</dt>
-              <dd class="text-white/85">{passed.size}, just now</dd>
+              <dt class="text-white/50">{t.demo.whatWeRead}</dt>
+              <dd class="text-white/85">{t.demo.sizeJustNow(passed.size)}</dd>
             </div>
           </dl>
         {/if}
@@ -197,7 +151,7 @@
           class="stage"
           class:open={hovering}
           class:busy={falling !== null}
-          aria-label="Drop a file into the portal, or press to choose one. Nothing is uploaded."
+          aria-label={t.demo.stageLabel}
           onclick={() => picker?.click()}
           ondragenter={() => (hovering = true)}
           ondragleave={(e) => {
@@ -227,28 +181,28 @@
       <!-- The owner's side of the same file. -->
       <div class="side order-3 lg:text-left" class:shown={passed !== null} aria-live="polite">
         {#if passed}
-          <p class="text-sm font-medium text-white">What you would get</p>
+          <p class="text-sm font-medium text-white">{t.demo.youGet}</p>
           <div class="mt-3 space-y-2 rounded-xl border border-white/15 bg-white/5 p-4 text-left text-sm">
             <p class="flex items-baseline justify-between gap-3">
               <span class="font-mono text-white">{passed.reference}</span>
-              <span class="text-white/50">just now</span>
+              <span class="text-white/50">{t.demo.justNow}</span>
             </p>
             <p class="truncate text-white/85">{passed.name}</p>
-            <p class="text-white/50">{passed.size}, deleted after 30 days, or 90 on Max</p>
+            <p class="text-white/50">{t.demo.kept(passed.size)}</p>
           </div>
-          <p class="mt-2 text-sm text-white/50">Opened with the key in your vault, which we never have.</p>
+          <p class="mt-2 text-sm text-white/50">{t.demo.vault}</p>
         {/if}
       </div>
     </div>
 
     <p class="text-sm text-white/60">
       {#if passed}
-        That was your file, encrypted in this page. Nothing was uploaded.
+        {t.demo.done}
       {:else}
-        Drop a file into it. Nothing leaves this page.
+        {t.demo.prompt}
       {/if}
       <button type="button" class="text-white underline underline-offset-4 hover:cursor-pointer" onclick={sample}>
-        {passed ? "Send another" : "Or use a sample"}
+        {passed ? t.demo.another : t.demo.sample}
       </button>
     </p>
   </div>
@@ -257,12 +211,12 @@
 <div class="bg-background">
   <section class="mx-auto max-w-6xl px-4 sm:px-6 py-24 sm:py-32">
     <p class="text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl sm:leading-[1.1]">
-      Until now you could send files without us seeing them.
-      <span class="text-muted-foreground">Now people can send files to you the same way.</span>
+      {t.before}
+      <span class="text-muted-foreground">{t.beforeAfter}</span>
     </p>
 
     <ol class="mt-16 grid gap-10 md:grid-cols-3">
-      {#each sequence as step, i (step.title)}
+      {#each t.sequence as step, i (step.title)}
         <li class="space-y-3 border-t border-border pt-5">
           <p class="text-sm font-medium tabular-nums text-primary">{i + 1}</p>
           <h2 class="text-xl font-semibold tracking-tight text-foreground">{step.title}</h2>
@@ -276,18 +230,16 @@
 <div class="hero" data-header-tone="dark">
   <section class="mx-auto max-w-6xl px-4 sm:px-6 py-24 text-center sm:py-32">
     <h2 class="text-4xl font-semibold leading-none text-white sm:text-7xl" style="letter-spacing: -0.035em">
-      We see nothing. Still.
+      {t.seeNothing}
     </h2>
     <p class="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-white/70">
-      Files are encrypted in the sender's browser, with a key that only your browser can
-      unlock. It lives in your vault, not on our servers. We cannot read the files, their
-      names, the notes people add, what you ask for, or even what you called the portal.
+      {t.seeNothingBody}
     </p>
     <p class="mt-6 text-sm text-white/60">
-      Don't take our word for it.
-      <a href="/security#portals" class="text-white underline underline-offset-4">Read how it works</a>
-      or
-      <a href="/verify" class="text-white underline underline-offset-4">check it yourself</a>.
+      {t.takeWord}
+      <a href="{href('/security')}#portals" class="text-white underline underline-offset-4">{t.readHow}</a>
+      {t.or}
+      <a href={href("/verify")} class="text-white underline underline-offset-4">{t.checkYourself}</a>.
     </p>
   </section>
 </div>
@@ -296,15 +248,13 @@
   <section class="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 py-24 sm:py-32 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-center">
     <div class="space-y-5">
       <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-        Ask once.<br />Watch it arrive.
+        {t.askOnce}<br />{t.watchArrive}
       </h2>
       <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
-        Add a short list of what you need. Everyone who opens your link sees it, ticks things
-        off as they add files, and gets a confirmation with a reference. You get the same
-        reference on your side.
+        {t.askBody}
       </p>
       <ul class="space-y-2.5 text-foreground">
-        {#each ["A confirmation for them, a record for you", "Search across everything that came in", "Share a portal with one colleague", "Switch a link off whenever you like"] as point (point)}
+        {#each t.askPoints as point (point)}
           <li class="flex items-center gap-2.5">
             <IconCheckRegular class="size-4 shrink-0 text-primary" />
             {point}
@@ -315,13 +265,13 @@
 
     <!-- What the sender sees. An illustration, not a control. -->
     <div aria-hidden="true" class="space-y-3.5 rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <p class="text-xs text-muted-foreground">Send files to</p>
+      <p class="text-xs text-muted-foreground">{t.mock.sendTo}</p>
       <p class="text-xl font-semibold tracking-tight text-foreground">Studio North</p>
       <div class="flex justify-between border-t border-border pt-3.5 text-xs text-muted-foreground">
-        <span>What is needed</span>
-        <span>2 of 3 added</span>
+        <span>{t.mock.needed}</span>
+        <span>{t.mock.progress}</span>
       </div>
-      {#each [{ label: "Signed contract", file: "contract-signed.pdf" }, { label: "Logo files", file: "logo.zip" }] as row (row.label)}
+      {#each [{ label: t.mock.contract, file: t.demo.sampleName }, { label: t.mock.logos, file: "logo.zip" }] as row (row.label)}
         <div class="flex items-center gap-2.5 rounded-md border border-border px-3.5 py-2.5 text-sm">
           <IconCheckRegular class="size-4 shrink-0 text-success-foreground" />
           <span class="flex-1 text-foreground">{row.label}</span>
@@ -330,11 +280,11 @@
       {/each}
       <div class="flex items-center gap-2.5 rounded-md border border-dashed border-border px-3.5 py-2.5 text-sm text-muted-foreground">
         <span class="size-4 shrink-0 rounded-full border border-dashed border-warning"></span>
-        <span class="flex-1">Invoice details</span>
-        <span class="text-xs font-medium text-foreground">Choose file</span>
+        <span class="flex-1">{t.mock.invoice}</span>
+        <span class="text-xs font-medium text-foreground">{t.mock.choose}</span>
       </div>
       <div class="rounded-md bg-primary py-2.5 text-center text-sm font-medium text-primary-foreground">
-        Send 2 files
+        {t.mock.send}
       </div>
     </div>
   </section>
@@ -343,15 +293,14 @@
     <div class="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
       <div class="max-w-2xl space-y-5">
         <h2 class="text-3xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-          Make it yours.
+          {t.yours}
         </h2>
         <p class="text-lg leading-relaxed text-muted-foreground">
-          Every portal has its own switches. Turn on what this one needs, watch the page
-          change beside you as you do, and change your mind later. The link stays the same.
+          {t.yoursBody}
         </p>
       </div>
       <ul class="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {#each options as option (option.name)}
+        {#each t.options as option (option.name)}
           <li class="space-y-2 bg-card p-6">
             <p class="flex items-center gap-2 font-medium text-foreground">
               {option.name}
@@ -364,8 +313,7 @@
         {/each}
       </ul>
       <p class="mt-6 text-sm text-muted-foreground">
-        Your texts, your logo and what you send back are encrypted like everything else. We
-        can't read them.
+        {t.optionsNote}
       </p>
     </div>
   </section>
@@ -373,23 +321,22 @@
   <section class="border-t border-border">
     <div class="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-24 text-center sm:py-32">
       <h2 class="text-4xl font-semibold leading-none tracking-tight text-foreground sm:text-6xl">
-        Open one.
+        {t.open}
       </h2>
       <p class="max-w-lg text-lg text-muted-foreground">
-        Portals are part of the paid plans. You set them up in your account, and it takes
-        about as long as reading this sentence twice.
+        {t.openBody}
       </p>
       <div class="flex flex-wrap items-center justify-center gap-3">
         {#if auth.user}
-          <Button href="/dashboard/portals" fullWidth={false}>Open your portals</Button>
+          <Button href="/dashboard/portals" fullWidth={false}>{t.yourPortals}</Button>
         {:else}
-          <Button href="/pricing" fullWidth={false}>See the plans</Button>
-          <Button href="/login" variant="secondary" fullWidth={false}>Sign in</Button>
+          <Button href={href("/pricing")} fullWidth={false}>{t.plans}</Button>
+          <Button href="/login" variant="secondary" fullWidth={false}>{t.signIn}</Button>
         {/if}
       </div>
       <p class="text-sm text-muted-foreground">
-        Sending files stays free, with or without an account.
-        <TextLink href="/">Send something</TextLink>
+        {t.free}
+        <TextLink href={href("/")}>{t.sendSomething}</TextLink>
       </p>
     </div>
   </section>

@@ -13,6 +13,8 @@
   import { coverageOf, type OpenedDeposit } from "$lib/portal/deposits";
   import type { ChecklistItem } from "$lib/portal/keys";
   import { formatSize } from "$lib/utils";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
 
   export type DepositFileState = {
     status: "idle" | "downloading" | "complete" | "error";
@@ -52,18 +54,13 @@
     deposit ? deposit.files.filter((f) => !checklist.some((i) => i.id === f.itemId)) : [],
   );
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const dayFmt = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const locale = $derived(appLocale());
+  const t = $derived(portalsAppMessages[locale].deposit);
+  const tag = $derived(locale === "nl" ? "nl-NL" : undefined);
+  const dateFmt = $derived(
+    new Intl.DateTimeFormat(tag, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+  );
+  const dayFmt = $derived(new Intl.DateTimeFormat(tag, { year: "numeric", month: "short", day: "numeric" }));
 </script>
 
 {#snippet fileRow(file: OpenedDeposit["files"][number])}
@@ -84,7 +81,7 @@
   {#snippet header()}
     {#if deposit}
       <div class="space-y-1">
-        <p class="text-xs text-muted-foreground">Delivery</p>
+        <p class="text-xs text-muted-foreground">{t.delivery}</p>
         <h2 class="font-semibold text-base leading-snug text-foreground font-mono">
           {deposit.reference}
         </h2>
@@ -97,30 +94,29 @@
       <DrawerSection>
         <DetailList>
           {#if deposit.answer}
-            <DetailItem label={deposit.answer.label || "From"}>{deposit.answer.value}</DetailItem>
+            <DetailItem label={deposit.answer.label || t.from}>{deposit.answer.value}</DetailItem>
           {/if}
-          <DetailItem label="Received">{dateFmt.format(new Date(deposit.createdAt))}</DetailItem>
-          <DetailItem label="Deleted on">{dayFmt.format(new Date(deposit.expiresAt))}</DetailItem>
-          <DetailItem label="Size">
-            {deposit.files.length}
-            {deposit.files.length === 1 ? "file" : "files"}, {formatSize(deposit.totalBytes)}
+          <DetailItem label={t.received}>{dateFmt.format(new Date(deposit.createdAt))}</DetailItem>
+          <DetailItem label={t.deletedOn}>{dayFmt.format(new Date(deposit.expiresAt))}</DetailItem>
+          <DetailItem label={t.size}>
+            {t.files(deposit.files.length, formatSize(deposit.totalBytes))}
           </DetailItem>
         </DetailList>
       </DrawerSection>
 
       {#if deposit.note}
-        <DrawerSection title="Note from the sender">
+        <DrawerSection title={t.note}>
           <p class="text-sm text-foreground whitespace-pre-wrap break-words">{deposit.note}</p>
         </DrawerSection>
       {/if}
 
       {#if checklist.length > 0}
-        <DrawerSection title="What you asked for">
+        <DrawerSection title={t.askedFor}>
           {#snippet aside()}
             <Badge tone={coverage.missing.length === 0 ? "success" : "warning"}>
               {coverage.missing.length === 0
-                ? "Complete"
-                : `${coverage.provided.length} of ${checklist.length}`}
+                ? t.complete
+                : t.of(coverage.provided.length, checklist.length)}
             </Badge>
           {/snippet}
           <ul class="space-y-4">
@@ -129,7 +125,7 @@
               <li class="space-y-2">
                 <p class="text-sm text-foreground break-words">{item.label}</p>
                 {#if files.length === 0}
-                  <p class="text-sm text-warning-foreground">Not included</p>
+                  <p class="text-sm text-warning-foreground">{t.notIncluded}</p>
                 {:else}
                   <ul class="space-y-2">
                     {#each files as file (file.id)}
@@ -144,7 +140,7 @@
       {/if}
 
       {#if extras.length > 0}
-        <DrawerSection title={checklist.length > 0 ? "Also sent" : "Files"}>
+        <DrawerSection title={checklist.length > 0 ? t.alsoSent : t.filesTitle}>
           <ul class="space-y-2">
             {#each extras as file (file.id)}
               <li>{@render fileRow(file)}</li>
@@ -154,10 +150,10 @@
       {/if}
 
       <DrawerSection
-        title="Keep a record"
-        description="A text file with the reference, the note, the file names and the deletion date. The sender has the same reference on their confirmation."
+        title={t.recordTitle}
+        description={t.recordBody}
       >
-        <Button variant="secondary" fullWidth={false} onclick={onSaveRecord}>Save record</Button>
+        <Button variant="secondary" fullWidth={false} onclick={onSaveRecord}>{t.saveRecord}</Button>
       </DrawerSection>
     </div>
   {/if}
@@ -165,14 +161,14 @@
   {#snippet footer()}
     {#if deposit}
       <Button type="button" variant="destructive" fullWidth={false} onclick={onDelete}>
-        Delete
+        {t.delete}
       </Button>
       <Button type="button" fullWidth={false} onclick={onDownloadAll} disabled={busy}>
         {busy
-          ? "Downloading…"
+          ? t.downloading
           : deposit.files.length > 1
-            ? `Download all ${deposit.files.length}`
-            : "Download"}
+            ? t.downloadAll(deposit.files.length)
+            : t.download}
       </Button>
     {/if}
   {/snippet}

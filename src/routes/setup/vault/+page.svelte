@@ -23,7 +23,6 @@
   import {
     evaluatePassword,
     MIN_PASSWORD_LENGTH,
-    scoreLabel,
     type PasswordStrength,
   } from "$lib/vault/strength";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
@@ -31,6 +30,11 @@
   import IconDownloadSimpleRegular from "phosphor-icons-svelte/IconDownloadSimpleRegular.svelte";
   import IconEyeRegular from "phosphor-icons-svelte/IconEyeRegular.svelte";
   import IconEyeSlashRegular from "phosphor-icons-svelte/IconEyeSlashRegular.svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { vaultMessages } from "$lib/i18n/messages/vault";
+
+  const m = $derived(vaultMessages[appLocale()]);
+  const t = $derived(m.setup);
 
   // "method" is only shown where a passkey can protect the vault: then the
   // user picks passkey or password. Elsewhere setup starts at "password".
@@ -65,8 +69,8 @@
       if (!result.ok) {
         passkeyError =
           result.reason === "cancelled"
-            ? "The passkey prompt was dismissed. Try again, or use a password."
-            : "This passkey can't protect a vault. Use a password instead; you can still sign in with the passkey.";
+            ? t.dismissed
+            : t.cannotProtect;
         return;
       }
       prepared = result.prepared;
@@ -76,10 +80,10 @@
     } catch (err) {
       passkeyError =
         err instanceof PasskeyError && err.kind === "cancelled"
-          ? "The passkey prompt was dismissed. Try again, or use a password."
+          ? t.dismissed
           : err instanceof Error
             ? err.message
-            : "Couldn't use a passkey here. Use a password instead.";
+            : t.passkeyFailed;
     } finally {
       isStartingPasskey = false;
     }
@@ -158,7 +162,7 @@
       step = "phrase";
     } catch (err) {
       setupError =
-        err instanceof Error ? err.message : "Couldn't set up the vault. Try again.";
+        err instanceof Error ? err.message : t.setupFailedBody;
     } finally {
       isSubmittingSetup = false;
     }
@@ -177,12 +181,7 @@
 
   function downloadPhrase() {
     if (!recoveryPhrase) return;
-    const body =
-      "Tessil recovery phrase\n" +
-      "Keep this somewhere safe. If you forget your vault password, this\n" +
-      "is the only way to recover access to your files.\n\n" +
-      recoveryPhrase +
-      "\n";
+    const body = m.phrase.file(recoveryPhrase);
     const blob = new Blob([body], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -203,7 +202,7 @@
       goto("/dashboard", { replaceState: true });
     } catch (err) {
       finishError =
-        err instanceof Error ? err.message : "Couldn't save the vault. Try again.";
+        err instanceof Error ? err.message : t.saveFailed;
     } finally {
       isFinishing = false;
     }
@@ -222,18 +221,18 @@
   const strengthBarWidth = $derived(`${((strength.score + 1) / 5) * 100}%`);
 </script>
 
-<Seo title="Set up your vault - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout>
   <PageHeader
-    title={step === "phrase" ? "Save your recovery phrase" : "Set up your vault"}
+    title={step === "phrase" ? t.phraseTitle : t.title}
     tagline={step === "phrase"
       ? usedPasskey
-        ? "Write these 12 words down somewhere safe. They're the only way back in if you lose your passkey."
-        : "Write these 12 words down somewhere safe. They're the only way back in if you forget your password."
+        ? t.taglinePhrasePasskey
+        : t.taglinePhrasePassword
       : step === "password"
-        ? "Pick a long password you'll remember: we can't reset it."
-        : "A vault keeps the names and links of what you send, encrypted so only you can read them."}
+        ? t.taglinePassword
+        : t.taglineMethod}
   />
 
   <Frame.Root>
@@ -248,15 +247,14 @@
             <Button onclick={startWithPasskey} disabled={isStartingPasskey}>
               {#if isStartingPasskey}
                 <Spinner aria-hidden="true" />
-                Waiting for your passkey…
+                {t.waitingPasskey}
               {:else}
                 <IconFingerprintRegular class="size-4" />
-                Protect it with a passkey
+                {t.withPasskey}
               {/if}
             </Button>
             <p class="text-xs text-muted-foreground text-center">
-              Your fingerprint, face or device PIN opens the vault. No password to remember.
-              You may be asked twice: once to create the passkey, once to use it.
+              {t.passkeyNote}
             </p>
           </div>
 
@@ -266,21 +264,21 @@
 
           <div class="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
             <span class="h-px flex-1 bg-border"></span>
-            or
+            {t.or}
             <span class="h-px flex-1 bg-border"></span>
           </div>
 
           <Button variant="secondary" onclick={() => (step = "password")} disabled={isStartingPasskey}>
-            Use a password instead
+            {t.usePassword}
           </Button>
 
           <p class="text-center text-xs text-muted-foreground">
             <TextLink
               href="/dashboard"
             >
-              Not now
+              {t.notNow}
             </TextLink>
-            · you can send without a vault and set one up later.
+            · {t.later}
           </p>
         </div>
       {:else if step === "password"}
@@ -288,7 +286,7 @@
           <div class="space-y-2">
             <PasswordInput
               id="vault-password"
-              label="Vault password"
+              label={t.vaultPassword}
               autocomplete="new-password"
               required
               bind:value={password}
@@ -304,19 +302,19 @@
               <div class="flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   {#if password.length === 0}
-                    At least {MIN_PASSWORD_LENGTH} characters, and not easy to guess
+                    {m.strength.hint(MIN_PASSWORD_LENGTH)}
                   {:else if isEvaluating}
-                    Checking…
+                    {m.strength.checking}
                   {:else}
-                    {scoreLabel(strength.score)}
+                    {m.strength.scores[strength.score]}
                     {#if password.length < MIN_PASSWORD_LENGTH}
-                      · {MIN_PASSWORD_LENGTH - password.length} more character{MIN_PASSWORD_LENGTH - password.length === 1 ? "" : "s"}
+                      · {m.strength.more(MIN_PASSWORD_LENGTH - password.length)}
                     {/if}
                   {/if}
                 </span>
                 {#if strength.acceptable}
                   <span class="inline-flex items-center gap-1 text-success-foreground">
-                    <IconCheckRegular class="size-3.5" /> OK
+                    <IconCheckRegular class="size-3.5" /> {m.strength.ok}
                   </span>
                 {/if}
               </div>
@@ -328,65 +326,58 @@
 
           <PasswordInput
             id="vault-password-confirm"
-            label="Confirm password"
+            label={t.confirmPassword}
             autocomplete="new-password"
             required
             bind:value={passwordConfirm}
             disabled={isSubmittingSetup}
             error={passwordConfirm.length > 0 && !passwordMatches
-              ? "Passwords don't match yet."
+              ? m.strength.noMatch
               : undefined}
           />
 
           {#if setupError}
-            <Alert tone="destructive" title="Setup failed">{setupError}</Alert>
+            <Alert tone="destructive" title={t.setupFailed}>{setupError}</Alert>
           {/if}
 
           <div class="rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground space-y-1">
-            <p class="font-medium text-foreground">Pick wisely - there's no reset link.</p>
-            <p>
-              Your password never leaves this browser. We can't email you a
-              reset because we never see it. If you forget it, the recovery
-              phrase on the next screen is your only way back in.
-            </p>
+            <p class="font-medium text-foreground">{t.noResetTitle}</p>
+            <p>{t.noResetBody}</p>
           </div>
 
           <Button type="submit" disabled={!canSubmitPassword}>
             {#if isSubmittingSetup}
               <Spinner aria-hidden="true" />
-              Setting up your vault…
+              {t.settingUp}
             {:else}
-              Continue
+              {t.continue}
             {/if}
           </Button>
           <p class="text-center text-xs text-muted-foreground">
             <TextLink
               href="/dashboard"
             >
-              Not now
+              {t.notNow}
             </TextLink>
-            · you can send without a vault and set one up later.
+            · {t.later}
           </p>
         </form>
       {:else if recoveryPhrase}
         <div class="space-y-5">
-          <Alert tone="warning" title="Save this phrase before continuing">
-            We won't show it again. Anyone with these 12 words can unlock your
-            vault - keep them somewhere only you can reach.
-          </Alert>
+          <Alert tone="warning" title={t.saveTitle}>{t.saveBody}</Alert>
 
           <div class="rounded-md border border-border bg-muted/30 p-4 relative">
             {#if !phraseRevealed}
               <div class="flex items-center justify-between">
                 <p class="text-sm text-muted-foreground">
-                  Phrase is hidden. Reveal it when you're ready to write it down.
+                  {m.phrase.hidden}
                 </p>
                 <Button
                   variant="secondary"
                   fullWidth={false}
                   onclick={() => (phraseRevealed = true)}
                 >
-                  <IconEyeRegular class="size-4" /> Reveal
+                  <IconEyeRegular class="size-4" /> {m.phrase.reveal}
                 </Button>
               </div>
             {:else}
@@ -403,31 +394,31 @@
               <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
                 <Button variant="secondary" fullWidth={false} onclick={copyPhrase}>
                   {#if phraseCopied}
-                    <IconCheckRegular class="size-4" /> Copied
+                    <IconCheckRegular class="size-4" /> {m.phrase.copied}
                   {:else}
-                    <IconCopyRegular class="size-4" /> Copy
+                    <IconCopyRegular class="size-4" /> {m.phrase.copy}
                   {/if}
                 </Button>
                 <Button variant="secondary" fullWidth={false} onclick={downloadPhrase}>
-                  <IconDownloadSimpleRegular class="size-4" /> Download .txt
+                  <IconDownloadSimpleRegular class="size-4" /> {m.phrase.download}
                 </Button>
                 <Button
                   variant="ghost"
                   fullWidth={false}
                   onclick={() => (phraseRevealed = false)}
                 >
-                  <IconEyeSlashRegular class="size-4" /> Hide
+                  <IconEyeSlashRegular class="size-4" /> {m.phrase.hide}
                 </Button>
               </div>
             {/if}
           </div>
 
           <Button onclick={() => (confirmOpen = true)} disabled={!phraseRevealed}>
-            I've saved my recovery phrase
+            {t.saved}
           </Button>
           {#if !phraseRevealed}
             <p class="text-xs text-muted-foreground text-center">
-              Reveal the phrase first - we need you to look at it before you continue.
+              {t.revealFirst}
             </p>
           {/if}
         </div>
@@ -438,8 +429,8 @@
 
 <Modal
   open={confirmOpen}
-  title="Have you saved your recovery phrase?"
-  description="We won't show it again. Without it, a forgotten password means losing access to every file in your vault."
+  title={t.modalTitle}
+  description={t.modalBody}
   dismissible={!isFinishing}
   onClose={() => {
     confirmOpen = false;
@@ -453,8 +444,7 @@
       class="mt-0.5 size-4 rounded border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     />
     <span class="text-sm text-foreground leading-relaxed">
-      I've written down or stored my 12-word recovery phrase somewhere I can
-      get back to. I understand Tessil can't recover it for me.
+      {t.modalCheck}
     </span>
   </label>
 
@@ -474,14 +464,14 @@
         confirmChecked = false;
       }}
     >
-      Not yet
+      {m.phrase.notYet}
     </Button>
     <Button fullWidth={false} disabled={!confirmChecked || isFinishing} onclick={finishSetup}>
       {#if isFinishing}
         <Spinner aria-hidden="true" />
-        Saving…
+        {t.saving}
       {:else}
-        Continue to your transfers
+        {t.toTransfers}
       {/if}
     </Button>
   {/snippet}

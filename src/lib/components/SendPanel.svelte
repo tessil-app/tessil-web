@@ -45,6 +45,8 @@
   import IconUploadRegular from "phosphor-icons-svelte/IconUploadRegular.svelte";
   import IconWarningRegular from "phosphor-icons-svelte/IconWarningRegular.svelte";
   import { fade } from "svelte/transition";
+  import type { Locale } from "$lib/i18n/locale";
+  import { sendMessages } from "$lib/i18n/messages/send";
 
   interface Props {
     /** Where "Sign in" comes back to when a limit asks for an account. */
@@ -56,9 +58,12 @@
      * "page": files on the left, the link's settings on the right, for a page of its own.
      */
     layout?: "panel" | "page";
+    /** The language to show; the page decides, from its address or the account. */
+    locale?: Locale;
   }
 
-  let { returnTo = "/", emptyClass = "panel-empty", layout = "panel" }: Props = $props();
+  let { returnTo = "/", emptyClass = "panel-empty", layout = "panel", locale = "en" }: Props = $props();
+  const t = $derived(sendMessages[locale]);
 
   const MIN_PASSWORD_LENGTH = 8;
   const MAX_FILENAME_BYTES = 255;
@@ -67,22 +72,22 @@
   const EXPIRES_OPTIONS = $derived.by(() => {
     // Mirrors allowedExpiryHours per tier in the API.
     const base = [
-      { value: 1, label: "1h" },
-      { value: 6, label: "6h" },
-      { value: 12, label: "12h" },
-      { value: 24, label: "1d" },
-      { value: 72, label: "3d" },
+      { value: 1, label: t.hours(1) },
+      { value: 6, label: t.hours(6) },
+      { value: 12, label: t.hours(12) },
+      { value: 24, label: t.days(1) },
+      { value: 72, label: t.days(3) },
     ];
     if (!auth.user) return base;
-    const free = [...base, { value: 168, label: "7d" }];
+    const free = [...base, { value: 168, label: t.days(7) }];
     if (auth.user.tier !== "pro" && auth.user.tier !== "max") return free;
     const pro = [
       ...free,
-      { value: 336, label: "14d" },
-      { value: 720, label: "30d" },
+      { value: 336, label: t.days(14) },
+      { value: 720, label: t.days(30) },
     ];
     // Mirrors MAX_EXPIRY_HOURS in the API's tiers.
-    return auth.user.tier === "max" ? [...pro, { value: 1440, label: "60d" }, { value: 2160, label: "90d" }] : pro;
+    return auth.user.tier === "max" ? [...pro, { value: 1440, label: t.days(60) }, { value: 2160, label: t.days(90) }] : pro;
   });
 
   $effect(() => {
@@ -92,13 +97,13 @@
     }
   });
 
-  const DOWNLOADS_OPTIONS: { value: number | null; label: string }[] = [
-    { value: null, label: "Unlimited" },
+  const DOWNLOADS_OPTIONS: { value: number | null; label: string }[] = $derived([
+    { value: null, label: t.unlimited },
     { value: 1, label: "1" },
     { value: 5, label: "5" },
     { value: 10, label: "10" },
     { value: 25, label: "25" },
-  ];
+  ]);
 
   let copied = $state(false);
   let uploadSpeed = $state<number | null>(null);
@@ -146,7 +151,7 @@
     );
     if (tooLong) {
       uploadStore.setError(
-        `"${tooLong.name}" has a filename that is too long (max ${MAX_FILENAME_BYTES} bytes).`,
+        t.nameTooLong(tooLong.name, MAX_FILENAME_BYTES),
       );
       return;
     }
@@ -161,7 +166,7 @@
     if (projectedTotal > MAX_TOTAL_UPLOAD_SIZE) {
       const remaining = MAX_TOTAL_UPLOAD_SIZE - currentTotal;
       uploadStore.setError(
-        `Not enough space. You have ${formatSize(remaining)} remaining.`,
+        t.notEnoughSpace(formatSize(remaining)),
       );
       return;
     }
@@ -218,17 +223,6 @@
     setTimeout(() => (copied = false), 2000);
   }
 
-  function formatExpiry(hours: number): string {
-    if (hours < 24) return `${hours}h`;
-    const days = hours / 24;
-    return `${days} day${days !== 1 ? "s" : ""}`;
-  }
-
-  function formatDownloads(max: number | null): string {
-    if (max === null) return "Unlimited downloads";
-    return `Max ${max} download${max !== 1 ? "s" : ""}`;
-  }
-
   // Turn raw upload failures into something a user should read. The API's 4xx
   // responses (tier limits, validation, auth) are already written for users, so
   // keep those; server (5xx) and direct-to-R2 transport errors get a generic line
@@ -241,7 +235,7 @@
       if (error.status === 0 || error.status >= 500) {
         return {
           message:
-            "Something went wrong on our end during the upload. Please try again in a moment.",
+            t.errorServer,
         };
       }
       return { message: error.message, upgradeUrl: error.upgradeUrl };
@@ -250,10 +244,10 @@
     if (/network|connection|lost|fetch|load failed/.test(raw)) {
       return {
         message:
-          "The connection dropped during the upload. Check your network and try again.",
+          t.errorConnection,
       };
     }
-    return { message: "The upload didn't finish. Please try again." };
+    return { message: t.errorUnfinished };
   }
 
   // A vault is never required to send. With one, the transfer's key is
@@ -299,12 +293,12 @@
       if (!result.ok) {
         unlockError =
           result.reason === "wrong_password"
-            ? "That password didn't unlock the vault."
+            ? t.wrongPassword
             : result.reason === "wrong_phrase"
-              ? "That recovery phrase doesn't match. Check spelling and word order."
+              ? t.wrongPhrase
               : result.reason === "not_setup"
-                ? "Vault isn't set up yet. Set one up from settings first."
-                : "We couldn't read your vault. Try again.";
+                ? t.noVault
+                : t.unreadableVault;
         return;
       }
       unlockOpen = false;
@@ -314,7 +308,7 @@
       pendingResume = null;
       resume?.("unlocked");
     } catch (err) {
-      unlockError = err instanceof Error ? err.message : "Couldn't unlock.";
+      unlockError = err instanceof Error ? err.message : t.unlockFailed;
     } finally {
       isUnlockingVault = false;
     }
@@ -456,7 +450,7 @@
                   i,
                   "error",
                   0,
-                  err instanceof Error ? err.message : "Upload failed",
+                  err instanceof Error ? err.message : t.uploadFailed,
                 );
               }
               throw err;
@@ -577,8 +571,8 @@
   const isSending = $derived(uploadStore.files.some((f) => f.status === "uploading"));
   const filesDone = $derived(uploadStore.files.filter((f) => f.status === "complete").length);
   const phaseLabel = $derived.by(() => {
-    if (uploadStore.status === "validating") return "Checking…";
-    return isSending ? "Uploading…" : "Encrypting…";
+    if (uploadStore.status === "validating") return t.checking;
+    return isSending ? t.uploading : t.encrypting;
   });
 
   const passwordTooShort = $derived(
@@ -663,10 +657,10 @@
         <IconUploadRegular class="size-7" />
       </span>
       <p class="text-3xl sm:text-5xl font-semibold tracking-tight text-foreground" style="letter-spacing: -0.03em">
-        Let go.
+        {t.letGo}
       </p>
       <p class="max-w-sm text-base text-muted-foreground">
-        It is encrypted here, in your browser, before any of it leaves.
+        {t.letGoBody}
       </p>
     </div>
   </div>
@@ -677,8 +671,8 @@
     <div class="space-y-1">
       <TextInput
         id="home-transfer-title"
-        label="Transfer name (optional)"
-        placeholder="e.g. Q3 designs"
+        label={t.titleLabel}
+        placeholder={t.titlePlaceholder}
         value={uploadStore.title}
         oninput={(e) =>
           uploadStore.setTitle(
@@ -688,20 +682,20 @@
       />
       {#if uploadStore.title.length > TITLE_MAX}
         <p class="text-xs text-warning-foreground">
-          {uploadStore.title.length} / {TITLE_MAX} - too long.
+          {t.titleTooLong(uploadStore.title.length, TITLE_MAX)}
         </p>
       {/if}
     </div>
 
     <SegmentedControl
-      label="Expires in"
+      label={t.expiresLabel}
       options={EXPIRES_OPTIONS}
       value={uploadStore.expiresInHours}
       onChange={(v) => uploadStore.setExpiresInHours(v)}
     />
 
     <SegmentedControl
-      label="Max downloads"
+      label={t.downloadsLabel}
       options={DOWNLOADS_OPTIONS}
       value={uploadStore.maxDownloads}
       onChange={(v) => uploadStore.setMaxDownloads(v)}
@@ -710,8 +704,8 @@
     <div class="space-y-1">
       <PasswordInput
         id="home-transfer-password"
-        label="Password (optional)"
-        placeholder="Add a password to protect the link"
+        label={t.passwordLabel}
+        placeholder={t.passwordPlaceholder}
         value={uploadStore.password}
         oninput={(e) =>
           uploadStore.setPassword(
@@ -720,7 +714,7 @@
       />
       {#if passwordTooShort}
         <p class="text-xs text-warning-foreground">
-          At least {MIN_PASSWORD_LENGTH} characters.
+          {t.passwordShort(MIN_PASSWORD_LENGTH)}
         </p>
       {/if}
     </div>
@@ -733,38 +727,38 @@
       <div>
         <h2 id="send-ready" class="flex items-center gap-2 text-base font-semibold text-foreground">
           <IconLockRegular class="size-4 text-primary" />
-          Share link ready
+          {t.ready}
         </h2>
-        <p class="mt-0.5 text-sm text-muted-foreground">It decrypts in the recipient's browser.</p>
+        <p class="mt-0.5 text-sm text-muted-foreground">{t.readyBodyPage}</p>
       </div>
       <TextInput
         id="home-share-link"
-        aria-label="Share link"
+        aria-label={t.shareLink}
         value={uploadStore.shareUrl ?? ""}
         readonly
         mono
         onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
       />
       <p class="text-sm text-muted-foreground">
-        Expires in {formatExpiry(uploadStore.expiresInHours)}.
-        {formatDownloads(uploadStore.maxDownloads)}.
+        {t.expiresIn(uploadStore.expiresInHours)}
+        {uploadStore.maxDownloads === null ? t.unlimitedDownloads : t.maxDownloads(uploadStore.maxDownloads)}
         {#if lastUploadVaulted}
-          Saved to your transfers.
+          {t.saved}
         {:else}
-          Keep this link: without a vault it can't be shown again.
+          {t.keepLink}
         {/if}
       </p>
       <div class="flex flex-wrap gap-2">
         <Button variant="primary" fullWidth={false} onclick={copyShareLink}>
           {#if copied}
             <IconCheckRegular class="size-4" />
-            Copied
+            {t.copied}
           {:else}
             <IconCopyRegular class="size-4" />
-            Copy link
+            {t.copy}
           {/if}
         </Button>
-        <Button variant="secondary" fullWidth={false} onclick={resetUpload}>Send another</Button>
+        <Button variant="secondary" fullWidth={false} onclick={resetUpload}>{t.another}</Button>
       </div>
     </section>
   {:else}
@@ -773,7 +767,7 @@
       <section class="space-y-4 rounded-lg bg-card p-4 sm:p-5" aria-labelledby="send-files">
         <div class="flex items-center justify-between gap-3">
           <h2 id="send-files" class="text-base font-semibold text-foreground">
-            Files
+            {t.files}
             {#if hasFiles}
               <span class="font-normal text-muted-foreground">
                 {uploadStore.files.length}, {formatSize(totalSize)}
@@ -786,7 +780,7 @@
               onclick={resetUpload}
               class="rounded text-sm text-muted-foreground transition-colors duration-200 ease-out hover:cursor-pointer hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              Clear
+              {t.clear}
             </button>
           {/if}
         </div>
@@ -810,7 +804,7 @@
           <button
             type="button"
             onclick={openFilePicker}
-            aria-label={hasFiles ? "Add more files" : "Drop files here or click to choose them"}
+            aria-label={hasFiles ? t.addMore : t.dropAria}
             class={cn(
               "flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border text-center transition-colors duration-200 ease-out hover:cursor-pointer hover:border-muted-foreground hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               hasFiles ? "px-4 py-5" : "px-4 py-16 sm:py-24",
@@ -825,10 +819,10 @@
             </span>
             <span class="space-y-0.5">
               <span class="block text-sm font-semibold text-foreground">
-                {hasFiles ? "Add more files" : "Drop files here"}
+                {hasFiles ? t.addMore : t.dropHere}
               </span>
               <span class="block text-sm text-muted-foreground">
-                {hasFiles ? "Drop them anywhere on this page, or click." : "Anywhere on this page works, or click to choose them."}
+                {hasFiles ? t.dropMoreHint : t.dropHint}
               </span>
             </span>
             {#if !hasFiles}
@@ -840,12 +834,12 @@
 
       <!-- How the link behaves, and the button that makes it. -->
       <section class="space-y-4 rounded-lg bg-card p-4 sm:p-5 lg:sticky lg:top-20" aria-labelledby="send-link">
-        <h2 id="send-link" class="text-base font-semibold text-foreground">The link</h2>
+        <h2 id="send-link" class="text-base font-semibold text-foreground">{t.theLink}</h2>
         {#if uploadStore.status === "error"}
           <Alert tone="destructive">{uploadStore.error}</Alert>
           <div class="flex gap-2">
-            <Button variant="secondary" fullWidth={false} class="flex-1" onclick={returnToSettings}>Back</Button>
-            <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>Try again</Button>
+            <Button variant="secondary" fullWidth={false} class="flex-1" onclick={returnToSettings}>{t.back}</Button>
+            <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>{t.tryAgain}</Button>
           </div>
         {:else if isProcessing}
           <div class="flex flex-col items-center gap-3 py-4 text-center">
@@ -853,36 +847,36 @@
             <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
               {#if isSending && uploadStalled}
                 <p class="text-warning-foreground">
-                  Connection lost. Continuing as soon as it is back. Keep this tab open.
+                  {t.stalled}
                 </p>
               {:else if isSending && uploadSpeed}
                 <p class="tabular-nums">
-                  {formatSpeed(uploadSpeed)}{#if uploadEta}, {formatEta(uploadEta)} left{/if}
+                  {formatSpeed(uploadSpeed)}{#if uploadEta}, {t.left(formatEta(uploadEta))}{/if}
                 </p>
               {/if}
               {#if uploadStore.files.length > 1}
-                <p>{filesDone} of {uploadStore.files.length} files done</p>
+                <p>{t.filesDone(filesDone, uploadStore.files.length)}</p>
               {/if}
             </div>
           </div>
-          <Button variant="secondary" onclick={stopUpload}>Stop</Button>
+          <Button variant="secondary" onclick={stopUpload}>{t.stop}</Button>
         {:else}
           {@render fields()}
           <Button variant="primary" onclick={handleUpload} disabled={!hasFiles || passwordTooShort}>
-            Create share link
+            {t.create}
           </Button>
           <p class="text-xs leading-relaxed text-muted-foreground">
             {#if auth.needsVaultSetup}
-              Sends right away. To keep names and links in your list of transfers,
+              {t.noVaultBeforePage}
               <button
                 type="button"
                 onclick={goToSetup}
                 class="rounded underline underline-offset-2 hover:cursor-pointer hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                set up a vault
+                {t.setUpVault}
               </button>.
             {:else}
-              Files and their names are encrypted here before upload. The key travels in the link, never to us.
+              {t.encryptedNote}
             {/if}
           </p>
         {/if}
@@ -912,42 +906,42 @@
         <div class="px-5 py-4 border-b border-border">
           <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
             <IconLockRegular class="size-4 text-primary" />
-            Share link ready
+            {t.ready}
           </div>
           <p class="text-xs text-muted-foreground mt-0.5">
-            Decrypts in the recipient's browser.
+            {t.readyBody}
           </p>
         </div>
         <div class="p-5 space-y-3">
           <TextInput
             id="home-share-link"
-            aria-label="Share link"
+            aria-label={t.shareLink}
             value={uploadStore.shareUrl ?? ""}
             readonly
             mono
             onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
           />
           <p class="text-xs text-muted-foreground">
-            Expires in {formatExpiry(uploadStore.expiresInHours)}.
-            {formatDownloads(uploadStore.maxDownloads)}.
+            {t.expiresIn(uploadStore.expiresInHours)}
+            {uploadStore.maxDownloads === null ? t.unlimitedDownloads : t.maxDownloads(uploadStore.maxDownloads)}
             {#if lastUploadVaulted}
-              Saved to your transfers.
+              {t.saved}
             {:else if auth.isAuthenticated}
-              Keep this link: without a vault it can't be shown again.
+              {t.keepLink}
             {/if}
           </p>
         </div>
         <div class="flex items-center gap-2 px-5 py-4 border-t border-border bg-muted/30">
           <Button variant="secondary" fullWidth={false} class="flex-1 whitespace-nowrap" onclick={resetUpload}>
-            Send another
+            {t.another}
           </Button>
           <Button variant="primary" fullWidth={false} class="flex-1" onclick={copyShareLink}>
             {#if copied}
               <IconCheckRegular class="size-4" />
-              Copied
+              {t.copied}
             {:else}
               <IconCopyRegular class="size-4" />
-              Copy link
+              {t.copy}
             {/if}
           </Button>
         </div>
@@ -956,7 +950,7 @@
           type="button"
           onclick={openFilePicker}
           disabled={isProcessing}
-          aria-label="Drop files here or click to browse"
+          aria-label={t.browseAria}
           class={cn(
             "w-full p-5 flex flex-col items-center justify-center text-center hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-lg transition-colors duration-200 ease-out sm:flex-1",
             isDraggingOver ? "bg-primary/5" : "hover:bg-accent",
@@ -969,17 +963,17 @@
           <div class="space-y-0.5 mt-3.5">
             <p class="text-sm font-semibold text-foreground leading-snug">
               {#if isDraggingOver}
-                Release to encrypt
+                {t.releaseToEncrypt}
               {:else}
-                Drop a file
+                {t.dropFile}
               {/if}
             </p>
             <p class="text-xs text-muted-foreground leading-relaxed max-w-[16rem]">
-              Or click to browse. Encrypts in your browser.
+              {t.browseHint}
             </p>
           </div>
           <span class="mt-4 text-[11px] text-muted-foreground/80">
-            Up to {formatSize(MAX_TOTAL_UPLOAD_SIZE)} per transfer
+            {t.upTo(formatSize(MAX_TOTAL_UPLOAD_SIZE))}
           </span>
         </button>
       {:else}
@@ -987,7 +981,7 @@
           <div class="flex items-center gap-2 text-sm font-semibold text-foreground min-w-0">
             <IconLockRegular class="size-4 text-primary shrink-0" />
             <span class="truncate">
-              {uploadStore.files.length} file{uploadStore.files.length !== 1 ? "s" : ""}
+              {t.fileCount(uploadStore.files.length)}
               · {formatSize(totalSize)}
             </span>
           </div>
@@ -997,7 +991,7 @@
               onclick={resetUpload}
               class="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
             >
-              Clear
+              {t.clear}
             </button>
           {/if}
         </div>
@@ -1009,7 +1003,7 @@
                 <IconWarningRegular class="size-6" />
               </span>
               <div class="space-y-1">
-                <p class="text-sm font-semibold text-foreground">Upload failed</p>
+                <p class="text-sm font-semibold text-foreground">{t.uploadFailed}</p>
                 <p class="text-xs text-muted-foreground leading-relaxed max-w-[18rem]">
                   {uploadStore.error}
                 </p>
@@ -1018,13 +1012,13 @@
           {:else}
             {#if auth.isAuthenticated && auth.needsVaultSetup}
               <p class="text-xs text-muted-foreground">
-                You can send right away. To keep names and links in your list of transfers,
+                {t.noVaultBefore}
                 <button
                   type="button"
                   onclick={goToSetup}
                   class="underline underline-offset-2 hover:text-foreground hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
                 >
-                  set up a vault
+                  {t.setUpVault}
                 </button>.
               </p>
             {/if}
@@ -1038,15 +1032,15 @@
               <div class="space-y-0.5 text-xs text-muted-foreground" aria-live="polite">
                 {#if isSending && uploadStalled}
                   <p class="text-warning-foreground">
-                    Connection lost. Continuing as soon as it is back. Keep this tab open.
+                    {t.stalled}
                   </p>
                 {:else if isSending && uploadSpeed}
                   <p class="tabular-nums">
-                    {formatSpeed(uploadSpeed)}{#if uploadEta} · {formatEta(uploadEta)} left{/if}
+                    {formatSpeed(uploadSpeed)}{#if uploadEta} · {t.left(formatEta(uploadEta))}{/if}
                   </p>
                 {/if}
                 {#if uploadStore.files.length > 1}
-                  <p>{filesDone} of {uploadStore.files.length} files done</p>
+                  <p>{t.filesDone(filesDone, uploadStore.files.length)}</p>
                 {/if}
               </div>
             </div>
@@ -1073,7 +1067,7 @@
               class="w-full flex items-center justify-center gap-2 py-2.5 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:border-muted-foreground hover:text-foreground transition-colors duration-200 ease-out focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:cursor-pointer"
             >
               <IconPlusRegular class="size-4" />
-              Add more files
+              {t.addMore}
             </button>
 
             {@render fields()}
@@ -1084,19 +1078,19 @@
         <div class="flex items-center gap-2 px-5 py-4 border-t border-border bg-muted/30">
           {#if isProcessing}
             <Button variant="secondary" fullWidth={false} class="flex-1" onclick={stopUpload}>
-              Stop
+              {t.stop}
             </Button>
           {:else if uploadStore.status === "error"}
             <Button variant="secondary" fullWidth={false} class="flex-1" onclick={returnToSettings}>
-              Back
+              {t.back}
             </Button>
             {#if uploadStore.errorUpgradeUrl && !auth.isAuthenticated}
               <Button variant="primary" fullWidth={false} class="flex-1" onclick={() => goto(`/login?redirect=${encodeURIComponent(returnTo)}`)}>
-                Sign in
+                {t.signIn}
               </Button>
             {:else}
               <Button variant="primary" fullWidth={false} class="flex-1" onclick={retryUpload}>
-                Try again
+                {t.tryAgain}
               </Button>
             {/if}
           {:else}
@@ -1107,7 +1101,7 @@
               onclick={handleUpload}
               disabled={passwordTooShort}
             >
-              Create share link
+              {t.create}
             </Button>
           {/if}
         </div>
@@ -1128,9 +1122,9 @@
       <div class="glass-panel w-[300px] h-full flex flex-col rounded-l-none border-l-0">
         <div class="px-5 py-4 border-b border-border">
           <p class="text-sm font-semibold text-foreground">
-            Files
+            {t.files}
             <span class="font-normal text-muted-foreground">
-              · Queued for this transfer.
+              · {t.queued}
             </span>
           </p>
         </div>
@@ -1153,8 +1147,8 @@
 
 <Modal
   open={unlockOpen}
-  title="Keep this transfer in your list?"
-  description="Unlock your vault and your list of transfers can show this one's name and give you its link again. Or send without unlocking and keep the link yourself."
+  title={t.unlockTitle}
+  description={t.unlockBody}
   onClose={() => closeUnlockModal("cancelled")}
 >
   <!-- The footer is a snippet of the Modal, so it sits outside the form and
@@ -1168,7 +1162,7 @@
     {#if unlockMode === "password"}
       <PasswordInput
         id="home-unlock-password"
-        label="Vault password"
+        label={t.vaultPassword}
         autocomplete="current-password"
         required
         bind:value={unlockPassword}
@@ -1177,7 +1171,7 @@
     {:else}
       <Textarea
         id="home-unlock-phrase"
-        label="Recovery phrase"
+        label={t.recoveryPhrase}
         placeholder="word word word …"
         rows={3}
         bind:value={unlockPhrase}
@@ -1200,8 +1194,8 @@
       disabled={isUnlockingVault}
     >
       {unlockMode === "password"
-        ? "Forgot your password? Use your recovery phrase instead."
-        : "Have your password? Use it instead."}
+        ? t.usePhrase
+        : t.usePassword}
     </button>
     {/if}
 
@@ -1215,14 +1209,14 @@
       onclick={() => closeUnlockModal("skipped")}
       disabled={isUnlockingVault}
     >
-      Send without unlocking
+      {t.sendWithout}
     </Button>
     <Button type="submit" form="home-unlock-form" fullWidth={false} disabled={!canSubmitUnlock}>
       {#if isUnlockingVault}
         <Spinner aria-hidden="true" />
-        Unlocking…
+        {t.unlocking}
       {:else}
-        Unlock and send
+        {t.unlockAndSend}
       {/if}
     </Button>
   {/snippet}

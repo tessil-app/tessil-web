@@ -5,6 +5,9 @@
 
   import SiteFooter from "$lib/components/SiteFooter.svelte";
   import { cn } from "$lib/utils";
+  import { page } from "$app/state";
+  import { uiLocale } from "$lib/i18n/app.svelte";
+  import { chromeMessages } from "$lib/i18n/messages/chrome";
   import { onMount, type ComponentProps, type Snippet } from "svelte";
 
   interface Props {
@@ -17,6 +20,8 @@
   }
 
   let { title, tagline, updated, current, children }: Props = $props();
+
+  const c = $derived(chromeMessages[uiLocale(page.url.pathname)]);
 
   let article = $state<HTMLElement | null>(null);
   let sections = $state<{ id: string; label: string }[]>([]);
@@ -75,14 +80,14 @@
         <p class="text-lg leading-relaxed text-muted-foreground">{tagline}</p>
       {/if}
       {#if updated}
-        <p class="text-sm text-muted-foreground">Last updated {updated}</p>
+        <p class="text-sm text-muted-foreground">{c.lastUpdated(updated)}</p>
       {/if}
     </header>
 
     <div class="grid gap-x-12 gap-y-8 border-t border-border pt-10 lg:grid-cols-[13rem_minmax(0,1fr)]">
-      <nav aria-label="On this page" class="hidden lg:block">
+      <nav aria-label={c.onThisPage} class="hidden lg:block">
         <div class="sticky top-24 space-y-3">
-          <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">On this page</p>
+          <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{c.onThisPage}</p>
           <ul class="border-l border-border text-sm">
             {#each sections as section (section.id)}
               <li>

@@ -174,6 +174,8 @@ export interface MeResponse {
      * minted via magic link, verify-code, or pre-migration rows are null.
      */
     currentAuthenticatorId: string | null;
+    /** The language the account chose, or null. Absent from an older server. */
+    locale?: string | null;
     /**
      * ISO timestamp when the user completed vault setup, or null if
      * they haven't yet. The dashboard route guard bounces users with
@@ -567,10 +569,11 @@ export class ApiClient {
     return response.arrayBuffer();
   }
 
-  async requestMagicLink(email: string): Promise<RequestMagicLinkResponse> {
+  /** `locale` is the language the email should be in when the account has none set. */
+  async requestMagicLink(email: string, locale?: string): Promise<RequestMagicLinkResponse> {
     return this.request("/api/auth/request-magic-link", {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, locale }),
     });
   }
 
@@ -595,6 +598,11 @@ export class ApiClient {
 
   async logout(): Promise<{ ok: true }> {
     return this.request("/api/auth/logout", { method: "POST" });
+  }
+
+  /** The account's language; null clears the choice. */
+  async setMyLocale(locale: "en" | "nl" | null): Promise<{ locale: string | null }> {
+    return this.request("/api/me/locale", { method: "PUT", body: JSON.stringify({ locale }) });
   }
 
   async logoutAll(): Promise<{ ok: true; sessionsRevoked: number; devicesRevoked?: number }> {

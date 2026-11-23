@@ -42,6 +42,14 @@
   import IconCopyRegular from "phosphor-icons-svelte/IconCopyRegular.svelte";
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
   import { onDestroy, onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { HTML_LANG } from "$lib/i18n/locale";
+  import { chromeMessages } from "$lib/i18n/messages/chrome";
+  import { transfersMessages } from "$lib/i18n/messages/transfers";
+
+  const locale = $derived(appLocale());
+  const t = $derived(transfersMessages[locale]);
+  const c = $derived(chromeMessages[locale]);
 
   let transfers = $state<OwnedTransferSummary[]>([]);
   let nextCursor = $state<string | null>(null);
@@ -88,18 +96,18 @@
     vaultUnlocked = unlocked;
     if (!unlocked) {
       for (const id of Object.keys(vaultStates)) {
-        if (transfers.find((t) => t.id === id)?.wrappedKey) {
+        if (transfers.find((tr) => tr.id === id)?.wrappedKey) {
           vaultStates[id] = { status: "locked" };
         }
       }
       return;
     }
-    for (const t of transfers) {
-      if (!t.wrappedKey) continue;
-      const st = vaultStates[t.id];
+    for (const tr of transfers) {
+      if (!tr.wrappedKey) continue;
+      const st = vaultStates[tr.id];
       if (!st || st.status === "locked") {
-        vaultStates[t.id] = { status: "unlocking" };
-        void unwrapRow(t);
+        vaultStates[tr.id] = { status: "unlocking" };
+        void unwrapRow(tr);
       }
     }
   });
@@ -114,7 +122,7 @@
         const row = res.portals.find(
           (p) => p.role === "member" && isHandedCopy(base64UrlToBytes(p.sealedKeys)),
         );
-        pendingShare = row ? (row.owner?.email ?? "Someone") : null;
+        pendingShare = row ? (row.owner?.email ?? t.someone) : null;
       })
       .catch(() => {});
   });
@@ -162,7 +170,7 @@
       await seedVaultStates(res.transfers);
     } catch (err) {
       errorMessage =
-        err instanceof Error ? err.message : "Couldn't load your transfers.";
+        err instanceof Error ? err.message : t.errors.load;
     } finally {
       isLoading = false;
     }
@@ -178,7 +186,7 @@
       await seedVaultStates(res.transfers);
     } catch (err) {
       errorMessage =
-        err instanceof Error ? err.message : "Couldn't load more transfers.";
+        err instanceof Error ? err.message : t.errors.loadMore;
     } finally {
       isLoadingMore = false;
     }
@@ -187,46 +195,46 @@
   async function seedVaultStates(rows: OwnedTransferSummary[]) {
     if (!auth.user) return;
     const unlockedNow = await isUnlocked(auth.user.id);
-    for (const t of rows) {
-      if (!t.wrappedKey) continue;
-      if (vaultStates[t.id]) continue;
+    for (const tr of rows) {
+      if (!tr.wrappedKey) continue;
+      if (vaultStates[tr.id]) continue;
       if (unlockedNow) {
-        vaultStates[t.id] = { status: "unlocking" };
-        void unwrapRow(t);
+        vaultStates[tr.id] = { status: "unlocking" };
+        void unwrapRow(tr);
       } else {
-        vaultStates[t.id] = { status: "locked" };
+        vaultStates[tr.id] = { status: "locked" };
       }
     }
   }
 
-  async function unwrapRow(t: OwnedTransferSummary) {
-    if (!t.wrappedKey || !auth.user) return;
-    const raw = await unwrapTransferKey(auth.user.id, t.wrappedKey);
+  async function unwrapRow(tr: OwnedTransferSummary) {
+    if (!tr.wrappedKey || !auth.user) return;
+    const raw = await unwrapTransferKey(auth.user.id, tr.wrappedKey);
     if (!raw) {
-      vaultStates[t.id] = { status: "blind-error" };
+      vaultStates[tr.id] = { status: "blind-error" };
       return;
     }
     try {
       const transferKey = await importTransferKey(raw);
-      const { files } = await api.getMyTransferFiles(t.id);
+      const { files } = await api.getMyTransferFiles(tr.id);
       const names = await Promise.all(
         files.map((f) =>
           decryptFilename(f.encryptedName, f.encryptedNameIv, transferKey),
         ),
       );
       let title: string | null = null;
-      if (t.encryptedTitle && t.encryptedTitleIv) {
+      if (tr.encryptedTitle && tr.encryptedTitleIv) {
         try {
-          title = await decryptString(t.encryptedTitle, t.encryptedTitleIv, transferKey);
+          title = await decryptString(tr.encryptedTitle, tr.encryptedTitleIv, transferKey);
         } catch {
           // Title fails-soft so the row still renders.
           title = null;
         }
       }
       const sizes = files.map((f) => plaintextSize(f.size));
-      vaultStates[t.id] = { status: "unlocked", names, sizes, title };
+      vaultStates[tr.id] = { status: "unlocked", names, sizes, title };
     } catch {
-      vaultStates[t.id] = { status: "blind-error" };
+      vaultStates[tr.id] = { status: "blind-error" };
     }
   }
 
@@ -266,27 +274,26 @@
       unlockPassword = "";
       unlockPhrase = "";
     } catch (err) {
-      unlockError = err instanceof Error ? err.message : "Couldn't unlock.";
+      unlockError = err instanceof Error ? err.message : t.errors.unlock;
     } finally {
       isUnlocking = false;
     }
   }
 
 
-  async function copyRowLink(t: OwnedTransferSummary, e: Event) {
+  async function copyRowLink(tr: OwnedTransferSummary, e: Event) {
     e.stopPropagation();
-    if (!t.wrappedKey || !auth.user) return;
-    if (copyingId === t.id) return;
-    copyingId = t.id;
+    if (!tr.wrappedKey || !auth.user) return;
+    if (copyingId === tr.id) return;
+    copyingId = tr.id;
     try {
-      const raw = await unwrapTransferKey(auth.user.id, t.wrappedKey);
+      const raw = await unwrapTransferKey(auth.user.id, tr.wrappedKey);
       if (!raw) {
-        errorMessage =
-          "Couldn't rebuild the share link - unlock the vault and try again.";
+        errorMessage = t.errors.rebuild;
         return;
       }
       const fragment = transferKeyToFragment(raw);
-      const url = `${window.location.origin}/d/${t.id}#${fragment}`;
+      const url = `${window.location.origin}/d/${tr.id}#${fragment}`;
       try {
         await navigator.clipboard.writeText(url);
       } catch {
@@ -297,21 +304,21 @@
         document.execCommand("copy");
         document.body.removeChild(input);
       }
-      copiedId = t.id;
+      copiedId = tr.id;
       setTimeout(() => {
-        if (copiedId === t.id) copiedId = null;
+        if (copiedId === tr.id) copiedId = null;
       }, 2000);
     } catch {
-      errorMessage = "Couldn't copy the share link.";
+      errorMessage = t.errors.copy;
     } finally {
       copyingId = null;
     }
   }
 
-  function requestInlineDelete(t: OwnedTransferSummary, e: Event) {
+  function requestInlineDelete(tr: OwnedTransferSummary, e: Event) {
     e.stopPropagation();
     if (inlineDeletingId) return;
-    confirmDeleteId = t.id;
+    confirmDeleteId = tr.id;
   }
 
   async function performInlineDelete() {
@@ -326,7 +333,7 @@
       confirmDeleteId = null;
     } catch (err) {
       errorMessage =
-        err instanceof Error ? err.message : "Couldn't delete that transfer.";
+        err instanceof Error ? err.message : t.errors.delete;
       if (errorMessage === "Transfer not found.") {
         transfers = transfers.filter((row) => row.id !== id);
         confirmDeleteId = null;
@@ -336,26 +343,26 @@
     }
   }
 
-  function rowDisplayName(t: OwnedTransferSummary): string {
-    const vs = vaultStates[t.id];
+  function rowDisplayName(tr: OwnedTransferSummary): string {
+    const vs = vaultStates[tr.id];
     if (vs?.status === "unlocked") {
       if (vs.title && vs.title.length > 0) return vs.title;
       if (vs.names.length > 0) return summariseNames(vs.names);
     }
-    return `${t.fileCount} ${t.fileCount === 1 ? "file" : "files"}`;
+    return t.files(tr.fileCount);
   }
 
   function summariseNames(names: string[]): string {
-    if (names.length === 0) return "(no files)";
+    if (names.length === 0) return t.noFiles;
     if (names.length === 1) return names[0];
-    return `${names[0]} + ${names.length - 1} more`;
+    return t.more(names[0], names.length - 1);
   }
 
   // Names of the access keys behind transfers a program sent.
   let keyNames = $state<Record<string, string>>({});
   let keyNamesAsked = false;
   $effect(() => {
-    if (keyNamesAsked || !transfers.some((t) => t.deviceId)) return;
+    if (keyNamesAsked || !transfers.some((tr) => tr.deviceId)) return;
     keyNamesAsked = true;
     void api
       .listAccessKeys()
@@ -364,25 +371,23 @@
   });
 
   const lockedVaultedCount = $derived(
-    transfers.filter((t) => t.wrappedKey && vaultStates[t.id]?.status === "locked")
+    transfers.filter((tr) => tr.wrappedKey && vaultStates[tr.id]?.status === "locked")
       .length,
   );
 
-  function statusOf(t: OwnedTransferSummary): {
+  function statusOf(tr: OwnedTransferSummary): {
     label: string;
     tone: "success" | "warning" | "muted";
   } {
-    const expired = new Date(t.expiresAt) < new Date();
-    if (expired) return { label: "Expired", tone: "muted" };
-    if (!t.isCompleted) return { label: "In progress", tone: "warning" };
-    return { label: "Active", tone: "success" };
+    const expired = new Date(tr.expiresAt) < new Date();
+    if (expired) return { label: t.status.expired, tone: "muted" };
+    if (!tr.isCompleted) return { label: t.status.inProgress, tone: "warning" };
+    return { label: t.status.active, tone: "success" };
   }
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const dateFmt = $derived(
+    new Intl.DateTimeFormat(HTML_LANG[locale], { year: "numeric", month: "short", day: "numeric" }),
+  );
 
   function shortDate(iso: string) {
     return dateFmt.format(new Date(iso));
@@ -390,13 +395,12 @@
 
   function relativeExpiry(iso: string): string {
     const ms = new Date(iso).getTime() - Date.now();
-    if (ms <= 0) return "expired";
+    if (ms <= 0) return t.expired;
     const mins = Math.round(ms / 60000);
-    if (mins < 60) return `in ${mins}m`;
+    if (mins < 60) return t.inMinutes(mins);
     const hours = Math.round(mins / 60);
-    if (hours < 24) return `in ${hours}h`;
-    const days = Math.round(hours / 24);
-    return `in ${days}d`;
+    if (hours < 24) return t.inHours(hours);
+    return t.inDays(Math.round(hours / 24));
   }
 
   const canSubmitUnlock = $derived(
@@ -410,10 +414,10 @@
     encryptedTitle: string | null,
     encryptedTitleIv: string | null,
   ) {
-    transfers = transfers.map((t) =>
-      t.id === id
-        ? { ...t, encryptedTitle, encryptedTitleIv }
-        : t,
+    transfers = transfers.map((tr) =>
+      tr.id === id
+        ? { ...tr, encryptedTitle, encryptedTitleIv }
+        : tr,
     );
     const vs = vaultStates[id];
     if (vs?.status === "unlocked") {
@@ -422,24 +426,24 @@
   }
 
   function handleDrawerDelete(id: string) {
-    transfers = transfers.filter((t) => t.id !== id);
+    transfers = transfers.filter((tr) => tr.id !== id);
     delete vaultStates[id];
   }
 
   const openTransfer = $derived(
-    openTransferId ? transfers.find((t) => t.id === openTransferId) ?? null : null,
+    openTransferId ? transfers.find((tr) => tr.id === openTransferId) ?? null : null,
   );
   const openVaultState = $derived(
     openTransferId ? vaultStates[openTransferId] : undefined,
   );
   const confirmDeleteTransfer = $derived(
     confirmDeleteId
-      ? transfers.find((t) => t.id === confirmDeleteId) ?? null
+      ? transfers.find((tr) => tr.id === confirmDeleteId) ?? null
       : null,
   );
 </script>
 
-<Seo title="Transfers - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout width="5xl">
   {#if !auth.loaded}
@@ -449,18 +453,18 @@
       class="flex flex-col items-center gap-4 py-16 text-info"
     >
       <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
+      <p class="text-muted-foreground">{t.loading}</p>
     </div>
   {:else if auth.user}
     <PageHeader
-      title="Your transfers"
-      tagline="Everything you've sent while signed in."
+      title={t.title}
+      tagline={t.tagline}
       align="left"
     >
       {#snippet actions()}
         <!-- The empty state has its own button; two would be one too many. -->
         {#if transfers.length > 0}
-          <Button href="/dashboard/new" fullWidth={false} class="whitespace-nowrap">New transfer</Button>
+          <Button href="/dashboard/new" fullWidth={false} class="whitespace-nowrap">{t.newTransfer}</Button>
         {/if}
       {/snippet}
     </PageHeader>
@@ -469,17 +473,16 @@
 
     {#if pendingShare}
       <Notice class="mb-6">
-        {pendingShare} shared a portal with you.
+        {t.sharedWithYou(pendingShare)}
         {#snippet action()}
-          <Button variant="secondary" fullWidth={false} href="/dashboard/portals">View</Button>
+          <Button variant="secondary" fullWidth={false} href="/dashboard/portals">{t.view}</Button>
         {/snippet}
       </Notice>
     {/if}
 
     <div class="space-y-6">
       <p class="text-sm text-muted-foreground">
-        Transfers you create while signed in appear here. File contents are
-        end-to-end encrypted; only the original share link can decrypt them.
+        {t.intro}
       </p>
 
       {#if errorMessage}
@@ -488,21 +491,19 @@
 
       {#if auth.needsVaultSetup}
         <Notice>
-          Without a vault, transfers are listed without their names and their links can't be
-          shown again. A vault keeps both, encrypted so only you can read them.
+          {t.noVault}
           {#snippet action()}
-            <Button variant="secondary" fullWidth={false} href="/setup/vault">Set up vault</Button>
+            <Button variant="secondary" fullWidth={false} href="/setup/vault">{t.setUpVault}</Button>
           {/snippet}
         </Notice>
       {/if}
 
       {#if !vaultUnlocked && lockedVaultedCount > 0 && skipped}
         <Notice>
-          Vault is locked. {lockedVaultedCount}
-          {lockedVaultedCount === 1 ? "transfer has" : "transfers have"} encrypted names waiting.
+          {t.locked(lockedVaultedCount)}
           {#snippet action()}
             <Button variant="secondary" fullWidth={false} onclick={openUnlockPrompt}>
-              Unlock vault
+              {t.unlockVault}
             </Button>
           {/snippet}
         </Notice>
@@ -515,15 +516,13 @@
           class="flex flex-col items-center gap-4 py-12 text-info"
         >
           <Spinner class="size-8" aria-hidden="true" />
-          <p class="text-muted-foreground">Loading your transfers…</p>
+          <p class="text-muted-foreground">{t.loadingTransfers}</p>
         </div>
       {:else if transfers.length === 0}
-        <EmptyState title="No transfers yet">
-          <p>
-            Anything you upload while signed in appears here.
-          </p>
+        <EmptyState title={t.emptyTitle}>
+          <p>{t.empty}</p>
           {#snippet actions()}
-            <Button href="/dashboard/new" fullWidth={false}>Create your first transfer</Button>
+            <Button href="/dashboard/new" fullWidth={false}>{t.first}</Button>
           {/snippet}
         </EmptyState>
       {:else}
@@ -532,47 +531,47 @@
           actions="sm"
         >
           {#snippet header()}
-            <div>Name</div>
-            <div>Size</div>
-            <div>Created</div>
-            <div>Expires</div>
-            <div>Status</div>
+            <div>{t.cols.name}</div>
+            <div>{t.cols.size}</div>
+            <div>{t.cols.created}</div>
+            <div>{t.cols.expires}</div>
+            <div>{t.cols.status}</div>
           {/snippet}
 
-          {#each transfers as t (t.id)}
-            {@const status = statusOf(t)}
-            {@const vs = vaultStates[t.id]}
-            {@const isVaulted = !!t.wrappedKey}
+          {#each transfers as tr (tr.id)}
+            {@const status = statusOf(tr)}
+            {@const vs = vaultStates[tr.id]}
+            {@const isVaulted = !!tr.wrappedKey}
             {@const canRowAction = isVaulted && vs?.status === "unlocked"}
-            <Table.Row onclick={() => (openTransferId = t.id)}>
+            <Table.Row onclick={() => (openTransferId = tr.id)}>
               {#snippet cells()}
                 <div class="min-w-0">
-                  <div class="text-foreground font-medium truncate" title={rowDisplayName(t)}>
-                    {rowDisplayName(t)}
+                  <div class="text-foreground font-medium truncate" title={rowDisplayName(tr)}>
+                    {rowDisplayName(tr)}
                   </div>
                   <div class="text-xs text-muted-foreground truncate">
-                    {t.fileCount} {t.fileCount === 1 ? "file" : "files"}
-                    {#if t.hasPassword}
-                      · password-protected
+                    {t.files(tr.fileCount)}
+                    {#if tr.hasPassword}
+                      · {t.passwordProtected}
                     {/if}
-                    {#if t.deviceId}
-                      · sent by {keyNames[t.deviceId] ?? "an access key"}
+                    {#if tr.deviceId}
+                      · {t.sentBy(keyNames[tr.deviceId] ?? t.anAccessKey)}
                     {:else if !isVaulted}
-                      · name not kept
+                      · {t.nameNotKept}
                     {:else if vs?.status === "locked"}
-                      · vault locked
+                      · {t.vaultLocked}
                     {:else if vs?.status === "unlocking"}
-                      · decrypting…
+                      · {t.decrypting}
                     {:else if vs?.status === "blind-error"}
-                      · couldn't decrypt
+                      · {t.couldntDecrypt}
                     {/if}
                   </div>
                 </div>
-                <div class="text-muted-foreground">{formatSize(t.totalBytes)}</div>
-                <div class="text-muted-foreground">{shortDate(t.createdAt)}</div>
+                <div class="text-muted-foreground">{formatSize(tr.totalBytes)}</div>
+                <div class="text-muted-foreground">{shortDate(tr.createdAt)}</div>
                 <div class="text-muted-foreground">
-                  {shortDate(t.expiresAt)}
-                  <span class="text-xs">({relativeExpiry(t.expiresAt)})</span>
+                  {shortDate(tr.expiresAt)}
+                  <span class="text-xs">({relativeExpiry(tr.expiresAt)})</span>
                 </div>
                 <div>
                   <Badge tone={status.tone}>{status.label}</Badge>
@@ -583,45 +582,45 @@
                 <div class="space-y-2">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
-                      <p class="font-medium text-foreground truncate">{rowDisplayName(t)}</p>
+                      <p class="font-medium text-foreground truncate">{rowDisplayName(tr)}</p>
                       <p class="text-xs text-muted-foreground">
-                        {t.fileCount} {t.fileCount === 1 ? "file" : "files"} · {formatSize(t.totalBytes)}
+                        {t.files(tr.fileCount)} · {formatSize(tr.totalBytes)}
                       </p>
                     </div>
                     <Badge tone={status.tone}>{status.label}</Badge>
                   </div>
                   <p class="text-xs text-muted-foreground">
-                    Created {shortDate(t.createdAt)} · Expires {relativeExpiry(t.expiresAt)}
+                    {t.createdExpires(shortDate(tr.createdAt), relativeExpiry(tr.expiresAt))}
                   </p>
                   {#if vs?.status === "locked"}
-                    <p class="text-xs text-muted-foreground">Vault locked - unlock to see name.</p>
+                    <p class="text-xs text-muted-foreground">{t.lockedRow}</p>
                   {:else if vs?.status === "unlocking"}
-                    <p class="text-xs text-muted-foreground">Decrypting…</p>
+                    <p class="text-xs text-muted-foreground">{t.decryptingRow}</p>
                   {:else if vs?.status === "blind-error"}
-                    <p class="text-xs text-muted-foreground">Couldn't decrypt metadata.</p>
+                    <p class="text-xs text-muted-foreground">{t.couldntDecryptRow}</p>
                   {/if}
                 </div>
               {/snippet}
 
               {#snippet actions()}
                 <IconButton
-                  label={copiedId === t.id ? "Link copied" : "Copy link"}
-                  onclick={(e) => copyRowLink(t, e)}
-                  disabled={!canRowAction || copyingId === t.id}
+                  label={copiedId === tr.id ? t.linkCopied : t.copyLink}
+                  onclick={(e) => copyRowLink(tr, e)}
+                  disabled={!canRowAction || copyingId === tr.id}
                 >
-                  {#if copyingId === t.id}
+                  {#if copyingId === tr.id}
                     <Spinner class="size-4" aria-hidden="true" />
-                  {:else if copiedId === t.id}
+                  {:else if copiedId === tr.id}
                     <IconCheckRegular class="size-4 text-success-foreground" />
                   {:else}
                     <IconCopyRegular class="size-4" />
                   {/if}
                 </IconButton>
                 <IconButton
-                  label="Delete transfer"
+                  label={t.deleteTransfer}
                   tone="destructive"
-                  onclick={(e) => requestInlineDelete(t, e)}
-                  disabled={inlineDeletingId === t.id}
+                  onclick={(e) => requestInlineDelete(tr, e)}
+                  disabled={inlineDeletingId === tr.id}
                 >
                   <IconTrashRegular class="size-4" />
                 </IconButton>
@@ -640,9 +639,9 @@
             >
               {#if isLoadingMore}
                 <Spinner aria-hidden="true" />
-                Loading…
+                {t.loading}
               {:else}
-                Load more
+                {t.loadMore}
               {/if}
             </Button>
           </div>
@@ -664,8 +663,8 @@
 
 <Modal
   open={promptOpen}
-  title="Unlock your vault"
-  description="Enter your vault password to see filenames and rebuild share links for your saved transfers."
+  title={c.unlockTitle}
+  description={t.unlockBody}
   onClose={closeUnlockPrompt}
 >
   <form onsubmit={handleUnlock} class="space-y-4" novalidate>
@@ -682,7 +681,7 @@
     {#if unlockMode === "password"}
       <PasswordInput
         id="unlock-vault-password"
-        label="Vault password"
+        label={c.vaultPassword}
         autocomplete="current-password"
         required
         bind:value={unlockPassword}
@@ -691,14 +690,14 @@
     {:else}
       <Textarea
         id="unlock-recovery-phrase"
-        label="Recovery phrase"
-        placeholder="word word word …"
+        label={c.recoveryPhrase}
+        placeholder={t.phrasePlaceholder}
         rows={3}
         bind:value={unlockPhrase}
         disabled={isUnlocking}
       />
       <p class="text-xs text-muted-foreground">
-        12 words, separated by spaces. Case and extra spacing don't matter.
+        {t.phraseHint}
       </p>
     {/if}
 
@@ -715,9 +714,7 @@
       class="text-xs text-muted-foreground"
       disabled={isUnlocking}
     >
-      {unlockMode === "password"
-        ? "Forgot your password? Use your recovery phrase instead."
-        : "Have your password? Use it instead."}
+      {unlockMode === "password" ? c.usePhrase : c.usePassword}
     </TextLink>
     {/if}
 
@@ -729,14 +726,14 @@
         onclick={closeUnlockPrompt}
         disabled={isUnlocking}
       >
-        Skip for now
+        {t.skip}
       </Button>
       <Button type="submit" fullWidth={false} disabled={!canSubmitUnlock}>
         {#if isUnlocking}
           <Spinner aria-hidden="true" />
-          Unlocking…
+          {c.unlocking}
         {:else}
-          Unlock
+          {c.unlock}
         {/if}
       </Button>
     {/snippet}
@@ -749,8 +746,8 @@
 
 <Modal
   open={confirmDeleteId !== null}
-  title="Delete this transfer?"
-  description="The encrypted files are removed and the share link stops working. This can't be undone."
+  title={t.deleteTitle}
+  description={t.deleteBody}
   onClose={() => {
     if (!inlineDeletingId) confirmDeleteId = null;
   }}
@@ -758,8 +755,7 @@
   {#if confirmDeleteTransfer}
     <p class="text-sm text-muted-foreground">
       <span class="font-medium text-foreground">{rowDisplayName(confirmDeleteTransfer)}</span>
-      · {confirmDeleteTransfer.fileCount}
-      {confirmDeleteTransfer.fileCount === 1 ? "file" : "files"}
+      · {t.files(confirmDeleteTransfer.fileCount)}
       · {formatSize(confirmDeleteTransfer.totalBytes)}
     </p>
   {/if}
@@ -772,7 +768,7 @@
       onclick={() => (confirmDeleteId = null)}
       disabled={!!inlineDeletingId}
     >
-      Cancel
+      {c.cancel}
     </Button>
     <Button
       type="button"
@@ -783,9 +779,9 @@
     >
       {#if inlineDeletingId}
         <Spinner aria-hidden="true" />
-        Deleting…
+        {t.deleting}
       {:else}
-        Delete transfer
+        {t.deleteTransfer}
       {/if}
     </Button>
   {/snippet}

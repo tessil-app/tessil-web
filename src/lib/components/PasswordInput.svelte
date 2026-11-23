@@ -1,8 +1,13 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
+  import { page } from "$app/state";
+  import { uiLocale } from "$lib/i18n/app.svelte";
+  import { chromeMessages } from "$lib/i18n/messages/chrome";
   import IconEyeRegular from "phosphor-icons-svelte/IconEyeRegular.svelte";
   import IconEyeSlashRegular from "phosphor-icons-svelte/IconEyeSlashRegular.svelte";
   import type { HTMLInputAttributes } from "svelte/elements";
+
+  const words = $derived(chromeMessages[uiLocale(page.url.pathname)].common);
 
   interface Props extends Omit<HTMLInputAttributes, "class" | "value" | "type"> {
     value?: string;
@@ -58,7 +63,7 @@
     <button
       type="button"
       onclick={() => (show = !show)}
-      aria-label={show ? "Hide password" : "Show password"}
+      aria-label={show ? words.hidePassword : words.showPassword}
       aria-pressed={show}
       class="hover:cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground rounded-md focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >

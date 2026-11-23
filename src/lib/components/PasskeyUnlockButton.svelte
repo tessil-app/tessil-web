@@ -10,6 +10,8 @@
   import { passkeyUnlockPossible } from "$lib/vault/passkeyUnlock";
   import IconFingerprintRegular from "phosphor-icons-svelte/IconFingerprintRegular.svelte";
 
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { chromeMessages } from "$lib/i18n/messages/chrome";
   interface Props {
     /** Set while the dialog is open, so the check runs when it is needed. */
     active: boolean;
@@ -18,6 +20,8 @@
   }
 
   let { active, disabled = false, onUnlocked }: Props = $props();
+
+  const words = $derived(chromeMessages[appLocale()].common);
 
   let available = $state(false);
   let busy = $state(false);
@@ -51,14 +55,14 @@
       if (result.ok) {
         onUnlocked();
       } else if (result.reason === "no_prf") {
-        error = "This passkey can't unlock the vault from this device. Use your password.";
+        error = words.passkeyNoPrf;
       } else if (result.reason === "wrong_passkey") {
-        error = "That passkey didn't open the vault. Use your password.";
+        error = words.passkeyWrong;
       } else if (result.reason !== "cancelled") {
-        error = "Couldn't use a passkey here. Use your password.";
+        error = words.passkeyFailed;
       }
     } catch {
-      error = "Couldn't use a passkey here. Use your password.";
+      error = words.passkeyFailed;
     } finally {
       busy = false;
     }
@@ -70,10 +74,10 @@
     <Button type="button" variant="secondary" onclick={unlock} disabled={disabled || busy}>
       {#if busy}
         <Spinner aria-hidden="true" />
-        Waiting for your passkey…
+        {words.passkeyWaiting}
       {:else}
         <IconFingerprintRegular class="size-4" />
-        Unlock with passkey
+        {words.passkeyUnlock}
       {/if}
     </Button>
     {#if error}
@@ -81,7 +85,7 @@
     {/if}
     <div class="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
       <span class="h-px flex-1 bg-border"></span>
-      or
+      {words.or}
       <span class="h-px flex-1 bg-border"></span>
     </div>
   </div>

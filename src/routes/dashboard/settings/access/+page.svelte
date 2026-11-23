@@ -27,23 +27,20 @@
   import { publicKeyFingerprint } from "$lib/vault/keypair";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import { onDestroy, onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { settingsMessages } from "$lib/i18n/messages/settings";
+
+  const t = $derived(settingsMessages[appLocale()].access);
 
   let portalsAllowed = $state(false);
 
   // What a key can be allowed. The portal one is offered on plans with portals.
-  const TRANSFER_PERMISSIONS = [
-    { id: "transfers:send", label: "Send files", about: "Create transfers on your account, within your plan's limits." },
-    { id: "transfers:read", label: "See what it sent", about: "List its own transfers and how often they were downloaded." },
-    { id: "transfers:delete", label: "Delete what it sent", about: "Remove its own transfers before they expire." },
-  ] as const;
-  const PORTAL_PERMISSION = {
-    id: "portals:read",
-    label: "Read portals you pick",
-    about: "List and download what people sent to the portals you hand it. You choose which after approving.",
-  } as const;
-  const PERMISSIONS = $derived(portalsAllowed ? [...TRANSFER_PERMISSIONS, PORTAL_PERMISSION] : [...TRANSFER_PERMISSIONS]);
-  const LABELS: Record<string, string> = Object.fromEntries(
-    [...TRANSFER_PERMISSIONS, PORTAL_PERMISSION].map((p) => [p.id, p.label]),
+  const TRANSFER_PERMISSIONS = ["transfers:send", "transfers:read", "transfers:delete"];
+  const PERMISSIONS = $derived(
+    (portalsAllowed ? [...TRANSFER_PERMISSIONS, "portals:read"] : TRANSFER_PERMISSIONS).map((id) => ({
+      id,
+      ...t.permissions[id],
+    })),
   );
 
   let keys = $state<AccessKey[]>([]);
@@ -62,7 +59,7 @@
       portalsAllowed = res.portalsAllowed;
       loadError = null;
     } catch (err) {
-      loadError = err instanceof Error ? err.message : "Couldn't load your access keys.";
+      loadError = err instanceof Error ? err.message : t.errors.load;
     } finally {
       loading = false;
     }
@@ -103,10 +100,10 @@
     } catch (err) {
       lookError =
         err instanceof ApiError && err.status === 404
-          ? "No program is waiting under that code. Codes last ten minutes; start again in the program."
+          ? t.errors.noCode
           : err instanceof Error
             ? err.message
-            : "Couldn't look that code up.";
+            : t.errors.lookUp;
     } finally {
       looking = false;
     }
@@ -127,7 +124,7 @@
       code = "";
       await load();
     } catch (err) {
-      approveError = err instanceof Error ? err.message : "Couldn't approve. Try again.";
+      approveError = err instanceof Error ? err.message : t.errors.approve;
     } finally {
       approving = false;
     }
@@ -152,7 +149,7 @@
       const next = await api.updateAccessKey(key.id, { renew: true });
       keys = keys.map((k) => (k.id === key.id ? next : k));
     } catch (err) {
-      rowError = err instanceof Error ? err.message : "Couldn't renew this key.";
+      rowError = err instanceof Error ? err.message : t.errors.renew;
     } finally {
       busyId = null;
     }
@@ -166,7 +163,7 @@
       await api.revokeAccessKey(revokeId);
       await load();
     } catch (err) {
-      rowError = err instanceof Error ? err.message : "Couldn't revoke this key.";
+      rowError = err instanceof Error ? err.message : t.errors.revoke;
     } finally {
       busyId = null;
       revokeId = null;
@@ -205,7 +202,7 @@
       vaultLocked = mine.portals.some((p) => p.state === "locked");
       granted = new Set(grants.portals.map((g) => g.portalId));
     } catch (err) {
-      portalsError = err instanceof Error ? err.message : "Couldn't load your portals.";
+      portalsError = err instanceof Error ? err.message : t.errors.portals;
     } finally {
       portalsLoading = false;
     }
@@ -224,8 +221,8 @@
         if (!result.ok) {
           portalsError =
             result.reason === "locked"
-              ? "Your vault is locked. Unlock it to hand over a portal: its keys are sealed for this access key here in your browser."
-              : "This portal's keys could not be opened with your vault.";
+              ? t.errors.locked
+              : t.errors.sealed;
           if (result.reason === "locked") unlockPrompt.request();
           return;
         }
@@ -233,7 +230,7 @@
       }
       granted = new Set(granted);
     } catch (err) {
-      portalsError = err instanceof Error ? err.message : "Couldn't change that. Try again.";
+      portalsError = err instanceof Error ? err.message : t.errors.change;
     } finally {
       togglingPortal = null;
     }
@@ -245,7 +242,9 @@
   });
   onDestroy(unsubscribeVault);
 
-  const dayFmt = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" });
+  const dayFmt = $derived(
+    new Intl.DateTimeFormat(appLocale() === "nl" ? "nl-NL" : undefined, { year: "numeric", month: "short", day: "numeric" }),
+  );
 
   function daysLeft(iso: string | null): number {
     return iso ? Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000) : 0;
@@ -269,24 +268,19 @@
     <Frame.Panel>
       <div class="space-y-4">
         <div class="space-y-1">
-          <h2 class="text-xl font-semibold text-foreground">Access keys</h2>
-          <p class="text-sm text-muted-foreground">
-            A key lets a program on your own computer, such as the Tessil command-line tool, send
-            files as you. It never gets your vault, your password or this session, and it cannot
-            reach your account settings or billing. It opens a portal only if you hand it that
-            portal.
-          </p>
+          <h2 class="text-xl font-semibold text-foreground">{t.title}</h2>
+          <p class="text-sm text-muted-foreground">{t.intro}</p>
         </div>
 
         {#if approved}
-          <Alert tone="success">"{approved}" is approved. The program can continue.</Alert>
+          <Alert tone="success">{t.approved(approved)}</Alert>
         {/if}
 
         {#if !pending}
           <form onsubmit={lookUp} class="flex flex-wrap items-end gap-2">
             <TextInput
               id="pairing-code"
-              label="Code shown by the program"
+              label={t.codeLabel}
               placeholder="ABCD-EFGH"
               mono
               autocomplete="off"
@@ -300,9 +294,9 @@
             <Button type="submit" variant="secondary" fullWidth={false} disabled={looking || code.trim().length === 0}>
               {#if looking}
                 <Spinner aria-hidden="true" />
-                Looking…
+                {t.looking}
               {:else}
-                Continue
+                {t.continue}
               {/if}
             </Button>
           </form>
@@ -312,23 +306,20 @@
         {:else}
           <div class="space-y-4 rounded-lg border border-border p-4">
             <div class="space-y-1">
-              <h3 class="text-sm font-medium text-foreground">A program is asking for access</h3>
-              <p class="text-sm text-muted-foreground">
-                Compare the code below with the one the program shows. If they differ, or you did
-                not start this yourself, do not approve.
-              </p>
+              <h3 class="text-sm font-medium text-foreground">{t.askingTitle}</h3>
+              <p class="text-sm text-muted-foreground">{t.askingBody}</p>
             </div>
             <DetailList>
-              <DetailItem label="Calls itself">{pending.name}</DetailItem>
-              <DetailItem label="Its key">
+              <DetailItem label={t.callsItself}>{pending.name}</DetailItem>
+              <DetailItem label={t.itsKey}>
                 <span class="font-mono text-xs">{pending.fingerprint}</span>
               </DetailItem>
             </DetailList>
 
-            <TextInput id="key-name" label="Name it" maxlength={80} bind:value={pendingName} disabled={approving} />
+            <TextInput id="key-name" label={t.nameIt} maxlength={80} bind:value={pendingName} disabled={approving} />
 
             <fieldset class="space-y-3" disabled={approving}>
-              <legend class="text-sm font-medium text-foreground">It may</legend>
+              <legend class="text-sm font-medium text-foreground">{t.mayDo}</legend>
               {#each PERMISSIONS as permission (permission.id)}
                 <div>
                   <Checkbox bind:checked={chosen[permission.id]}>{permission.label}</Checkbox>
@@ -338,7 +329,7 @@
             </fieldset>
 
             <p class="text-xs text-muted-foreground">
-              It works for 90 days and can be renewed or revoked here at any time.
+              {t.lasts}
             </p>
 
             {#if approveError}
@@ -349,13 +340,13 @@
               <Button fullWidth={false} onclick={approve} disabled={approving || chosenList.length === 0}>
                 {#if approving}
                   <Spinner aria-hidden="true" />
-                  Approving…
+                  {t.approving}
                 {:else}
-                  Approve
+                  {t.approve}
                 {/if}
               </Button>
               <Button variant="ghost" fullWidth={false} onclick={cancelApprove} disabled={approving}>
-                Don't approve
+                {t.dontApprove}
               </Button>
             </div>
           </div>
@@ -368,9 +359,9 @@
     <Frame.Panel>
       <div class="space-y-4">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 class="text-xl font-semibold text-foreground">Your keys</h2>
+          <h2 class="text-xl font-semibold text-foreground">{t.yourKeys}</h2>
           {#if !loading && maxKeys > 0}
-            <span class="text-sm text-muted-foreground">{activeCount} of {maxKeys} on your plan</span>
+            <span class="text-sm text-muted-foreground">{t.onPlan(activeCount, maxKeys)}</span>
           {/if}
         </div>
 
@@ -379,10 +370,10 @@
         {:else if loading}
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
             <Spinner aria-hidden="true" />
-            Loading…
+            {t.loading}
           </div>
         {:else if shown.length === 0}
-          <p class="text-sm text-muted-foreground">No keys yet.</p>
+          <p class="text-sm text-muted-foreground">{t.none}</p>
         {:else}
           {#if rowError}
             <Alert tone="destructive">{rowError}</Alert>
@@ -395,29 +386,29 @@
                   <p class="flex flex-wrap items-center gap-2 font-medium text-foreground">
                     <span class="break-words">{key.name}</span>
                     {#if !key.active}
-                      <Badge tone="muted">Expired</Badge>
+                      <Badge tone="muted">{t.expired}</Badge>
                     {:else if left <= 14}
-                      <Badge tone="warning">{left === 1 ? "1 day left" : `${left} days left`}</Badge>
+                      <Badge tone="warning">{t.daysLeft(left)}</Badge>
                     {/if}
                   </p>
                   <p class="text-xs text-muted-foreground">
-                    {key.permissions.map((p) => LABELS[p] ?? p).join(" · ")}
+                    {key.permissions.map((p) => t.permissions[p]?.label ?? p).join(" · ")}
                   </p>
                   <p class="text-xs text-muted-foreground">
-                    {key.lastUsedAt ? `Last used ${dayFmt.format(new Date(key.lastUsedAt))}` : "Not used yet"}
+                    {key.lastUsedAt ? t.lastUsed(dayFmt.format(new Date(key.lastUsedAt))) : t.notUsed}
                     {#if key.expiresAt}
-                      · {key.active ? "works until" : "stopped on"} {dayFmt.format(new Date(key.expiresAt))}
+                      · {(key.active ? t.worksUntil : t.stoppedOn)(dayFmt.format(new Date(key.expiresAt)))}
                     {/if}
                   </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-3">
                   {#if key.active && key.permissions.includes("portals:read")}
                     <TextLink class="text-sm" onclick={() => openPortals(key)} disabled={busyId !== null}>
-                      Portals
+                      {t.portals}
                     </TextLink>
                   {/if}
                   <TextLink class="text-sm" onclick={() => renew(key)} disabled={busyId !== null}>
-                    {busyId === key.id && !revokeId ? "Renewing…" : "Renew"}
+                    {busyId === key.id && !revokeId ? t.renewing : t.renew}
                   </TextLink>
                   <Button
                     variant="secondary"
@@ -426,7 +417,7 @@
                     onclick={() => (revokeId = key.id)}
                     disabled={busyId !== null}
                   >
-                    Revoke
+                    {t.revoke}
                   </Button>
                 </div>
               </li>
@@ -436,24 +427,24 @@
 
         {#if portalsAllowed && accountKey}
           <div class="space-y-1 rounded-md border border-border p-3">
-            <p class="text-sm font-medium text-foreground">Your account's key</p>
+            <p class="text-sm font-medium text-foreground">{t.accountKey}</p>
             <p class="font-mono text-xs text-foreground">{accountKey.fingerprint}</p>
             <p class="text-xs text-muted-foreground">
-              Before a program opens portals it shows you this code (<code>tessil trust</code>).
-              Confirm there only if it is exactly the same.
+              {t.accountKeyBody} (<code>tessil trust</code>).
+              {t.accountKeyConfirm}
               {#if !accountKey.checked}
-                Your vault is locked, so this is the code as our server reports it.
-                <TextLink onclick={() => unlockPrompt.request()}>Unlock the vault</TextLink>
-                and this page checks it against your own key first.
+                {t.serverReported}
+                <TextLink onclick={() => unlockPrompt.request()}>{t.unlockVault}</TextLink>
+                {t.checkFirst}
               {:else}
-                Checked against the key in your vault.
+                {t.checked}
               {/if}
             </p>
           </div>
         {/if}
 
         <p class="text-xs text-muted-foreground">
-          "Sign out everywhere" under Security also revokes every key here.
+          {t.signOutNote}
         </p>
       </div>
     </Frame.Panel>
@@ -462,39 +453,39 @@
 
 <Modal
   open={revokeKey !== null}
-  title="Revoke this key?"
-  description={`"${revokeKey?.name ?? ""}" stops working at once and cannot be brought back; the program has to be approved again. What it already sent stays until it expires or you delete it.`}
+  title={t.revokeTitle}
+  description={t.revokeBody(revokeKey?.name ?? "")}
   onClose={() => (revokeId = null)}
 >
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (revokeId = null)} disabled={busyId !== null}>
-      Keep it
+      {t.keep}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmRevoke} disabled={busyId !== null}>
-      {busyId ? "Revoking…" : "Revoke key"}
+      {busyId ? t.revoking : t.revokeKey}
     </Button>
   {/snippet}
 </Modal>
 
 <Modal
   open={portalsFor !== null}
-  title="Portals for {portalsFor?.name ?? ''}"
-  description="Tick a portal to hand its keys to this access key. They are sealed for it here in your browser; we cannot read them. Untick to take the portal back."
+  title={t.portalsFor(portalsFor?.name ?? "")}
+  description={t.portalsBody}
   onClose={() => (portalsFor = null)}
 >
   <div class="space-y-3">
     {#if portalsLoading}
       <div class="flex items-center gap-2 text-sm text-muted-foreground">
         <Spinner aria-hidden="true" />
-        Loading…
+        {t.loading}
       </div>
     {:else if myPortals.length === 0}
-      <p class="text-sm text-muted-foreground">You have no portals yet.</p>
+      <p class="text-sm text-muted-foreground">{t.noPortals}</p>
     {:else}
       {#if vaultLocked}
         <Alert tone="warning">
-          Your vault is locked, so portal names are hidden and none can be handed over.
-          <TextLink onclick={() => unlockPrompt.request()}>Unlock vault</TextLink>
+          {t.lockedHidden}
+          <TextLink onclick={() => unlockPrompt.request()}>{t.unlock}</TextLink>
         </Alert>
       {/if}
       <ul class="divide-y divide-border rounded-md border border-border">
@@ -505,10 +496,10 @@
               onchange={() => togglePortal(portal)}
               disabled={togglingPortal !== null || (portal.state !== "open" && !granted.has(portal.id))}
             >
-              {portal.title ?? (portal.kind === "form" ? "Locked form" : "Locked portal")}
-              {#if portal.kind === "form"}<span class="text-muted-foreground"> · form</span>{/if}
+              {portal.title ?? (portal.kind === "form" ? t.lockedForm : t.lockedPortal)}
+              {#if portal.kind === "form"}<span class="text-muted-foreground"> · {t.form}</span>{/if}
               {#if togglingPortal === portal.id}
-                <span class="text-muted-foreground"> · saving…</span>
+                <span class="text-muted-foreground"> · {t.saving}</span>
               {/if}
             </Checkbox>
           </li>
@@ -519,11 +510,10 @@
       <Alert tone="destructive">{portalsError}</Alert>
     {/if}
     <p class="text-xs text-muted-foreground">
-      The key can list and download what was sent to these portals. It cannot change or delete
-      anything, and it loses a portal when you leave or delete it.
+      {t.portalsNote}
     </p>
   </div>
   {#snippet footer()}
-    <Button type="button" fullWidth={false} onclick={() => (portalsFor = null)}>Done</Button>
+    <Button type="button" fullWidth={false} onclick={() => (portalsFor = null)}>{t.done}</Button>
   {/snippet}
 </Modal>

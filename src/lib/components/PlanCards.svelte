@@ -5,7 +5,9 @@
   import Badge from "$lib/components/Badge.svelte";
   import Button from "$lib/components/Button.svelte";
   import Spinner from "$lib/components/Spinner.svelte";
-  import { PLANS, priceLabel, priceUnit, type Cycle, type PlanId } from "$lib/config/plans";
+  import { plansFor, priceLabel, priceUnit, type Cycle, type PlanId } from "$lib/config/plans";
+  import { type Locale } from "$lib/i18n/locale";
+import { hrefFor } from "$lib/i18n/paths";
   import { cn } from "$lib/utils";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
 
@@ -20,9 +22,36 @@
     busy?: PlanId | null;
     onChoose?: (plan: "pro" | "max") => void;
     onManage?: () => void;
+    locale?: Locale;
   }
 
-  let { cycle = "monthly", compact = false, current = null, billed = null, busy = null, onChoose, onManage }: Props = $props();
+  let { cycle = "monthly", compact = false, current = null, billed = null, busy = null, onChoose, onManage, locale = "en" }: Props =
+    $props();
+
+  const plans = $derived(plansFor(locale));
+  const t = $derived(
+    locale === "nl"
+      ? {
+          yours: "Jouw abonnement",
+          popular: "Meest gekozen",
+          start: "Begin met versturen",
+          granted: "Aan je account gegeven. Er wordt niets in rekening gebracht.",
+          manage: "Beheer je abonnement",
+          change: "Wijzig abonnement",
+          wait: "Een moment…",
+          get: (name: string) => `Kies ${name}`,
+        }
+      : {
+          yours: "Your plan",
+          popular: "Most people",
+          start: "Start sending",
+          granted: "Given to your account. Nothing is billed.",
+          manage: "Manage your plan",
+          change: "Change plan",
+          wait: "One moment…",
+          get: (name: string) => `Get ${name}`,
+        },
+  );
 
   const onPaidPlan = $derived(current === "pro" || current === "max");
   // A plan set by hand has no subscription to manage.
@@ -30,7 +59,7 @@
 </script>
 
 <div class="grid gap-4 md:grid-cols-3">
-  {#each PLANS as plan (plan.id)}
+  {#each plans as plan (plan.id)}
     {@const featured = plan.id === "pro"}
     <div
       class={cn(
@@ -41,9 +70,9 @@
       <div class="flex items-center justify-between gap-3">
         <h3 class="text-lg font-semibold text-foreground">{plan.name}</h3>
         {#if current === plan.id}
-          <Badge tone="success">Your plan</Badge>
+          <Badge tone="success">{t.yours}</Badge>
         {:else if featured}
-          <Badge tone="info">Most people</Badge>
+          <Badge tone="info">{t.popular}</Badge>
         {/if}
       </div>
       <p class="mt-1 text-sm text-muted-foreground">{plan.pitch}</p>
@@ -52,20 +81,20 @@
         <span class="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl" style="letter-spacing: -0.03em">
           {priceLabel(plan, cycle)}
         </span>
-        <span class="text-sm text-muted-foreground">{priceUnit(plan, cycle)}</span>
+        <span class="text-sm text-muted-foreground">{priceUnit(plan, cycle, locale)}</span>
       </p>
 
       {#if !compact}
         <div class="mt-6">
           {#if plan.id === "free"}
-            <Button href="/" variant="secondary">Start sending</Button>
+            <Button href={hrefFor("/", locale)} variant="secondary">{t.start}</Button>
           {:else if granted && current === plan.id}
             <p class="flex min-h-10 items-center text-sm text-muted-foreground">
-              Given to your account. Nothing is billed.
+              {t.granted}
             </p>
           {:else if onPaidPlan && !granted}
             <Button variant="secondary" onclick={onManage} disabled={busy !== null || billed === null}>
-              {current === plan.id ? "Manage your plan" : "Change plan"}
+              {current === plan.id ? t.manage : t.change}
             </Button>
           {:else}
             <Button
@@ -75,9 +104,9 @@
             >
               {#if busy === plan.id}
                 <Spinner aria-hidden="true" />
-                One moment…
+                {t.wait}
               {:else}
-                Get {plan.name}
+                {t.get(plan.name)}
               {/if}
             </Button>
           {/if}

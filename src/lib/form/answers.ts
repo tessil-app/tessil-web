@@ -189,7 +189,11 @@ function csvCell(text: string): string {
  * One row per response, one column per question. Columns follow the form
  * as it is now, then any questions only older responses answered.
  */
-export function answersCsv(questions: Question[], responses: CsvResponse[]): string {
+export function answersCsv(
+  questions: Question[],
+  responses: CsvResponse[],
+  words = { reference: "Reference", received: "Received", yes: "Yes", no: "No" },
+): string {
   const columns: { id: string; label: string }[] = questions.map((q) => ({ id: q.id, label: q.label }));
   for (const r of responses) {
     for (const a of r.answers) {
@@ -199,14 +203,14 @@ export function answersCsv(questions: Question[], responses: CsvResponse[]): str
       }
     }
   }
-  const lines = [["Reference", "Received", ...columns.map((c) => c.label)]];
+  const lines = [[words.reference, words.received, ...columns.map((c) => c.label)]];
   for (const r of responses) {
     lines.push([
       r.reference,
       r.receivedAt,
       ...columns.map((c) => {
         const a = r.answers.find((x) => x.id === c.id);
-        return a ? answerText(a) : "";
+        return a ? answerText(a, words) : "";
       }),
     ]);
   }

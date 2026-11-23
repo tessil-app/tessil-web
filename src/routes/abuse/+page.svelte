@@ -9,6 +9,11 @@
   import TextInput from "$lib/components/TextInput.svelte";
   import Textarea from "$lib/components/Textarea.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
+  import { page } from "$app/state";
+  import { localeFromPath } from "$lib/i18n/locale";
+  import { abuseMessages } from "$lib/i18n/messages/abuse";
+
+  const t = $derived(abuseMessages[localeFromPath(page.url.pathname)]);
 
   let transferUrl = $state("");
   let reason = $state("");
@@ -24,14 +29,12 @@
     error = null;
 
     try {
-      const subject = encodeURIComponent("Tessil Abuse Report");
-      const body = encodeURIComponent(
-        `Transfer URL: ${transferUrl}\n\nReason: ${reason}\n\nReporter contact: ${contact || "Not provided"}`
-      );
+      const subject = encodeURIComponent(t.mailSubject);
+      const body = encodeURIComponent(t.mailBody(transferUrl, reason, contact));
       window.location.href = `mailto:abuse@tessil.app?subject=${subject}&body=${body}`;
       submitted = true;
     } catch {
-      error = "Failed to submit report. Please email abuse@tessil.app directly.";
+      error = t.failed;
     } finally {
       submitting = false;
     }
@@ -39,15 +42,15 @@
 </script>
 
 <Seo
-  title="Report Abuse - Tessil"
-  description="Report illegal or abusive transfers on Tessil. Submit a link for review."
+  title={t.seoTitle}
+  description={t.description}
   path="/abuse"
 />
 
 <PageLayout width="3xl">
   <PageHeader
-    title="Report Abuse"
-    tagline="Report a transfer or related misuse on Tessil."
+    title={t.title}
+    tagline={t.tagline}
   />
 
   <Frame.Root>
@@ -59,13 +62,12 @@
           >
             <IconCheckRegular class="size-5" />
           </span>
-          <h2 class="text-xl font-semibold text-foreground">Report submitted</h2>
+          <h2 class="text-xl font-semibold text-foreground">{t.doneTitle}</h2>
           <p class="text-muted-foreground max-w-md text-balance">
-            Thanks for the report. We review every report and act on valid ones
-            under applicable law.
+            {t.doneBody}
           </p>
           <p class="text-sm text-muted-foreground max-w-md text-balance">
-            If your email client didn't open, send the report to
+            {t.noClient}
             <a
               href="mailto:abuse@tessil.app"
               class="text-primary underline underline-offset-2"
@@ -76,16 +78,8 @@
       {:else}
         <div class="space-y-6">
           <div class="space-y-3 text-muted-foreground">
-            <p>
-              If a transfer on Tessil contains illegal or abusive content,
-              report it below. Every report is reviewed; valid ones get acted
-              on under applicable law.
-            </p>
-            <p>
-              End-to-end encryption stops us from viewing file contents. We can
-              still delete the transfer, scrub associated metadata, and
-              cooperate with law enforcement under lawful orders.
-            </p>
+            <p>{t.intro1}</p>
+            <p>{t.intro2}</p>
           </div>
 
           <form
@@ -97,7 +91,7 @@
           >
             <TextInput
               id="transfer-url"
-              label="Transfer URL"
+              label={t.url}
               required
               placeholder="https://tessil.app/d/..."
               bind:value={transferUrl}
@@ -105,17 +99,17 @@
 
             <Textarea
               id="reason"
-              label="Reason for report"
+              label={t.reason}
               required
-              placeholder="Please describe why you are reporting this transfer"
+              placeholder={t.reasonHint}
               bind:value={reason}
             />
 
             <TextInput
               id="contact"
               type="email"
-              label="Your email (optional)"
-              placeholder="For follow-up if needed"
+              label={t.contact}
+              placeholder={t.contactHint}
               bind:value={contact}
             />
 
@@ -127,19 +121,13 @@
               type="submit"
               disabled={!transferUrl.trim() || !reason.trim() || submitting}
             >
-              {submitting ? "Submitting…" : "Submit report"}
+              {submitting ? t.submitting : t.submit}
             </Button>
           </form>
 
           <p class="text-sm text-muted-foreground">
-            Or email
-            <a
-              href="mailto:abuse@tessil.app"
-              class="text-primary underline underline-offset-2"
-              >abuse@tessil.app</a
-            >
-            directly. For child-safety emergencies, also contact local law
-            enforcement.
+            {t.orEmail}
+            <a href="mailto:abuse@tessil.app" class="text-primary underline underline-offset-2">abuse@tessil.app</a>{t.directly}
           </p>
         </div>
       {/if}

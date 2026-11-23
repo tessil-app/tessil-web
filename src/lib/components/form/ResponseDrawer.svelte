@@ -16,6 +16,9 @@
   import type { Question } from "$lib/form/questions";
   import type { OpenedDeposit } from "$lib/portal/deposits";
   import { formatSize } from "$lib/utils";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { formsAppMessages } from "$lib/i18n/messages/formsApp";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
 
   interface Props {
     open: boolean;
@@ -42,14 +45,16 @@
       : [],
   );
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const dayFmt = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" });
+  const locale = $derived(appLocale());
+  const f = $derived(formsAppMessages[locale]);
+  const t = $derived(f.drawer);
+  const r = $derived(f.responses);
+  const p = $derived(portalsAppMessages[locale].deposit);
+  const tag = $derived(locale === "nl" ? "nl-NL" : undefined);
+  const dateFmt = $derived(
+    new Intl.DateTimeFormat(tag, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+  );
+  const dayFmt = $derived(new Intl.DateTimeFormat(tag, { year: "numeric", month: "short", day: "numeric" }));
 
   function showDate(value: string): string {
     const [y, m, d] = value.split("-").map(Number);
@@ -75,7 +80,7 @@
   {#snippet header()}
     {#if response}
       <div class="space-y-1">
-        <p class="text-xs text-muted-foreground">Response</p>
+        <p class="text-xs text-muted-foreground">{t.response}</p>
         <h2 class="font-semibold text-base leading-snug text-foreground font-mono">{response.reference}</h2>
       </div>
     {/if}
@@ -85,18 +90,17 @@
     <div class="space-y-3">
       <DrawerSection>
         <DetailList>
-          <DetailItem label="Received">{dateFmt.format(new Date(response.createdAt))}</DetailItem>
-          <DetailItem label="Deleted on">{dayFmt.format(new Date(response.expiresAt))}</DetailItem>
+          <DetailItem label={p.received}>{dateFmt.format(new Date(response.createdAt))}</DetailItem>
+          <DetailItem label={p.deletedOn}>{dayFmt.format(new Date(response.expiresAt))}</DetailItem>
           {#if response.files.length > 0}
-            <DetailItem label="Files">
-              {response.files.length}
-              {response.files.length === 1 ? "file" : "files"}, {formatSize(response.totalBytes)}
+            <DetailItem label={t.files}>
+              {p.files(response.files.length, formatSize(response.totalBytes))}
             </DetailItem>
           {/if}
         </DetailList>
       </DrawerSection>
 
-      <DrawerSection title="Answers">
+      <DrawerSection title={t.answers}>
         {#if response.answers}
           <dl class="space-y-4">
             {#each response.answers as answer (answer.id)}
@@ -105,18 +109,15 @@
                 <dt class="text-sm text-muted-foreground break-words">
                   {answer.label}
                   {#if asked !== undefined && asked !== answer.label}
-                    <Badge tone="warning" class="ml-1 align-middle">Wording differs</Badge>
-                    <span class="mt-1 block text-xs">
-                      The form now asks: "{asked}". The wording above came with the response, from the
-                      sender's browser.
-                    </span>
+                    <Badge tone="warning" class="ml-1 align-middle">{t.wordingDiffers}</Badge>
+                    <span class="mt-1 block text-xs">{t.nowAsks(asked)}</span>
                   {/if}
                 </dt>
                 <dd class="text-sm text-foreground">
                   {#if answer.type === "file"}
                     {@const files = response.files.filter((f) => f.itemId === answer.id)}
                     {#if files.length === 0}
-                      <span class="text-muted-foreground">No file</span>
+                      <span class="text-muted-foreground">{t.noFile}</span>
                     {:else}
                       <ul class="space-y-2">
                         {#each files as file (file.id)}
@@ -125,25 +126,25 @@
                       </ul>
                     {/if}
                   {:else if answer.value === null}
-                    <span class="text-muted-foreground">Not answered</span>
+                    <span class="text-muted-foreground">{t.notAnswered}</span>
                   {:else if answer.type === "date" && typeof answer.value === "string"}
                     {showDate(answer.value)}
                   {:else}
-                    <span class="whitespace-pre-wrap break-words">{answerText(answer)}</span>
+                    <span class="whitespace-pre-wrap break-words">{answerText(answer, r)}</span>
                   {/if}
                 </dd>
               </div>
             {/each}
           </dl>
         {:else if response.answersUnreadable}
-          <Alert tone="warning">The answers could not be opened. Reload the page to try again.</Alert>
+          <Alert tone="warning">{t.unreadable}</Alert>
         {:else}
-          <p class="text-sm text-muted-foreground">No answers came with this response.</p>
+          <p class="text-sm text-muted-foreground">{t.noAnswers}</p>
         {/if}
       </DrawerSection>
 
       {#if loose.length > 0}
-        <DrawerSection title="Other files">
+        <DrawerSection title={t.otherFiles}>
           <ul class="space-y-2">
             {#each loose as file (file.id)}
               <li>{@render fileRow(file)}</li>
@@ -153,20 +154,20 @@
       {/if}
 
       <DrawerSection
-        title="Keep a record"
-        description="A text file with the reference, every answer, the file names and the deletion date. The person who answered has the same reference on their confirmation."
+        title={p.recordTitle}
+        description={t.recordBody}
       >
-        <Button variant="secondary" fullWidth={false} onclick={onSaveRecord}>Save record</Button>
+        <Button variant="secondary" fullWidth={false} onclick={onSaveRecord}>{p.saveRecord}</Button>
       </DrawerSection>
     </div>
   {/if}
 
   {#snippet footer()}
     {#if response}
-      <Button type="button" variant="destructive" fullWidth={false} onclick={onDelete}>Delete</Button>
+      <Button type="button" variant="destructive" fullWidth={false} onclick={onDelete}>{p.delete}</Button>
       {#if response.files.length > 0}
         <Button type="button" fullWidth={false} onclick={onDownloadAll} disabled={busy}>
-          {busy ? "Downloading…" : response.files.length > 1 ? `Download all ${response.files.length} files` : "Download file"}
+          {busy ? p.downloading : response.files.length > 1 ? t.downloadAll(response.files.length) : t.downloadFile}
         </Button>
       {/if}
     {/if}

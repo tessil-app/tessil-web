@@ -3,6 +3,7 @@
 // PLAN_* settings); change both together. Prices are charged by Polar,
 // so these numbers must match the products there.
 
+import type { Locale } from "$lib/i18n/locale";
 import { ACCESS_KEYS_ANNOUNCED, FORMS_ANNOUNCED } from "./launch";
 
 export type PlanId = "free" | "pro" | "max";
@@ -86,7 +87,9 @@ const paid = { free: false, pro: true, max: true } as const;
 const maxOnly = { free: false, pro: false, max: true } as const;
 
 // Every limit per plan. Same source as the lists above: the API's tiers.
-export const COMPARISON: ComparisonGroup[] = [
+/** The table for a set of launched products. */
+export function comparisonGroups(shown: { forms: boolean; accessKeys: boolean }): ComparisonGroup[] {
+  return [
   {
     title: "Sending",
     rows: [
@@ -146,7 +149,7 @@ export const COMPARISON: ComparisonGroup[] = [
   },
   // Shown once forms are announced. Counts mirror PLAN_*_MAX_FORMS in the API
   // and questionLimit in $lib/form/questions.
-  ...(FORMS_ANNOUNCED
+  ...(shown.forms
     ? [
         {
           title: "Asking through forms",
@@ -175,7 +178,7 @@ export const COMPARISON: ComparisonGroup[] = [
       ]
     : []),
   // Shown once the command-line tool is released.
-  ...(ACCESS_KEYS_ANNOUNCED
+  ...(shown.accessKeys
     ? [
         {
           title: "From a terminal or an AI assistant",
@@ -201,13 +204,162 @@ export const COMPARISON: ComparisonGroup[] = [
     ],
   },
 ];
+}
+
+export const COMPARISON: ComparisonGroup[] = comparisonGroups({
+  forms: FORMS_ANNOUNCED,
+  accessKeys: ACCESS_KEYS_ANNOUNCED,
+});
+
+// The same plans in Dutch. Numbers and order as above; only the words differ.
+const PLAN_TEXT_NL: Record<PlanId, Pick<Plan, "name" | "pitch" | "lead" | "features">> = {
+  free: {
+    name: "Gratis",
+    pitch: "Om te versturen.",
+    lead: null,
+    features: [
+      "Verstuur tot 1 GB per transfer",
+      "2 GB per maand, 20 transfers per dag",
+      "Links die tot 7 dagen geldig blijven",
+      "Een lijst met wat je verstuurde",
+      "Kan uitgenodigd worden voor iemands portaal",
+    ],
+  },
+  pro: {
+    name: "Pro",
+    pitch: "Ook om te ontvangen.",
+    lead: "Alles van Gratis, plus:",
+    features: [
+      "3 portalen, elk met een eigen checklist en teksten",
+      ...(FORMS_ANNOUNCED ? ["3 formulieren met tot 15 vragen"] : []),
+      "20 GB opslag",
+      "Transfers en portaalbestanden tot 30 dagen bewaard",
+      "Verstuur tot 5 GB per bestand",
+      "Deel een portaal met één persoon",
+    ],
+  },
+  max: {
+    name: "Max",
+    pitch: "Meer ruimte, en een pagina die eruitziet als de jouwe.",
+    lead: "Alles van Pro, plus:",
+    features: [
+      "10 portalen",
+      ...(FORMS_ANNOUNCED ? ["10 formulieren met tot 50 vragen"] : []),
+      "100 GB opslag",
+      "Transfers en portaalbestanden tot 90 dagen bewaard",
+      "Je logo, een wachtwoord en bestanden terugsturen",
+    ],
+  },
+};
+
+/** The plans with their words in a language. */
+export function plansFor(locale: Locale): Plan[] {
+  return locale === "nl" ? PLANS.map((p) => ({ ...p, ...PLAN_TEXT_NL[p.id] })) : PLANS;
+}
 
 export function priceLabel(plan: Plan, cycle: Cycle): string {
   if (!plan.price) return "€0";
   return `€${plan.price[cycle]}`;
 }
 
-export function priceUnit(plan: Plan, cycle: Cycle): string {
+export function priceUnit(plan: Plan, cycle: Cycle, locale: Locale = "en"): string {
+  if (locale === "nl") {
+    if (!plan.price) return "altijd";
+    return cycle === "annual" ? "per jaar" : "per maand";
+  }
   if (!plan.price) return "always";
   return cycle === "annual" ? "a year" : "a month";
 }
+
+// The comparison's words in Dutch, by their English wording. Numbers stay as
+// they are. plans.test.ts checks that every row has its Dutch.
+const COMPARISON_NL: Record<string, string> = {
+  Sending: "Versturen",
+  "Size of one transfer": "Grootte van één transfer",
+  "Size of one file": "Grootte van één bestand",
+  "How long a link can last": "Hoe lang een link geldig kan blijven",
+  "You pick per transfer, from one hour up to this.": "Je kiest per transfer, van een uur tot dit maximum.",
+  "Sent per month": "Verstuurd per maand",
+  "On the paid plans a fair-use ceiling; storage is the limit that counts.":
+    "Bij de betaalde abonnementen een redelijk-gebruikgrens; opslag is de grens die telt.",
+  "Transfers per day": "Transfers per dag",
+  "Password and download limit on a link": "Wachtwoord en downloadlimiet op een link",
+  "List of what you sent": "Lijst met wat je verstuurde",
+  "Receiving through portals": "Ontvangen via portalen",
+  Portals: "Portalen",
+  Storage: "Opslag",
+  "Everything you hold at one time: files in your portals and your own transfers.":
+    "Alles wat je tegelijk bewaart: bestanden in je portalen en je eigen transfers.",
+  "How long files in a portal are kept": "Hoe lang bestanden in een portaal bewaard blijven",
+  "What one person can send to a portal at once": "Wat één persoon in één keer naar een portaal kan sturen",
+  "Checklist of what you ask for": "Checklist van wat je vraagt",
+  "Confirmation for the sender, record for you": "Bevestiging voor de afzender, overzicht voor jou",
+  "Share a portal with one person": "Deel een portaal met één persoon",
+  "Be invited to someone else's portal": "Uitgenodigd worden voor het portaal van een ander",
+  "Options per portal": "Opties per portaal",
+  "Welcome message and thank-you note": "Welkomstbericht en bedankje",
+  "A field of your own": "Een eigen veld",
+  "A name, client number or reference.": "Een naam, klantnummer of referentie.",
+  "Closing date": "Sluitingsdatum",
+  "Email when files arrive": "E-mail als er bestanden binnenkomen",
+  "Duplicate a portal": "Een portaal dupliceren",
+  "Your logo on the page": "Je logo op de pagina",
+  "Send files back": "Bestanden terugsturen",
+  "Kept as long as your links can last.": "Bewaard zo lang als je links geldig kunnen blijven.",
+  "Password on a portal": "Wachtwoord op een portaal",
+  "Asking through forms": "Vragen via formulieren",
+  Forms: "Formulieren",
+  "Questions per form": "Vragen per formulier",
+  "Kinds of question": "Soorten vragen",
+  "Short and long text, one choice, several choices, yes or no, date, file.":
+    "Korte en lange tekst, één keuze, meerdere keuzes, ja of nee, datum, bestand.",
+  "How long responses are kept": "Hoe lang reacties bewaard blijven",
+  "Files in responses count towards your storage.": "Bestanden in reacties tellen mee voor je opslag.",
+  "Summary per question and export to CSV": "Samenvatting per vraag en export naar CSV",
+  "Welcome message, thank-you note and closing date": "Welkomstbericht, bedankje en sluitingsdatum",
+  "Email when someone answers": "E-mail als iemand antwoordt",
+  "Share a form with one person": "Deel een formulier met één persoon",
+  "Your logo on the form": "Je logo op het formulier",
+  "Password on a form": "Wachtwoord op een formulier",
+  "From a terminal or an AI assistant": "Vanuit een terminal of een AI-assistent",
+  "Access keys": "Toegangssleutels",
+  "One per computer or assistant that uses the tessil tool.": "Eén per computer of assistent die de tessil-tool gebruikt.",
+  "Send, fetch and list transfers": "Transfers versturen, ophalen en opsommen",
+  "Read portals you hand to a key": "Portalen lezen die je aan een sleutel geeft",
+  "List and download what arrived.": "Bekijk en download wat er binnenkwam.",
+  "Use it from an assistant (MCP)": "Gebruik vanuit een assistent (MCP)",
+  "It never receives a link or a key.": "Die krijgt nooit een link of een sleutel.",
+  "On every plan": "Bij elk abonnement",
+  "End-to-end encryption": "End-to-end versleuteling",
+  "Files, names, titles and notes.": "Bestanden, namen, titels en notities.",
+  "No tracking, no ads, no data selling": "Geen tracking, geen advertenties, geen verkoop van gegevens",
+  "Vault with passkeys and a recovery phrase": "Kluis met passkeys en een herstelzin",
+};
+
+/** A value such as "30 days" in Dutch; sizes and counts need nothing. */
+export function valueNl(value: PlanValue): PlanValue {
+  if (typeof value !== "string") return value;
+  return value.replace(/^(\d+) days?$/, (_, n) => `${n} ${n === "1" ? "dag" : "dagen"}`);
+}
+
+/** The comparison with its words in a language. Unknown words stay English. */
+export function comparisonFor(locale: Locale): ComparisonGroup[] {
+  if (locale === "en") return COMPARISON;
+  const w = (text: string) => COMPARISON_NL[text] ?? text;
+  return COMPARISON.map((group) => ({
+    title: w(group.title),
+    rows: group.rows.map((row) => ({
+      label: w(row.label),
+      note: row.note === undefined ? undefined : w(row.note),
+      values: { free: valueNl(row.values.free), pro: valueNl(row.values.pro), max: valueNl(row.values.max) },
+    })),
+  }));
+}
+
+/** English words in the comparison with no Dutch yet. For the test. */
+export function untranslatedComparison(): string[] {
+  return comparisonGroups({ forms: true, accessKeys: true }).flatMap((g) => [g.title, ...g.rows.flatMap((r) => [r.label, ...(r.note ? [r.note] : [])])]).filter(
+    (text) => !(text in COMPARISON_NL),
+  );
+}
+

@@ -43,6 +43,11 @@
   import IconDownloadRegular from "phosphor-icons-svelte/IconDownloadRegular.svelte";
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
   import { onDestroy } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
+
+  const locale = $derived(appLocale());
+  const t = $derived(portalsAppMessages[locale].detail);
 
   type Phase = "loading" | "locked" | "missing" | "unreadable" | "ready";
   type FileStatus = "idle" | "downloading" | "complete" | "error";
@@ -102,10 +107,10 @@
     soon: rows.filter((r) => r.soon).length,
   });
   const filters = $derived<{ id: Filter; label: string }[]>([
-    { id: "all", label: "All" },
-    ...(rows.some((r) => r.isNew) ? [{ id: "new" as const, label: "New" }] : []),
-    ...(checklist.length > 0 ? [{ id: "incomplete" as const, label: "Incomplete" }] : []),
-    { id: "soon", label: "Deleted soon" },
+    { id: "all", label: t.filters.all },
+    ...(rows.some((r) => r.isNew) ? [{ id: "new" as const, label: t.filters.new }] : []),
+    ...(checklist.length > 0 ? [{ id: "incomplete" as const, label: t.filters.incomplete }] : []),
+    { id: "soon", label: t.filters.soon },
   ]);
   const visible = $derived.by(() => {
     const needle = query.trim().toLowerCase();
@@ -161,7 +166,7 @@
 
   const readyInvite = $derived(sharing?.invites.find((i) => i.ready) ?? null);
   const sharingLabel = $derived(
-    sharing?.guests.length ? "Shared with 1" : sharing?.invites.length ? "Sharing (invited)" : "Sharing",
+    sharing?.guests.length ? t.sharedWithOne : sharing?.invites.length ? t.sharingInvited : t.sharing,
   );
 
   async function reloadSharing() {
@@ -198,7 +203,7 @@
       nextCursor = first.nextCursor;
       phase = "ready";
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't load this portal.";
+      errorMessage = err instanceof Error ? err.message : t.errors.load;
       phase = portal ? "ready" : "missing";
     }
   }
@@ -223,7 +228,7 @@
       unreadable += more.unreadable;
       nextCursor = more.nextCursor;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't load more.";
+      errorMessage = err instanceof Error ? err.message : t.errors.more;
     } finally {
       isLoadingMore = false;
     }
@@ -254,8 +259,8 @@
         percent: 0,
         error:
           err instanceof StreamInterruptedError
-            ? "Interrupted. Delete the partial file and try again."
-            : "Couldn't download this file. Try again.",
+            ? t.errors.interrupted
+            : t.errors.download,
       };
     }
   }
@@ -288,7 +293,7 @@
       `tessil-${deposit.reference}.txt`,
       buildReceiptText({
         kind: "received",
-        locale: "en",
+        locale,
         portalTitle: portal.title,
         reference: deposit.reference,
         at: new Date(deposit.createdAt),
@@ -309,7 +314,7 @@
       if (selected.has(confirmDeleteId)) toggleSelected(confirmDeleteId);
       if (openDepositId === confirmDeleteId) openDepositId = null;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't delete these files.";
+      errorMessage = err instanceof Error ? err.message : t.errors.delete;
     } finally {
       confirmDeleteId = null;
       isDeleting = false;
@@ -323,7 +328,7 @@
       copied = true;
       setTimeout(() => (copied = false), 2000);
     } catch {
-      errorMessage = "Couldn't copy the link.";
+      errorMessage = t.errors.copy;
     }
   }
 
@@ -337,51 +342,51 @@
   const checkbox =
     "size-4 rounded border-input bg-card accent-primary cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-  const shortFmt = new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const shortFmt = $derived(
+    new Intl.DateTimeFormat(locale === "nl" ? "nl-NL" : undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  );
 
   function daysLeft(iso: string): string {
     const days = daysUntil(iso);
-    if (days <= 0) return "today";
-    return days === 1 ? "in 1 day" : `in ${days} days`;
+    if (days <= 0) return t.today;
+    return t.inDays(days);
   }
 </script>
 
-<Seo title="{portal?.title ?? 'Portal'} - Tessil" robots="noindex" />
+<Seo title={t.seoTitle(portal?.title ?? null)} robots="noindex" />
 
 <PageLayout width="5xl">
   {#if phase !== "ready"}
-    <BackLink href="/dashboard/portals" label="All portals" />
+    <BackLink href="/dashboard/portals" label={t.allPortals} />
   {/if}
 
   {#if phase === "loading"}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
       <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
+      <p class="text-muted-foreground">{t.loading}</p>
     </div>
   {:else if phase === "locked"}
-    <EmptyState title={auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"} level={1}>
-      <p>
-        The files sent to this portal are opened with a key kept in your vault.
-      </p>
+    <EmptyState title={auth.needsVaultSetup ? t.needsVault : t.vaultLocked} level={1}>
+      <p>{t.lockedBody}</p>
       {#snippet actions()}
         {#if auth.needsVaultSetup}
-          <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+          <Button fullWidth={false} href="/setup/vault">{t.setUpVault}</Button>
         {:else}
-          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>{t.unlockVault}</Button>
         {/if}
       {/snippet}
     </EmptyState>
   {:else if phase === "missing" || phase === "unreadable"}
-    <EmptyState title={phase === "missing" ? "Portal not found" : "This portal can't be opened"} level={1}>
+    <EmptyState title={phase === "missing" ? t.notFound : t.cantOpen} level={1}>
       <p>
         {phase === "missing"
-          ? "It may have been deleted, or you may not be a member of it."
-          : "Its keys did not open with your vault."}
+          ? t.notFoundBody
+          : t.cantOpenBody}
       </p>
       {#if errorMessage}
         <Alert tone="destructive">{errorMessage}</Alert>
@@ -391,18 +396,18 @@
     <PageHeader
       title={portal.title}
       tagline={portal.role === "member"
-        ? "Shared with you. Files are deleted automatically, so download what you need to keep."
-        : "Files are deleted automatically, so download what you need to keep."}
-      back={{ href: "/dashboard/portals", label: "All portals" }}
+        ? t.taglineMember
+        : t.taglineOwner}
+      back={{ href: "/dashboard/portals", label: t.allPortals }}
       align="left"
     >
       {#snippet badge()}
         <Badge tone={portal?.isDisabled || hasClosed(portal?.closesAt) ? "muted" : "success"}>
           {portal?.isDisabled
-            ? "Switched off"
+            ? t.off
             : hasClosed(portal?.closesAt)
-              ? "Closed"
-              : "Accepting files"}
+              ? t.closed
+              : t.accepting}
         </Badge>
       {/snippet}
       {#snippet actions()}
@@ -413,7 +418,7 @@
             class="whitespace-nowrap"
             href="/dashboard/portals/{portal.id}/settings"
           >
-            Settings
+            {t.settings}
           </Button>
           {#if portal.twoWay}
             <Button
@@ -422,7 +427,7 @@
               class="whitespace-nowrap"
               onclick={() => (returnsOpen = true)}
             >
-              Send files{portal.returns.length > 0 ? ` (${portal.returns.length})` : ""}
+              {t.sendFiles(portal.returns.length)}
             </Button>
           {/if}
           <Button
@@ -435,7 +440,7 @@
           </Button>
         {/if}
         <Button fullWidth={false} class="whitespace-nowrap" onclick={copyLink}>
-          {copied ? "Copied" : "Copy link"}
+          {copied ? t.copied : t.copyLink}
         </Button>
       {/snippet}
     </PageHeader>
@@ -447,10 +452,10 @@
 
       {#if readyInvite}
         <Notice>
-          {readyInvite.email} has signed in and is ready. Give them access to share this portal.
+          {t.readyInvite(readyInvite.email)}
           {#snippet action()}
             <Button variant="secondary" fullWidth={false} onclick={() => (sharingOpen = true)}>
-              Give access
+              {t.giveAccess}
             </Button>
           {/snippet}
         </Notice>
@@ -458,28 +463,24 @@
 
       {#if unreadable > 0}
         <Alert tone="warning">
-          {unreadable}
-          {unreadable === 1 ? "deposit" : "deposits"} could not be opened with this portal's key and
-          {unreadable === 1 ? "is" : "are"} not shown.
+          {t.unreadable(unreadable)}
         </Alert>
       {/if}
 
       {#if deposits.length === 0}
-        <EmptyState title="Nothing has been sent yet">
-          <p>
-            Share the portal link. Files appear here as soon as someone sends them.
-          </p>
+        <EmptyState title={t.emptyTitle}>
+          <p>{t.emptyBody}</p>
         </EmptyState>
       {:else}
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
           <SearchField
             bind:value={query}
-            label="Search deliveries"
-            placeholder="Search note, reference or file name"
+            label={t.search}
+            placeholder={t.searchPlaceholder}
             class="sm:w-80"
           />
           <FilterChips
-            label="Show"
+            label={t.show}
             options={filters.map((f) => ({ value: f.id, label: f.label, count: counts[f.id] }))}
             value={filter}
             onChange={(v) => (filter = v)}
@@ -493,10 +494,10 @@
                 onclick={downloadSelected}
                 disabled={downloadingSelected || downloadingAll !== null}
               >
-                {downloadingSelected ? "Downloading…" : `Download ${selectedVisible.length} selected`}
+                {downloadingSelected ? t.downloading : t.downloadSelected(selectedVisible.length)}
               </Button>
               <TextLink class="text-sm text-muted-foreground" onclick={() => (selected = new Set())}>
-                Clear
+                {t.clear}
               </TextLink>
             </div>
           {/if}
@@ -504,7 +505,7 @@
 
         {#if visible.length === 0}
           <div class="rounded-lg bg-card px-4 py-10 text-center text-sm text-muted-foreground">
-            Nothing matches. Search looks at notes, references, file names and what senders filled in.
+            {t.noMatch}
           </div>
         {:else}
           <!-- What the sender filled in leads when the portal has an extra field; the reference otherwise. -->
@@ -516,7 +517,7 @@
             >
               <span class="truncate">{deposit.answer?.value ?? deposit.reference}</span>
               {#if isNew}
-                <Badge tone="info" class="font-sans">New</Badge>
+                <Badge tone="info" class="font-sans">{t.newBadge}</Badge>
               {/if}
             </div>
           {/snippet}
@@ -536,18 +537,18 @@
                 type="checkbox"
                 checked={allVisibleSelected}
                 onchange={toggleAllVisible}
-                aria-label="Select all shown"
+                aria-label={t.selectAll}
                 class={checkbox}
               />
             {/snippet}
             {#snippet header()}
-              <div>Delivery</div>
-              <div>Received</div>
-              <div>Files</div>
+              <div>{t.colDelivery}</div>
+              <div>{t.colReceived}</div>
+              <div>{t.colFiles}</div>
               {#if checklist.length > 0}
-                <div>Asked for</div>
+                <div>{t.colAskedFor}</div>
               {/if}
-              <div>Deleted</div>
+              <div>{t.colDeleted}</div>
             {/snippet}
 
             {#each visible as row (row.deposit.id)}
@@ -558,7 +559,7 @@
                     type="checkbox"
                     checked={selected.has(deposit.id)}
                     onchange={() => toggleSelected(deposit.id)}
-                    aria-label="Select {deposit.reference}"
+                    aria-label={t.select(deposit.reference)}
                     class={checkbox}
                   />
                 {/snippet}
@@ -577,8 +578,8 @@
                     <div>
                       <Badge tone={row.complete ? "success" : "warning"}>
                         {row.complete
-                          ? "Complete"
-                          : `${row.coverage.provided.length} of ${checklist.length}`}
+                          ? t.complete
+                          : t.of(row.coverage.provided.length, checklist.length)}
                       </Badge>
                     </div>
                   {/if}
@@ -597,18 +598,17 @@
                       {#if checklist.length > 0}
                         <Badge tone={row.complete ? "success" : "warning"}>
                           {row.complete
-                            ? "Complete"
-                            : `${row.coverage.provided.length} of ${checklist.length}`}
+                            ? t.complete
+                            : t.of(row.coverage.provided.length, checklist.length)}
                         </Badge>
                       {/if}
                     </div>
                     <p class="text-xs text-muted-foreground">
                       {shortFmt.format(new Date(deposit.createdAt))} ·
-                      {deposit.files.length}
-                      {deposit.files.length === 1 ? "file" : "files"} · {formatSize(deposit.totalBytes)}
+                      {t.files(deposit.files.length)} · {formatSize(deposit.totalBytes)}
                       ·
                       <span class={row.soon ? "text-destructive-foreground" : ""}>
-                        deleted {daysLeft(deposit.expiresAt)}
+                        {t.deletedWhen(daysLeft(deposit.expiresAt))}
                       </span>
                     </p>
                   </div>
@@ -616,7 +616,7 @@
 
                 {#snippet actions()}
                   <IconButton
-                    label="Download all files of {deposit.reference}"
+                    label={t.downloadAllOf(deposit.reference)}
                     onclick={() => downloadAll(deposit)}
                     disabled={downloadingAll !== null}
                   >
@@ -629,7 +629,7 @@
                     {/if}
                   </IconButton>
                   <IconButton
-                    label="Delete {deposit.reference}"
+                    label={t.deleteRef(deposit.reference)}
                     tone="destructive"
                     onclick={() => (confirmDeleteId = deposit.id)}
                   >
@@ -642,16 +642,13 @@
         {/if}
 
         <p class="text-xs text-muted-foreground" role="status">
-          Showing {visible.length} of {deposits.length}
-          {deposits.length === 1 ? "delivery" : "deliveries"}{nextCursor
-            ? ". Older ones are not loaded yet, so search does not cover them."
-            : "."}
+          {t.showing(visible.length, deposits.length, nextCursor !== null)}
         </p>
 
         {#if nextCursor}
           <div class="flex justify-center">
             <Button variant="secondary" fullWidth={false} onclick={loadMore} disabled={isLoadingMore}>
-              {isLoadingMore ? "Loading…" : "Show older"}
+              {isLoadingMore ? t.loading : t.showOlder}
             </Button>
           </div>
         {/if}
@@ -695,8 +692,8 @@
 
 <Modal
   open={confirmDeleteId !== null}
-  title="Delete these files?"
-  description="They are removed for everyone with access to this portal. This can't be undone."
+  title={t.deleteTitle}
+  description={t.deleteBody}
   onClose={() => (confirmDeleteId = null)}
 >
   {#snippet footer()}
@@ -707,14 +704,14 @@
       onclick={() => (confirmDeleteId = null)}
       disabled={isDeleting}
     >
-      Keep them
+      {t.keep}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmDelete} disabled={isDeleting}>
       {#if isDeleting}
         <Spinner aria-hidden="true" />
-        Deleting…
+        {t.deleting}
       {:else}
-        Delete files
+        {t.deleteFiles}
       {/if}
     </Button>
   {/snippet}

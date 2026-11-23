@@ -1,5 +1,8 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
+  import { page } from "$app/state";
+  import { uiLocale } from "$lib/i18n/app.svelte";
+  import { chromeMessages } from "$lib/i18n/messages/chrome";
   import { cubicIn } from "svelte/easing";
   import IconArrowsClockwiseRegular from "phosphor-icons-svelte/IconArrowsClockwiseRegular.svelte";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
@@ -7,6 +10,8 @@
   import IconFileRegular from "phosphor-icons-svelte/IconFileRegular.svelte";
   import IconWarningRegular from "phosphor-icons-svelte/IconWarningRegular.svelte";
   import IconXRegular from "phosphor-icons-svelte/IconXRegular.svelte";
+
+  const words = $derived(chromeMessages[uiLocale(page.url.pathname)].common);
 
   type Status = "idle" | "uploading" | "downloading" | "complete" | "error";
   type Kind = "upload" | "download";
@@ -102,7 +107,7 @@
         aria-valuemin="0"
         aria-valuemax="100"
         aria-valuenow={Math.round(percent)}
-        aria-label={status === "uploading" ? `Uploading ${name}` : `Downloading ${name}`}
+        aria-label={status === "uploading" ? words.uploading(name) : words.downloading(name)}
       >
         <div
           class="bg-info h-1 rounded-full transition-[width] duration-200 ease-out"
@@ -119,7 +124,7 @@
   {#if showTrail}
     <span class="shrink-0 inline-flex items-center justify-center min-w-9 h-9">
       {#if status === "complete"}
-        <span class="text-success-foreground inline-flex" aria-label="Done">
+        <span class="text-success-foreground inline-flex" aria-label={words.done}>
           <IconCheckRegular class="size-4" />
         </span>
       {:else if inProgress}
@@ -130,7 +135,7 @@
         <button
           type="button"
           onclick={onRetry}
-          aria-label="Retry {name}"
+          aria-label={words.retry(name)}
           class="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <IconArrowsClockwiseRegular class="size-4" />
@@ -139,7 +144,7 @@
         <button
           type="button"
           onclick={onRemove}
-          aria-label={removeLabel ?? `Remove ${name}`}
+          aria-label={removeLabel ?? words.remove(name)}
           class="p-2 rounded text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/10 transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <IconXRegular class="size-4" />
@@ -148,7 +153,7 @@
         <button
           type="button"
           onclick={onDownload}
-          aria-label="Download {name}"
+          aria-label={words.download(name)}
           class="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-200 ease-out hover:cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <IconDownloadRegular class="size-4" />

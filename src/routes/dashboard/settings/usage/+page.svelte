@@ -17,6 +17,13 @@
   import { PLANS } from "$lib/config/plans";
   import { formatSize } from "$lib/utils";
   import { onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { settingsMessages } from "$lib/i18n/messages/settings";
+
+  const locale = $derived(appLocale());
+  const s = $derived(settingsMessages[locale]);
+  const t = $derived(s.usage);
 
   let usage = $state<UsageResponse | null>(null);
   let usageError = $state<string | null>(null);
@@ -40,7 +47,7 @@
     try {
       usage = await api.getMyUsage();
     } catch (err) {
-      usageError = err instanceof Error ? err.message : "Couldn't load usage details.";
+      usageError = err instanceof Error ? err.message : t.loadFailed;
     }
   });
 
@@ -55,20 +62,23 @@
     return pct >= FULL ? "destructive" : pct >= NEAR ? "warning" : "info";
   }
 
-  const dayFmt = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long" });
-  const timeFmt = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
+  const tag = $derived(locale === "nl" ? "nl-NL" : undefined);
+  const dayFmt = $derived(new Intl.DateTimeFormat(tag, { day: "numeric", month: "long" }));
+  const timeFmt = $derived(new Intl.DateTimeFormat(tag, { hour: "2-digit", minute: "2-digit" }));
 
   /** "on 1 December" for a day further off, "today at 01:00" or "tomorrow at 01:00" when near. */
   function resets(iso: string): string {
     const at = new Date(iso);
     const now = new Date();
     const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    if (at.toDateString() === now.toDateString()) return `today at ${timeFmt.format(at)}`;
-    if (at.toDateString() === next.toDateString()) return `tomorrow at ${timeFmt.format(at)}`;
-    return `on ${dayFmt.format(at)}`;
+    if (at.toDateString() === now.toDateString()) return t.today(timeFmt.format(at));
+    if (at.toDateString() === next.toDateString()) return t.tomorrow(timeFmt.format(at));
+    return t.on(dayFmt.format(at));
   }
 
-  const planName = $derived(PLANS.find((p) => p.id === usage?.tier)?.name ?? "Free");
+  const planName = $derived(
+    usage?.tier === "free" || !usage ? s.tiers.free : (PLANS.find((p) => p.id === usage?.tier)?.name ?? s.tiers.free),
+  );
 
   interface Meter {
     id: string;
@@ -85,34 +95,34 @@
     if (usage.storage) {
       list.push({
         id: "storage",
-        title: "Storage",
-        value: `${formatSize(usage.storage.usedBytes)} of ${formatSize(usage.storage.quotaBytes)}`,
+        title: t.storage,
+        value: t.of(formatSize(usage.storage.usedBytes), formatSize(usage.storage.quotaBytes)),
         pct: percent(usage.storage.usedBytes, usage.storage.quotaBytes),
-        note: "Everything kept for you right now: what you sent and what people sent you. Space comes back when things are deleted or expire.",
+        note: t.storageNote,
       });
     }
     list.push({
       id: "sent",
-      title: "Sent by you this month",
-      value: `${formatSize(usage.monthlyVolume.usedBytes)} of ${formatSize(usage.monthlyVolume.capBytes)}`,
+      title: t.sent,
+      value: t.of(formatSize(usage.monthlyVolume.usedBytes), formatSize(usage.monthlyVolume.capBytes)),
       pct: percent(usage.monthlyVolume.usedBytes, usage.monthlyVolume.capBytes),
-      note: `Starts again ${resets(usage.monthlyVolume.resetAt)}.`,
+      note: t.startsAgain(resets(usage.monthlyVolume.resetAt)),
     });
     if (usage.portalVolume) {
       list.push({
         id: "received",
-        title: "Received this month",
-        value: `${formatSize(usage.portalVolume.usedBytes)} of ${formatSize(usage.portalVolume.capBytes)}`,
+        title: t.received,
+        value: t.of(formatSize(usage.portalVolume.usedBytes), formatSize(usage.portalVolume.capBytes)),
         pct: percent(usage.portalVolume.usedBytes, usage.portalVolume.capBytes),
-        note: `Everything people sent you, all links together. It does not use up what you can send. Starts again ${resets(usage.portalVolume.resetAt)}.`,
+        note: t.receivedNote(resets(usage.portalVolume.resetAt)),
       });
     }
     list.push({
       id: "daily",
-      title: "Transfers today",
-      value: `${usage.dailyTransfers.used} of ${usage.dailyTransfers.cap}`,
+      title: t.daily,
+      value: t.of(String(usage.dailyTransfers.used), String(usage.dailyTransfers.cap)),
       pct: percent(usage.dailyTransfers.used, usage.dailyTransfers.cap),
-      note: `Starts again ${resets(usage.dailyTransfers.resetAt)}.`,
+      note: t.startsAgain(resets(usage.dailyTransfers.resetAt)),
     });
     return list;
   });
@@ -123,14 +133,14 @@
   const counts = $derived.by(() => {
     if (!owned) return [];
     return [
-      ...(owned.maxPortals > 0 ? [{ label: "Portals", used: owned.portals, max: owned.maxPortals }] : []),
-      ...(FORMS_ANNOUNCED && owned.maxForms > 0 ? [{ label: "Forms", used: owned.forms, max: owned.maxForms }] : []),
+      ...(owned.maxPortals > 0 ? [{ label: t.portals, used: owned.portals, max: owned.maxPortals }] : []),
+      ...(FORMS_ANNOUNCED && owned.maxForms > 0 ? [{ label: t.forms, used: owned.forms, max: owned.maxForms }] : []),
     ];
   });
 
   function expiry(hours: number[]): string {
     const longest = Math.max(...hours);
-    return longest >= 24 ? `${longest / 24} days` : `${longest} hours`;
+    return longest >= 24 ? t.days(longest / 24) : t.hours(longest);
   }
 </script>
 
@@ -139,14 +149,14 @@
     <div class="space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2.5">
-          <h2 class="text-xl font-semibold text-foreground">Usage</h2>
+          <h2 class="text-xl font-semibold text-foreground">{t.title}</h2>
           {#if usage}
             <Badge tone={usage.tier === "free" ? "muted" : "info"}>{planName}</Badge>
           {/if}
         </div>
         {#if canGrow}
           <Button variant="secondary" fullWidth={false} class="py-2 px-3 text-sm" href="/dashboard/settings/account">
-            Change plan
+            {t.changePlan}
           </Button>
         {/if}
       </div>
@@ -156,14 +166,13 @@
       {:else if !usage}
         <div class="flex items-center gap-2 text-sm text-muted-foreground" role="status">
           <Spinner aria-hidden="true" />
-          Loading usage…
+          {t.loading}
         </div>
       {:else}
         {#if tight.length > 0}
           <Alert tone={tight.some((m) => m.pct >= FULL) ? "destructive" : "warning"}>
-            {tight.map((m) => m.title).join(" and ")}
-            {tight.length === 1 ? "is" : "are"} close to what {planName} allows.
-            {#if canGrow}A larger plan gives more room.{/if}
+            {t.close(tight.map((m) => m.title), planName)}
+            {#if canGrow}{t.larger}{/if}
           </Alert>
         {/if}
 
@@ -182,19 +191,19 @@
         </div>
 
         <section class="space-y-3 border-t border-border pt-5">
-          <h3 class="text-sm font-medium text-foreground">What {planName} allows</h3>
+          <h3 class="text-sm font-medium text-foreground">{t.allows(planName)}</h3>
           <DetailList>
             {#each counts as count (count.label)}
-              <DetailItem label={count.label}>{count.used} of {count.max}</DetailItem>
+              <DetailItem label={count.label}>{t.of(String(count.used), String(count.max))}</DetailItem>
             {/each}
-            <DetailItem label="One file">up to {formatSize(usage.caps.maxFileSize)}</DetailItem>
-            <DetailItem label="One transfer">up to {formatSize(usage.caps.maxTransferSize)}</DetailItem>
-            <DetailItem label="A link can last">up to {expiry(usage.caps.allowedExpiryHours)}</DetailItem>
+            <DetailItem label={t.oneFile}>{t.upTo(formatSize(usage.caps.maxFileSize))}</DetailItem>
+            <DetailItem label={t.oneTransfer}>{t.upTo(formatSize(usage.caps.maxTransferSize))}</DetailItem>
+            <DetailItem label={t.linkLasts}>{t.upTo(expiry(usage.caps.allowedExpiryHours))}</DetailItem>
           </DetailList>
           {#if PORTALS_ANNOUNCED}
             <p class="text-xs text-muted-foreground">
-              Every limit of every plan is in the
-              <TextLink href="/pricing#compare">comparison</TextLink>.
+              {t.everyLimit}
+              <TextLink href="{hrefFor('/pricing', locale)}#compare">{t.comparison}</TextLink>.
             </p>
           {/if}
         </section>

@@ -35,6 +35,14 @@
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import IconDotsThreeRegular from "phosphor-icons-svelte/IconDotsThreeRegular.svelte";
   import { onDestroy } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { formsAppMessages } from "$lib/i18n/messages/formsApp";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
+
+  const locale = $derived(appLocale());
+  const t = $derived(formsAppMessages[locale].list);
+  const l = $derived(portalsAppMessages[locale].list);
 
   let portals = $state<MyPortal[]>([]);
   let maxForms = $state(0);
@@ -69,7 +77,7 @@
       portals = res.portals.filter((p) => p.kind === "form");
       maxForms = res.maxForms;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't load your forms.";
+      errorMessage = err instanceof Error ? err.message : t.errors.load;
     } finally {
       isLoading = false;
     }
@@ -97,7 +105,7 @@
         if (copiedId === portal.id) copiedId = null;
       }, 2000);
     } catch {
-      errorMessage = "Couldn't copy. Select the link and copy it by hand.";
+      errorMessage = l.errors.copy;
     }
   }
 
@@ -111,7 +119,7 @@
         p.id === portal.id ? { ...p, isDisabled: !portal.isDisabled } : p,
       );
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't update the form.";
+      errorMessage = err instanceof Error ? err.message : t.errors.update;
     } finally {
       busyId = null;
     }
@@ -152,14 +160,14 @@
       if (!result.ok) {
         acceptError =
           result.reason === "locked"
-            ? "Your vault is locked. Unlock it and try again."
-            : "These keys were not sealed by the person who shared the form, so they were refused. Ask them to remove you and invite you again.";
+            ? l.errors.locked
+            : t.errors.notSealed;
         return;
       }
       acceptId = null;
       await load();
     } catch (err) {
-      acceptError = err instanceof Error ? err.message : "Couldn't accept. Try again.";
+      acceptError = err instanceof Error ? err.message : l.errors.accept;
     } finally {
       isAccepting = false;
     }
@@ -173,7 +181,7 @@
       await api.removePortalMember(leaveId, auth.user.id);
       portals = portals.filter((p) => p.id !== leaveId);
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't leave the form.";
+      errorMessage = err instanceof Error ? err.message : t.errors.leave;
     } finally {
       leaveId = null;
       isLeaving = false;
@@ -189,7 +197,7 @@
       portals = portals.filter((p) => p.id !== confirmDeleteId);
       confirmDeleteId = null;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't delete the form.";
+      errorMessage = err instanceof Error ? err.message : t.errors.delete;
       confirmDeleteId = null;
     } finally {
       isDeleting = false;
@@ -218,7 +226,7 @@
       const opened = await openMemberPortal(auth.user.id, templateOf.id, window.location.origin);
       if (!opened.ok) {
         templateError =
-          opened.reason === "locked" ? "Your vault is locked. Unlock it and try again." : "This form could not be opened.";
+          opened.reason === "locked" ? l.errors.locked : t.errors.cantOpen;
         return;
       }
       const form = opened.portal;
@@ -232,7 +240,7 @@
         notifyOnDelivery: form.notifyOnDelivery,
       });
       if (!saved) {
-        templateError = "Your vault is locked. Unlock it and try again.";
+        templateError = l.errors.locked;
         return;
       }
       templateSaved = templateName.trim();
@@ -240,40 +248,38 @@
     } catch (err) {
       templateError =
         err instanceof ApiError && err.code === "template_limit_reached"
-          ? "You have as many templates as an account can keep. Delete one when you create a form."
+          ? t.errors.templateLimit
           : err instanceof ApiError && err.code === "forms_require_paid_plan"
-            ? "Templates come with the plans that have forms."
-            : "Couldn't save the template. Try again.";
+            ? t.errors.templatePaid
+            : t.errors.templateSave;
     } finally {
       savingTemplate = false;
     }
   }
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const dateFmt = $derived(
+    new Intl.DateTimeFormat(locale === "nl" ? "nl-NL" : undefined, { year: "numeric", month: "short", day: "numeric" }),
+  );
 </script>
 
-<Seo title="Forms - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout width="5xl">
   {#if !auth.loaded || (auth.user && isLoading)}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
       <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
+      <p class="text-muted-foreground">{l.loading}</p>
     </div>
   {:else if auth.user}
     <PageHeader
-      title="Forms"
-      tagline="Questions people answer through a link. Only you can read the answers."
+      title={t.title}
+      tagline={t.tagline}
       align="left"
     >
       {#snippet actions()}
         <!-- The empty state has its own button; two would be one too many. -->
         {#if maxForms > 0 && portals.length > 0}
-          <Button fullWidth={false} class="whitespace-nowrap" href="/dashboard/forms/new">New form</Button>
+          <Button fullWidth={false} class="whitespace-nowrap" href="/dashboard/forms/new">{t.newForm}</Button>
         {/if}
       {/snippet}
     </PageHeader>
@@ -284,45 +290,40 @@
       {/if}
       {#if templateSaved}
         <Alert tone="success" onClose={() => (templateSaved = null)}>
-          Saved "{templateSaved}" as a template. You can pick it the next time you create a form.
+          {t.templateSaved(templateSaved)}
         </Alert>
       {/if}
 
       {#if auth.needsVaultSetup && maxForms > 0}
         <Notice>
-          Forms need a vault. It holds the keys that open what people answer, so only you can
-          read it.
+          {t.needsVault}
           {#snippet action()}
-            <Button variant="secondary" fullWidth={false} href="/setup/vault">Set up vault</Button>
+            <Button variant="secondary" fullWidth={false} href="/setup/vault">{l.setUpVault}</Button>
           {/snippet}
         </Notice>
       {:else if !vaultUnlocked && maxForms > 0}
         <Notice>
-          Your vault is locked. Form names and links are encrypted, so unlock to see them or
-          to create a form.
+          {t.vaultLocked}
           {#snippet action()}
             <Button variant="secondary" fullWidth={false} onclick={() => unlockPrompt.request()}>
-              Unlock vault
+              {l.unlockVault}
             </Button>
           {/snippet}
         </Notice>
       {/if}
 
       {#if maxForms === 0 && portals.length === 0}
-        <EmptyState title="Forms are part of the paid plans">
-          <p>
-            A form is a link where people answer your questions and can add documents, encrypted
-            in their browser so only you can read the answers.
-          </p>
+        <EmptyState title={t.paidTitle}>
+          <p>{t.paidBody}</p>
           {#snippet actions()}
-            <Button href="/pricing" fullWidth={false}>See the plans</Button>
+            <Button href={hrefFor("/pricing", locale)} fullWidth={false}>{l.seePlans}</Button>
           {/snippet}
         </EmptyState>
       {:else if portals.length === 0}
-        <EmptyState title="No forms yet">
-          <p>Create one, share its link, and the answers people send appear here.</p>
+        <EmptyState title={t.emptyTitle}>
+          <p>{t.emptyBody}</p>
           {#snippet actions()}
-            <Button fullWidth={false} href="/dashboard/forms/new">Create your first form</Button>
+            <Button fullWidth={false} href="/dashboard/forms/new">{t.createFirst}</Button>
           {/snippet}
         </EmptyState>
       {:else}
@@ -332,29 +333,26 @@
               {#if portal.state === "open"}
                 {portal.title}
               {:else if portal.state === "invited"}
-                Form from {portal.sharedBy?.email ?? "someone"}
+                {t.from(portal.sharedBy?.email ?? l.someone)}
               {:else if portal.state === "locked"}
-                Locked form
+                {t.locked}
               {:else}
-                Unreadable form
+                {t.unreadable}
               {/if}
             </div>
             <div class="text-xs text-muted-foreground">
               {#if portal.state === "unreadable"}
-                Its keys did not open with your vault. It can only be {portal.role === "owner"
-                  ? "deleted"
-                  : "left"}.
+                {t.unreadableNote(portal.role === "owner")}
               {:else if portal.state === "invited"}
-                Shared with you. Accept to open it.
+                {l.invitedNote}
               {:else}
-                Created {dateFmt.format(new Date(portal.createdAt))}
+                {l.created(dateFmt.format(new Date(portal.createdAt)))}
                 {#if portal.role === "member"}
-                  · shared by {portal.sharedBy?.email ?? "someone else"}
+                  · {l.sharedBy(portal.sharedBy?.email ?? l.someoneElse)}
                 {/if}
                 <span class="sm:hidden">
-                  · {portal.deliveries}
-                  {portal.deliveries === 1 ? "response" : "responses"}{portal.unseen > 0
-                    ? `, ${portal.unseen} new`
+                  · {t.responses(portal.deliveries)}{portal.unseen > 0
+                    ? `, ${l.newCount(portal.unseen)}`
                     : ""}
                 </span>
               {/if}
@@ -367,12 +365,12 @@
             tone={portal.state === "invited" ? "info" : portal.isDisabled || closed ? "muted" : "success"}
           >
             {portal.state === "invited"
-              ? "Waiting for you"
+              ? l.waiting
               : portal.isDisabled
-                ? "Switched off"
+                ? l.off
                 : closed
-                  ? "Closed"
-                  : "Open"}
+                  ? l.closed
+                  : t.open}
           </Badge>
         {/snippet}
 
@@ -381,11 +379,11 @@
           actions="md"
         >
           {#snippet header()}
-            <div>Form</div>
-            <div>Responses</div>
-            <div>Last response</div>
-            <div>Stored</div>
-            <div>Status</div>
+            <div>{t.colForm}</div>
+            <div>{t.colResponses}</div>
+            <div>{t.colLast}</div>
+            <div>{l.colStored}</div>
+            <div>{l.colStatus}</div>
           {/snippet}
 
           {#each portals as portal (portal.id)}
@@ -398,11 +396,11 @@
                 <div class="flex items-center gap-2 text-muted-foreground">
                   {portal.deliveries}
                   {#if portal.unseen > 0}
-                    <Badge tone="info">{portal.unseen} new</Badge>
+                    <Badge tone="info">{l.newCount(portal.unseen)}</Badge>
                   {/if}
                 </div>
                 <div class="text-muted-foreground">
-                  {portal.lastDeliveryAt ? dateFmt.format(new Date(portal.lastDeliveryAt)) : "None yet"}
+                  {portal.lastDeliveryAt ? dateFmt.format(new Date(portal.lastDeliveryAt)) : l.noneYet}
                 </div>
                 <div class="text-muted-foreground">
                   {portal.storedBytes > 0 ? formatSize(portal.storedBytes) : "0"}
@@ -423,22 +421,22 @@
                     class="py-2 px-3 text-sm"
                     onclick={() => openAccept(portal)}
                   >
-                    Accept
+                    {l.accept}
                   </Button>
                 {/if}
                 {#if portal.link}
                   <button
                     type="button"
                     onclick={() => copyLink(portal)}
-                    aria-label="Copy link for {portal.title}"
+                    aria-label={l.copyLinkFor(portal.title ?? "")}
                     class="hidden sm:inline-flex text-xs font-medium px-2 py-2 rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:cursor-pointer hover:text-foreground hover:bg-background focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
-                    {copiedId === portal.id ? "Copied" : "Copy link"}
+                    {copiedId === portal.id ? l.copied : l.copyLink}
                   </button>
                 {/if}
                 {#if portal.link || portal.role === "owner" || portal.role === "member"}
                   <DropdownMenu
-                    label="More for {portal.title ?? 'this form'}"
+                    label={t.moreFor(portal.title)}
                     triggerClass="p-2 text-muted-foreground hover:text-foreground hover:bg-background"
                   >
                     {#snippet trigger()}
@@ -452,7 +450,7 @@
                             void copyLink(portal);
                           }}
                         >
-                          Copy link
+                          {l.copyLink}
                         </DropdownMenuItem>
                       {/if}
                       {#if portal.role === "member"}
@@ -464,7 +462,7 @@
                             leaveId = portal.id;
                           }}
                         >
-                          {portal.state === "invited" ? "Decline" : "Leave"}
+                          {portal.state === "invited" ? l.decline : l.leave}
                         </DropdownMenuItem>
                       {/if}
                       {#if portal.role === "owner"}
@@ -475,7 +473,7 @@
                               void goto(`/dashboard/forms/${portal.id}/settings`);
                             }}
                           >
-                            Settings
+                            {l.settings}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onSelect={() => {
@@ -483,7 +481,7 @@
                               void goto(`/dashboard/forms/new?from=${portal.id}`);
                             }}
                           >
-                            Duplicate
+                            {l.duplicate}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onSelect={() => {
@@ -491,7 +489,7 @@
                               askTemplate(portal);
                             }}
                           >
-                            Save as template
+                            {t.saveAsTemplate}
                           </DropdownMenuItem>
                         {/if}
                         <DropdownMenuItem
@@ -501,7 +499,7 @@
                             void toggleDisabled(portal);
                           }}
                         >
-                          {portal.isDisabled ? "Switch on" : "Switch off"}
+                          {portal.isDisabled ? l.switchOn : l.switchOff}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           variant="destructive"
@@ -511,7 +509,7 @@
                             confirmDeleteId = portal.id;
                           }}
                         >
-                          Delete
+                          {l.delete}
                         </DropdownMenuItem>
                       {/if}
                     {/snippet}
@@ -524,13 +522,13 @@
 
         {#if maxForms > 0}
           <p class="text-xs text-muted-foreground">
-            {ownedCount} of {maxForms} forms on your plan.
+            {t.onPlan(ownedCount, maxForms)}
             {#if storage}
-              {formatSize(storage.usedBytes)} of {formatSize(storage.quotaBytes)} storage used.
+              {l.storage(formatSize(storage.usedBytes), formatSize(storage.quotaBytes))}
               <TextLink
                 href="/dashboard/settings/usage"
               >
-                Details
+                {l.details}
               </TextLink>
             {/if}
           </p>
@@ -542,8 +540,8 @@
 
 <Modal
   open={confirmDeletePortal !== null}
-  title="Delete this form?"
-  description="The link stops working and every response, with its files, is deleted. This can't be undone."
+  title={t.deleteTitle}
+  description={t.deleteBody}
   onClose={() => (confirmDeleteId = null)}
 >
   {#snippet footer()}
@@ -554,14 +552,14 @@
       onclick={() => (confirmDeleteId = null)}
       disabled={isDeleting}
     >
-      Keep it
+      {l.keep}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmDelete} disabled={isDeleting}>
       {#if isDeleting}
         <Spinner aria-hidden="true" />
-        Deleting…
+        {l.deleting}
       {:else}
-        Delete form
+        {t.deleteForm}
       {/if}
     </Button>
   {/snippet}
@@ -569,8 +567,8 @@
 
 <Modal
   open={templateOf !== null}
-  title="Save as a template"
-  description="Keeps this form's questions, texts and language to start new forms from. Responses, the link, the logo and the password are not part of it. It is encrypted like the form itself."
+  title={t.templateTitle}
+  description={t.templateBody}
   onClose={() => {
     if (!savingTemplate) templateOf = null;
   }}
@@ -578,7 +576,7 @@
   <form id="save-template" onsubmit={confirmTemplate} class="space-y-3" novalidate>
     <TextInput
       id="template-name"
-      label="Name of the template"
+      label={t.templateName}
       maxlength={TEMPLATE_NAME_MAX}
       autocomplete="off"
       bind:value={templateName}
@@ -590,14 +588,14 @@
   </form>
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (templateOf = null)} disabled={savingTemplate}>
-      Cancel
+      {l.cancel}
     </Button>
     <Button type="submit" form="save-template" fullWidth={false} disabled={savingTemplate || !templateName.trim()}>
       {#if savingTemplate}
         <Spinner aria-hidden="true" />
-        Saving…
+        {t.saving}
       {:else}
-        Save template
+        {t.saveTemplate}
       {/if}
     </Button>
   {/snippet}
@@ -605,23 +603,21 @@
 
 <Modal
   open={acceptPortal !== null}
-  title="Accept this form?"
-  description="{acceptPortal?.sharedBy?.email ?? 'Someone'} shared a form with you. You will be able to read, download and delete the responses people send to it."
+  title={t.acceptTitle}
+  description={t.acceptBody(acceptPortal?.sharedBy?.email ?? null)}
   onClose={() => (acceptId = null)}
 >
   <div class="space-y-3">
     <DetailList>
-      <DetailItem label="Their key">
-        <span class="font-mono text-xs">{acceptPortal?.sharedBy?.fingerprint ?? "unknown"}</span>
+      <DetailItem label={l.theirKey}>
+        <span class="font-mono text-xs">{acceptPortal?.sharedBy?.fingerprint ?? l.unknown}</span>
       </DetailItem>
-      <DetailItem label="Your key">
-        <span class="font-mono text-xs">{ownFingerprint ?? "unknown"}</span>
+      <DetailItem label={l.yourKey}>
+        <span class="font-mono text-xs">{ownFingerprint ?? l.unknown}</span>
       </DetailItem>
     </DetailList>
     <p class="text-xs text-muted-foreground">
-      To be certain nobody sits in between, compare these two codes with them by phone or in
-      person. They see the same two on their side. If you skip this, you trust our server for
-      this one step.
+      {l.compare}
     </p>
     {#if acceptError}
       <Alert tone="destructive">{acceptError}</Alert>
@@ -629,14 +625,14 @@
   </div>
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (acceptId = null)} disabled={isAccepting}>
-      Not now
+      {l.notNow}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmAccept} disabled={isAccepting}>
       {#if isAccepting}
         <Spinner aria-hidden="true" />
-        Accepting…
+        {l.accepting2}
       {:else}
-        Accept
+        {l.accept}
       {/if}
     </Button>
   {/snippet}
@@ -644,16 +640,16 @@
 
 <Modal
   open={leavePortal !== null}
-  title={leavePortal?.state === "invited" ? "Decline this form?" : "Leave this form?"}
-  description="You will no longer see it or the responses sent to it. Its owner can invite you again."
+  title={leavePortal?.state === "invited" ? t.declineTitle : t.leaveTitle}
+  description={t.leaveBody}
   onClose={() => (leaveId = null)}
 >
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (leaveId = null)} disabled={isLeaving}>
-      Cancel
+      {l.cancel}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmLeave} disabled={isLeaving}>
-      {isLeaving ? "Leaving…" : leavePortal?.state === "invited" ? "Decline" : "Leave"}
+      {isLeaving ? l.leaving : leavePortal?.state === "invited" ? l.decline : l.leave}
     </Button>
   {/snippet}
 </Modal>

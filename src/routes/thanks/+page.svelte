@@ -9,6 +9,12 @@
     SUPPORT_EMAIL,
     SUPPORT_POLAR_PORTAL_URL,
   } from "$lib/config/support";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { thanksMessages } from "$lib/i18n/messages/thanks";
+
+  const locale = $derived(appLocale());
+  const t = $derived(thanksMessages[locale]);
 
   const sectionClass = "space-y-3";
   const headingClass = "text-lg font-semibold text-foreground";
@@ -16,62 +22,45 @@
   const linkClass = "text-primary underline underline-offset-2";
 </script>
 
-<Seo title="Thank you - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout width="3xl">
   <PageHeader
-    title="Thank you"
-    tagline="That covers a real part of what it costs to run this."
+    title={t.title}
+    tagline={t.tagline}
   />
 
   <Frame.Root>
     <Frame.Panel>
       <div class="space-y-8">
         <section class={sectionClass}>
-          <h2 class={headingClass}>Use the same email as your account</h2>
-          <p class={bodyClass}>
-            If you checked out with the address you use for your Tessil account,
-            nothing else is needed. Nothing depends on it today; it is simply the
-            only thing that ties a contribution to an account.
-          </p>
-          <p class={bodyClass}>
-            Checked out with a different address, or don't have an account yet?
-            That is fine, and your support counts exactly the same.
-          </p>
+          <h2 class={headingClass}>{t.sameEmailTitle}</h2>
+          <p class={bodyClass}>{t.sameEmail1}</p>
+          <p class={bodyClass}>{t.sameEmail2}</p>
         </section>
 
         <section class={sectionClass}>
-          <h2 class={headingClass}>Your receipt</h2>
-          <p class={bodyClass}>
-            Polar handles the payment and emails you a receipt. A monthly
-            contribution renews on the same date each month until you stop it.
-            A one-time contribution is exactly that: charged once, never again.
-          </p>
+          <h2 class={headingClass}>{t.receiptTitle}</h2>
+          <p class={bodyClass}>{t.receipt}</p>
         </section>
 
         <section class={sectionClass}>
-          <h2 class={headingClass}>Stopping a monthly contribution</h2>
+          <h2 class={headingClass}>{t.stopTitle}</h2>
           <p class={bodyClass}>
-            Under a minute, on your own, whenever you want. No notice period and
-            no retention offer. Open
-            <a
-              href={SUPPORT_POLAR_PORTAL_URL}
-              rel="noopener noreferrer"
-              class={linkClass}>the customer portal</a
-            >, which is also linked from every receipt, and cancel there. It
-            stops at the end of the period you have already paid for.
+            {t.stopBefore}
+            <a href={SUPPORT_POLAR_PORTAL_URL} rel="noopener noreferrer" class={linkClass}>{t.portal}</a
+            >{t.stopAfter}
           </p>
           <p class={bodyClass}>
-            If the link has gone missing or a charge looks wrong, mail
+            {t.missingBefore}
             <a href="mailto:{SUPPORT_EMAIL}" class={linkClass}>{SUPPORT_EMAIL}</a
-            >. I'll cancel it for you and refund the last payment if it renewed
-            after you meant to stop. Full detail on the
-            <a href="/pricing#cancel" class={linkClass}>pricing page</a>.
+            >{t.missingAfter}
+            <a href="{hrefFor('/pricing', locale)}#cancel" class={linkClass}>{t.pricingPage}</a>.
           </p>
         </section>
 
         <div class="pt-2">
-          <Button href="/" fullWidth={false}>Back to Tessil</Button>
+          <Button href={hrefFor("/", locale)} fullWidth={false}>{t.back}</Button>
         </div>
       </div>
     </Frame.Panel>

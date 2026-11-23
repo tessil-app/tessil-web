@@ -29,6 +29,10 @@
   } from "$lib/vault/client";
   import { vaultFailureMessage } from "$lib/vault/messages";
   import { onMount } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { settingsMessages } from "$lib/i18n/messages/settings";
+
+  const t = $derived(settingsMessages[appLocale()].security);
 
   let passkeySupported = $state(false);
   let passkeys = $state<PasskeySummary[] | null>(null);
@@ -85,7 +89,7 @@
         enableError = vaultFailureMessage(result.reason);
       }
     } catch (err) {
-      enableError = err instanceof Error ? err.message : "Couldn't set this up.";
+      enableError = err instanceof Error ? err.message : t.errors.setUp;
     } finally {
       isEnabling = false;
     }
@@ -100,7 +104,7 @@
       next.delete(p.id);
       unlocksVault = next;
     } catch (err) {
-      vaultError = err instanceof Error ? err.message : "Couldn't change that.";
+      vaultError = err instanceof Error ? err.message : t.errors.change;
     } finally {
       vaultBusyId = null;
     }
@@ -119,7 +123,7 @@
       passkeys = authenticators;
     } catch (err) {
       passkeysError =
-        err instanceof Error ? err.message : "Couldn't load passkeys.";
+        err instanceof Error ? err.message : t.errors.load;
       passkeys = [];
     }
   }
@@ -152,7 +156,7 @@
         if (err.kind !== "cancelled") enrollError = err.message;
       } else {
         enrollError =
-          err instanceof Error ? err.message : "Couldn't add a passkey.";
+          err instanceof Error ? err.message : t.errors.add;
       }
     } finally {
       isEnrolling = false;
@@ -185,7 +189,7 @@
       await loadPasskeys();
     } catch (err) {
       renameError =
-        err instanceof Error ? err.message : "Couldn't rename the passkey.";
+        err instanceof Error ? err.message : t.errors.rename;
     } finally {
       isRenaming = false;
     }
@@ -213,23 +217,23 @@
       await loadPasskeys();
     } catch (err) {
       deleteError =
-        err instanceof Error ? err.message : "Couldn't remove the passkey.";
+        err instanceof Error ? err.message : t.errors.remove;
     } finally {
       deletingId = null;
     }
   }
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, {
+  const dateFmt = $derived(new Intl.DateTimeFormat(appLocale() === "nl" ? "nl-NL" : undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
-  });
+  }));
 
   function passkeyMeta(p: PasskeySummary): string {
-    const where = p.deviceType === "multiDevice" ? "Synced" : "This device";
+    const where = p.deviceType === "multiDevice" ? t.synced : t.thisDevice;
     const when = p.lastUsedAt
-      ? `Last used ${dateFmt.format(new Date(p.lastUsedAt))}`
-      : "Never used";
+      ? t.lastUsed(dateFmt.format(new Date(p.lastUsedAt)))
+      : t.neverUsed;
     return `${where} · ${when}`;
   }
 
@@ -253,7 +257,7 @@
       await auth.logoutEverywhere();
       await goto("/login", { replaceState: true });
     } catch {
-      signOutError = "Couldn't sign out everywhere. Nothing was changed; try again.";
+      signOutError = t.errors.signOut;
       signingOut = false;
     }
   }
@@ -261,21 +265,15 @@
 
 <Frame.Root>
   <Frame.Header>
-    <Frame.Title class="text-base">Passkeys</Frame.Title>
+    <Frame.Title class="text-base">{t.passkeys}</Frame.Title>
     {#if showFraming}
-      <Frame.Description class="mt-1 block">
-        Passkeys are tied to this site - they can't be used to sign in
-        anywhere else. Email sign-in stays available either way.
-      </Frame.Description>
+      <Frame.Description class="mt-1 block">{t.framing}</Frame.Description>
     {/if}
   </Frame.Header>
 
   <Frame.Panel>
     {#if !passkeySupported}
-      <Alert tone="info" title="Your browser doesn't support passkeys">
-        Passkeys need a recent browser with a platform authenticator
-        (Touch ID, Face ID, Windows Hello) or a security key.
-      </Alert>
+      <Alert tone="info" title={t.unsupportedTitle}>{t.unsupportedBody}</Alert>
     {:else if passkeys === null}
       <ul class="flex flex-col">
         {#each [0, 1, 2] as i (i)}
@@ -294,18 +292,14 @@
           </li>
         {/each}
       </ul>
-      <span class="sr-only" role="status" aria-live="polite">Loading passkeys…</span>
+      <span class="sr-only" role="status" aria-live="polite">{t.loading}</span>
     {:else if passkeys.length === 0}
       <div class="flex flex-col items-center gap-3 py-4 text-center">
-        <p class="text-sm text-muted-foreground max-w-md text-pretty">
-          Add a passkey to skip the email step next time. Passkeys are
-          tied to this site - they can't be used to sign in anywhere else.
-          Email sign-in stays available either way.
-        </p>
+        <p class="text-sm text-muted-foreground max-w-md text-pretty">{t.empty}</p>
         <div class="w-full max-w-64">
           <Button onclick={startAddPasskey}>
             <IconPlusRegular class="size-4" />
-            Add a passkey
+            {t.add}
           </Button>
         </div>
         {#if passkeysError}
@@ -342,8 +336,8 @@
                   bind:value={renameDraft}
                   maxlength={64}
                   disabled={isRenaming}
-                  placeholder="e.g. MacBook Touch ID"
-                  aria-label="Nickname"
+                  placeholder={t.nicknameExample}
+                  aria-label={t.nickname}
                 />
                 <div class="text-xs text-muted-foreground">{meta}</div>
               </div>
@@ -357,7 +351,7 @@
                   onclick={cancelRename}
                   disabled={isRenaming}
                 >
-                  Cancel
+                  {t.cancel}
                 </Button>
                 <Button
                   variant="primary"
@@ -367,9 +361,9 @@
                 >
                   {#if isRenaming}
                     <Spinner aria-hidden="true" />
-                    Saving
+                    {t.saving}
                   {:else}
-                    Save
+                    {t.save}
                   {/if}
                 </Button>
               {:else if deleteConfirmId !== p.id}
@@ -379,7 +373,7 @@
                   onclick={() => startRename(p)}
                   disabled={deletingId === p.id}
                 >
-                  Rename
+                  {t.rename}
                 </Button>
                 <Button
                   variant="ghost"
@@ -387,7 +381,7 @@
                   onclick={() => askDelete(p)}
                   disabled={deletingId === p.id}
                 >
-                  Remove
+                  {t.remove}
                 </Button>
               {/if}
             {/snippet}
@@ -397,14 +391,14 @@
                 <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                   <span>
                     {unlocksVault.has(p.id)
-                      ? "Unlocks your vault."
-                      : "Can also unlock your vault, so you don't have to type its password."}
+                      ? t.unlocks
+                      : t.canUnlock}
                   </span>
                   <TextLink
                     onclick={() => (unlocksVault.has(p.id) ? stopVaultUnlock(p) : askVaultUnlock(p))}
                     disabled={vaultBusyId === p.id}
                   >
-                    {unlocksVault.has(p.id) ? "Stop" : "Set this up"}
+                    {unlocksVault.has(p.id) ? t.stop : t.setUp}
                   </TextLink>
                 </p>
               {/if}
@@ -415,18 +409,14 @@
 
               {#if isConfirmingThis}
                 {#if isCurrent}
-                  <Alert tone="warning">
-                    This is the passkey for your current session. You'll
-                    stay signed in here, but you'll need to sign in by email
-                    or another passkey next time.
-                  </Alert>
+                  <Alert tone="warning">{t.currentWarning}</Alert>
                 {/if}
                 {#if deleteError}
                   <Alert tone="destructive">{deleteError}</Alert>
                 {/if}
                 <div class="flex flex-wrap items-center gap-2">
                   <p class="flex-1 basis-32 text-sm text-foreground">
-                    Remove this passkey?
+                    {t.removeAsk}
                   </p>
                   <Button
                     variant="secondary"
@@ -434,7 +424,7 @@
                     onclick={cancelDelete}
                     disabled={deletingId === p.id}
                   >
-                    Cancel
+                    {t.cancel}
                   </Button>
                   <Button
                     variant="destructive"
@@ -444,9 +434,9 @@
                   >
                     {#if deletingId === p.id}
                       <Spinner aria-hidden="true" />
-                      Removing
+                      {t.removing}
                     {:else}
-                      Confirm remove
+                      {t.confirmRemove}
                     {/if}
                   </Button>
                 </div>
@@ -469,8 +459,8 @@
             <div class="flex-1 basis-56 min-w-0">
               <TextInput
                 id="new-passkey-nickname"
-                label="Nickname (optional)"
-                placeholder="e.g. MacBook Touch ID"
+                label={t.nicknameOptional}
+                placeholder={t.nicknameExample}
                 bind:value={newNickname}
                 maxlength={64}
                 disabled={isEnrolling}
@@ -482,7 +472,7 @@
               onclick={cancelAddPasskey}
               disabled={isEnrolling}
             >
-              Cancel
+              {t.cancel}
             </Button>
             <Button
               variant="primary"
@@ -492,18 +482,17 @@
             >
               {#if isEnrolling}
                 <Spinner aria-hidden="true" />
-                Waiting on your device
+                {t.waiting}
               {:else}
-                Continue
+                {t.continue}
               {/if}
             </Button>
           </div>
           <p class="text-xs text-muted-foreground">
             {#if isEnrolling}
-              Confirm on your device to continue.
+              {t.confirmOnDevice}
             {:else}
-              Your browser will ask you to confirm with Touch ID, Face ID,
-              Windows Hello, or a security key.
+              {t.browserWillAsk}
             {/if}
           </p>
         </div>
@@ -511,7 +500,7 @@
         <div>
           <Button variant="secondary" fullWidth={false} onclick={startAddPasskey}>
             <IconPlusRegular class="size-4" />
-            Add a passkey
+            {t.add}
           </Button>
         </div>
       {/if}
@@ -521,11 +510,8 @@
 
 <Frame.Root>
   <Frame.Header>
-    <Frame.Title class="text-base">Signed-in devices</Frame.Title>
-    <Frame.Description class="mt-1 block">
-      Lost a device, or signed in somewhere you no longer trust? This signs your account out
-      everywhere, this browser included, and ends every access key a program was paired with.
-    </Frame.Description>
+    <Frame.Title class="text-base">{t.devicesTitle}</Frame.Title>
+    <Frame.Description class="mt-1 block">{t.devicesBody}</Frame.Description>
   </Frame.Header>
   <Frame.Panel>
     <Button
@@ -536,15 +522,15 @@
         confirmingSignOut = true;
       }}
     >
-      Sign out everywhere
+      {t.signOutEverywhere}
     </Button>
   </Frame.Panel>
 </Frame.Root>
 
 <Modal
   open={confirmingSignOut}
-  title="Sign out everywhere?"
-  description="Every browser and device is signed out, this one too, and every access key stops working. A program using a key, such as the tessil tool, has to be paired again. Your files, portals and vault are not touched."
+  title={t.signOutAsk}
+  description={t.signOutBody}
   onClose={() => {
     if (!signingOut) confirmingSignOut = false;
   }}
@@ -554,14 +540,14 @@
   {/if}
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (confirmingSignOut = false)} disabled={signingOut}>
-      Stay signed in
+      {t.staySignedIn}
     </Button>
     <Button type="button" fullWidth={false} onclick={signOutEverywhere} disabled={signingOut}>
       {#if signingOut}
         <Spinner aria-hidden="true" />
-        Signing out…
+        {t.signingOut}
       {:else}
-        Sign out everywhere
+        {t.signOutEverywhere}
       {/if}
     </Button>
   {/snippet}
@@ -569,8 +555,8 @@
 
 <Modal
   open={enableFor !== null}
-  title="Unlock your vault with this passkey"
-  description="Confirm it's you once. After that, this passkey opens your vault with a touch or a glance. Every other way in keeps working."
+  title={t.unlockTitle}
+  description={t.unlockBody}
   onClose={() => {
     if (!isEnabling) enableFor = null;
   }}
@@ -592,7 +578,7 @@
       onclick={() => (enableFor = null)}
       disabled={isEnabling}
     >
-      Cancel
+      {t.cancel}
     </Button>
     <Button
       type="submit"
@@ -602,9 +588,9 @@
     >
       {#if isEnabling}
         <Spinner aria-hidden="true" />
-        Waiting on your device
+        {t.waiting}
       {:else}
-        Continue
+        {t.continue}
       {/if}
     </Button>
   {/snippet}

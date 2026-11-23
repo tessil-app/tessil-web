@@ -16,6 +16,14 @@
   import type { Cycle, PlanId } from "$lib/config/plans";
   import { SUPPORT_EMAIL } from "$lib/config/support";
   import { auth } from "$lib/stores/auth.svelte";
+  import { page } from "$app/state";
+  import { localeFromPath } from "$lib/i18n/locale";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { pricingMessages } from "$lib/i18n/messages/pricing";
+
+  const locale = $derived(localeFromPath(page.url.pathname));
+  const t = $derived(pricingMessages[locale]);
+  const href = (canonical: string) => hrefFor(canonical, locale);
 
   let cycle = $state<Cycle>("monthly");
   // Arriving from the try-out editor with a form to publish. Read in the
@@ -24,10 +32,10 @@
   onMount(() => {
     keptForm = FORMS_ANNOUNCED && new URLSearchParams(window.location.search).get("kept") === "form";
   });
-  const cycleOptions: { value: Cycle; label: string }[] = [
-    { value: "monthly", label: "Monthly" },
-    { value: "annual", label: "Yearly" },
-  ];
+  const cycleOptions: { value: Cycle; label: string }[] = $derived([
+    { value: "monthly", label: t.monthly },
+    { value: "annual", label: t.yearly },
+  ]);
   let busy = $state<PlanId | null>(null);
   let message = $state<string | null>(null);
 
@@ -55,8 +63,8 @@
     } catch (err) {
       message =
         err instanceof ApiError && err.code === "checkout_unavailable"
-          ? "This plan can't be bought yet. It will be soon."
-          : "Couldn't start the checkout. Try again in a moment.";
+          ? t.notYet
+          : t.checkoutFailed;
       busy = null;
     }
   }
@@ -69,54 +77,24 @@
       const { url } = await api.openBillingPortal();
       window.location.href = url;
     } catch {
-      message = "Couldn't open your plan settings. Try again in a moment.";
+      message = t.portalFailed;
       busy = null;
     }
   }
 
-  const free = [
-    { title: "End-to-end encryption", body: "Every file and its name, on every plan, with or without an account." },
-    { title: "Password protection", body: "A second lock on a link, for when the link alone is not enough." },
-    { title: "Passkeys and the vault", body: "Sign in without email, and keep the names of what you sent readable only to you." },
-    { title: "Automatic expiry", body: "Everything is deleted when its time is up. Nothing piles up." },
-  ];
-
-  const questions: { q: string; a: string; link?: { href: string; label: string } }[] = [
-    {
-      q: "Do I need an account, and what does it store?",
-      a: "Not to send: without an account a link lasts up to 3 days. An account, free or paid, stores your email address, when you signed in, and the size and dates of what you send. Never your files, their names or the key that opens them.",
-      link: { href: "/what-we-store", label: "Everything an account stores" },
-    },
-    {
-      q: "How do I cancel?",
-      a: "From your account settings, at any time, in under a minute. The plan runs until the end of the period you paid for and does not renew. Nobody asks you why.",
-    },
-    {
-      q: "Can I get my money back?",
-      a: `Within 14 days of your first payment, yes, in full: write to ${SUPPORT_EMAIL}. After that a period that has started is not refunded, except where the law gives you that right.`,
-    },
-    {
-      q: FORMS_ANNOUNCED ? "What happens to my portals and forms when a plan ends?" : "What happens to my portals when a plan ends?",
-      a: FORMS_ANNOUNCED
-        ? "They stop accepting files and answers. What they already hold stays available to you until it expires. Sending works as before."
-        : "They stop accepting files. What they already hold stays available to you until it expires. Sending works as before.",
-    },
-    {
-      q: "Who am I paying?",
-      a: "Polar, our payment provider, is the seller on your invoice and handles tax. We never see your card details.",
-    },
-    {
-      q: FORMS_ANNOUNCED ? "Do the people who send me files or answers need a plan?" : "Do the people who send me files need a plan?",
-      a: FORMS_ANNOUNCED
-        ? "No. They need no account at all. Someone you share a portal or form with needs an account, and a free one is enough."
-        : "No. They need no account at all. Someone you share a portal with needs an account, and a free one is enough.",
-    },
-  ];
+  const questions: { q: string; a: string; link?: { href: string; label: string } }[] = $derived([
+    { ...t.account, link: { href: href("/what-we-store"), label: t.account.link } },
+    t.cancel,
+    { q: t.refund.q, a: t.refund.a(SUPPORT_EMAIL) },
+    { q: FORMS_ANNOUNCED ? t.ends.qForms : t.ends.q, a: FORMS_ANNOUNCED ? t.ends.aForms : t.ends.a },
+    t.payee,
+    { q: FORMS_ANNOUNCED ? t.senders.qForms : t.senders.q, a: FORMS_ANNOUNCED ? t.senders.aForms : t.senders.a },
+  ]);
 </script>
 
 <Seo
-  title="Pricing - Tessil"
-  description="Sending files is free and encrypted. A plan adds portals: links where people send files that only you can open. You never pay for privacy."
+  title={t.title}
+  description={t.description}
   path="/pricing"
 />
 
@@ -124,20 +102,14 @@
   <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-20">
     <header class="mx-auto flex max-w-3xl flex-col items-center gap-5 pb-10 text-center sm:pb-12">
       <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-none" style="letter-spacing: -0.035em">
-        Pay for more.<br />Never for privacy.
+        {t.heading1}<br />{t.heading2}
       </h1>
       <p class="max-w-xl text-lg leading-relaxed text-muted-foreground">
-        {#if FORMS_ANNOUNCED}
-          Sending files is free, encrypted, and stays that way. A plan adds portals and forms:
-          links where other people send files and answers that only you can open.
-        {:else}
-          Sending files is free, encrypted, and stays that way. A plan adds portals: links
-          where other people send files that only you can open.
-        {/if}
+        {FORMS_ANNOUNCED ? t.introForms : t.intro}
       </p>
       <div class="flex flex-wrap items-center justify-center gap-3">
-        <Tabs label="Billing period" tabs={cycleOptions} value={cycle} onChange={(v) => (cycle = v)} />
-        <Badge tone="success">2 months free yearly</Badge>
+        <Tabs label={t.period} tabs={cycleOptions} value={cycle} onChange={(v) => (cycle = v)} />
+        <Badge tone="success">{t.yearlyFree}</Badge>
       </div>
     </header>
 
@@ -146,37 +118,35 @@
     {/if}
     {#if keptForm}
       <Alert tone="info" class="mx-auto mb-6 max-w-xl">
-        Your form is kept in this browser. Once you are on a plan, open Forms and choose New form:
-        it will be waiting there.
+        {t.keptForm}
       </Alert>
     {/if}
 
-    <PlanCards {cycle} current={auth.user?.tier ?? null} {billed} {busy} onChoose={choose} onManage={manage} />
+    <PlanCards {locale} {cycle} current={auth.user?.tier ?? null} {billed} {busy} onChoose={choose} onManage={manage} />
 
     <p class="mt-5 text-center text-sm text-muted-foreground">
-      Without an account you can still send up to 500 MB. Prices include tax where it applies.
-      <TextLink href="#compare">Compare everything</TextLink>
+      {t.withoutAccount}
+      <TextLink href="#compare">{t.compareAll}</TextLink>
     </p>
 
     <section id="compare" class="mt-16 scroll-mt-20 sm:mt-24">
       <div class="max-w-2xl space-y-3">
         <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
-          Every limit, side by side
+          {t.everyLimit}
         </h2>
         <p class="text-muted-foreground">
-          The exact numbers behind each plan. Without an account the limits are 500 MB per
-          transfer, 500 MB a month, 5 transfers a day and links that last up to 3 days.
+          {t.everyLimitBody}
         </p>
       </div>
-      <PlanComparison current={auth.user?.tier ?? null} class="mt-8" />
+      <PlanComparison {locale} current={auth.user?.tier ?? null} class="mt-8" />
     </section>
 
     <section class="mt-20 border-t border-border pt-16 sm:mt-24 sm:pt-24 grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
-        What never costs anything
+        {t.neverCosts}
       </h2>
       <ul class="grid max-w-2xl gap-x-10 gap-y-8 sm:grid-cols-2">
-        {#each free as item (item.title)}
+        {#each t.free as item (item.title)}
           <li class="space-y-1.5">
             <p class="font-semibold text-foreground">{item.title}</p>
             <p class="text-sm leading-relaxed text-muted-foreground">{item.body}</p>
@@ -186,7 +156,7 @@
     </section>
 
     <section id="cancel" class="mt-16 border-t border-border pt-16 sm:mt-24 sm:pt-24 scroll-mt-20 grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-      <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">About paying</h2>
+      <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">{t.aboutPaying}</h2>
       <div class="max-w-2xl space-y-6">
         <div class="divide-y divide-border border-y border-border text-base">
           {#each questions as item (item.q)}
@@ -205,7 +175,7 @@
           {/each}
         </div>
         <p class="text-sm text-muted-foreground">
-          The full wording is in the <TextLink href="/terms#billing">terms</TextLink>.
+          {t.fullWording} <TextLink href="{href('/terms')}#billing">{t.terms}</TextLink>.
         </p>
       </div>
     </section>

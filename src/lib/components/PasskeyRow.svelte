@@ -2,6 +2,10 @@
   import { cn } from "$lib/utils";
   import IconKeyRegular from "phosphor-icons-svelte/IconKeyRegular.svelte";
   import type { Snippet } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { settingsMessages } from "$lib/i18n/messages/settings";
+
+  const t = $derived(settingsMessages[appLocale()].passkeyRow);
 
   interface Props {
     nickname: string | null;
@@ -49,11 +53,11 @@
             nickname ? "text-foreground" : "italic font-normal text-muted-foreground"
           )}
         >
-          {nickname ?? "Unnamed passkey"}
+          {nickname ?? t.unnamed}
         </div>
         <div class="mt-0.5 text-xs text-muted-foreground">
           {meta}{#if isCurrent}
-            <span> · Used to sign in here</span>
+            <span> · {t.current}</span>
           {/if}
         </div>
       {/if}

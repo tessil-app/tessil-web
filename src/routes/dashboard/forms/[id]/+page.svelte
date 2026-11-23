@@ -40,6 +40,14 @@
   import IconTrashRegular from "phosphor-icons-svelte/IconTrashRegular.svelte";
   import IconXRegular from "phosphor-icons-svelte/IconXRegular.svelte";
   import { onDestroy } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { formsAppMessages } from "$lib/i18n/messages/formsApp";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
+
+  const locale = $derived(appLocale());
+  const t = $derived(formsAppMessages[locale].responses);
+  const d = $derived(portalsAppMessages[locale].detail);
+  const l = $derived(portalsAppMessages[locale].list);
 
   type Phase = "loading" | "locked" | "missing" | "unreadable" | "ready";
   type FileStatus = "idle" | "downloading" | "complete" | "error";
@@ -88,10 +96,10 @@
         response,
         lead: leadingAnswer(answers),
         // The second answer worth showing, under the first.
-        second: answers.filter((a) => a.type !== "file" && a.value !== null).map((a) => answerText(a))[1] ?? null,
+        second: answers.filter((a) => a.type !== "file" && a.value !== null).map((a) => answerText(a, t))[1] ?? null,
         soon: daysUntil(response.expiresAt) <= SOON_DAYS,
         isNew: seenBefore !== null && response.createdAt > seenBefore,
-        haystack: [response.reference, ...answers.map((a) => answerText(a)), ...response.files.map((f) => f.name)]
+        haystack: [response.reference, ...answers.map((a) => answerText(a, t)), ...response.files.map((f) => f.name)]
           .join("\n")
           .toLowerCase(),
       };
@@ -103,9 +111,9 @@
     soon: rows.filter((r) => r.soon).length,
   });
   const filters = $derived<{ id: Filter; label: string }[]>([
-    { id: "all", label: "All" },
-    ...(rows.some((r) => r.isNew) ? [{ id: "new" as const, label: "New" }] : []),
-    { id: "soon", label: "Deleted soon" },
+    { id: "all", label: d.filters.all },
+    ...(rows.some((r) => r.isNew) ? [{ id: "new" as const, label: d.filters.new }] : []),
+    { id: "soon", label: d.filters.soon },
   ]);
   const visible = $derived.by(() => {
     const needle = query.trim().toLowerCase();
@@ -123,7 +131,7 @@
   let sharingOpen = $state(false);
   const readyInvite = $derived(sharing?.invites.find((i) => i.ready) ?? null);
   const sharingLabel = $derived(
-    sharing?.guests.length ? "Shared with 1" : sharing?.invites.length ? "Sharing (invited)" : "Sharing",
+    sharing?.guests.length ? d.sharedWithOne : sharing?.invites.length ? d.sharingInvited : d.sharing,
   );
 
   async function reloadSharing() {
@@ -157,7 +165,7 @@
       nextCursor = first.nextCursor;
       phase = "ready";
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't load this form.";
+      errorMessage = err instanceof Error ? err.message : t.errors.load;
       phase = form ? "ready" : "missing";
     }
   }
@@ -182,7 +190,7 @@
       unreadable += more.unreadable;
       nextCursor = more.nextCursor;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't load more.";
+      errorMessage = err instanceof Error ? err.message : d.errors.more;
     } finally {
       isLoadingMore = false;
     }
@@ -215,8 +223,8 @@
         percent: 0,
         error:
           err instanceof StreamInterruptedError
-            ? "Interrupted. Delete the partial file and try again."
-            : "Couldn't download this file. Try again.",
+            ? d.errors.interrupted
+            : d.errors.download,
       };
     }
   }
@@ -252,12 +260,12 @@
       `tessil-${response.reference}.txt`,
       buildReceiptText({
         kind: "received",
-        locale: "en",
+        locale,
         portalTitle: form.title,
         reference: response.reference,
         at: new Date(response.createdAt),
         note: null,
-        answers: (response.answers ?? []).map((a) => ({ label: a.label, value: answerText(a) })),
+        answers: (response.answers ?? []).map((a) => ({ label: a.label, value: answerText(a, t) })),
         files: response.files.map((f) => ({ name: f.name, size: formatSize(f.plainSize) })),
         deletedOn: new Date(response.expiresAt),
       }),
@@ -274,7 +282,7 @@
     while (nextCursor) {
       const before = nextCursor;
       await loadMore();
-      if (nextCursor === before) throw new Error("Couldn't load every response. Try again.");
+      if (nextCursor === before) throw new Error(t.errors.loadAll);
     }
   }
 
@@ -287,7 +295,7 @@
     try {
       await loadAll();
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't load every response.";
+      errorMessage = err instanceof Error ? err.message : t.errors.loadEvery;
     } finally {
       loadingAll = false;
     }
@@ -297,7 +305,7 @@
     picked = {
       questionId: question.id,
       value,
-      label: `${question.label}: ${typeof value === "boolean" ? (value ? "Yes" : "No") : value}`,
+      label: `${question.label}: ${typeof value === "boolean" ? (value ? t.yes : t.no) : value}`,
     };
     view = "responses";
   }
@@ -319,6 +327,7 @@
         [...responses]
           .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
           .map((r) => ({ reference: r.reference, receivedAt: stamp(r.createdAt), answers: r.answers ?? [] })),
+        { ...formsAppMessages[locale].csv, yes: t.yes, no: t.no },
       );
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -329,10 +338,10 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       exportNote =
         unreadAnswers > 0
-          ? `${unreadAnswers} ${unreadAnswers === 1 ? "response has" : "responses have"} an empty row in this export, because the answers could not be opened. Reload the page and export again to retry.`
+          ? t.exportNote(unreadAnswers)
           : null;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't make the export.";
+      errorMessage = err instanceof Error ? err.message : t.errors.export;
     } finally {
       exporting = false;
     }
@@ -346,7 +355,7 @@
       responses = responses.filter((r) => r.id !== confirmDeleteId);
       if (openId === confirmDeleteId) openId = null;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't delete this response.";
+      errorMessage = err instanceof Error ? err.message : t.errors.delete;
     } finally {
       confirmDeleteId = null;
       isDeleting = false;
@@ -360,7 +369,7 @@
       copied = true;
       setTimeout(() => (copied = false), 2000);
     } catch {
-      errorMessage = "Couldn't copy the link.";
+      errorMessage = d.errors.copy;
     }
   }
 
@@ -370,44 +379,46 @@
       : "grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.8fr)]",
   );
 
-  const shortFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const shortFmt = $derived(
+    new Intl.DateTimeFormat(locale === "nl" ? "nl-NL" : undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+  );
 
   function daysLeft(iso: string): string {
     const days = daysUntil(iso);
-    if (days <= 0) return "today";
-    return days === 1 ? "in 1 day" : `in ${days} days`;
+    if (days <= 0) return d.today;
+    return d.inDays(days);
   }
 </script>
 
-<Seo title="{form?.title ?? 'Form'} - Tessil" robots="noindex" />
+<Seo title={t.seoTitle(form?.title ?? null)} robots="noindex" />
 
 <PageLayout width="5xl">
   {#if phase !== "ready"}
-    <BackLink href="/dashboard/forms" label="All forms" />
+    <BackLink href="/dashboard/forms" label={t.allForms} />
   {/if}
 
   {#if phase === "loading"}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
       <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
+      <p class="text-muted-foreground">{d.loading}</p>
     </div>
   {:else if phase === "locked"}
-    <EmptyState title={auth.needsVaultSetup ? "This needs a vault" : "Your vault is locked"} level={1}>
-      <p>The answers to this form are opened with a key kept in your vault.</p>
+    <EmptyState title={auth.needsVaultSetup ? d.needsVault : d.vaultLocked} level={1}>
+      <p>{t.lockedBody}</p>
       {#snippet actions()}
         {#if auth.needsVaultSetup}
-          <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+          <Button fullWidth={false} href="/setup/vault">{d.setUpVault}</Button>
         {:else}
-          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+          <Button fullWidth={false} onclick={() => unlockPrompt.request()}>{d.unlockVault}</Button>
         {/if}
       {/snippet}
     </EmptyState>
   {:else if phase === "missing" || phase === "unreadable"}
-    <EmptyState title={phase === "missing" ? "Form not found" : "This form can't be opened"} level={1}>
+    <EmptyState title={phase === "missing" ? t.notFound : t.cantOpen} level={1}>
       <p>
         {phase === "missing"
-          ? "It may have been deleted, or you may not have access to it."
-          : "Its keys did not open with your vault."}
+          ? t.notFoundBody
+          : d.cantOpenBody}
       </p>
       {#if errorMessage}
         <Alert tone="destructive">{errorMessage}</Alert>
@@ -417,27 +428,27 @@
     <PageHeader
       title={form.title}
       tagline={form.role === "member"
-        ? "Shared with you. Responses are deleted automatically, so export or save what you need to keep."
-        : "Responses are deleted automatically, so export or save what you need to keep."}
-      back={{ href: "/dashboard/forms", label: "All forms" }}
+        ? t.taglineMember
+        : t.taglineOwner}
+      back={{ href: "/dashboard/forms", label: t.allForms }}
       align="left"
     >
       {#snippet badge()}
         <Badge tone={form?.isDisabled || hasClosed(form?.closesAt) ? "muted" : "success"}>
-          {form?.isDisabled ? "Switched off" : hasClosed(form?.closesAt) ? "Closed" : "Open"}
+          {form?.isDisabled ? d.off : hasClosed(form?.closesAt) ? d.closed : t.open}
         </Badge>
       {/snippet}
       {#snippet actions()}
         {#if form?.role === "owner"}
           <Button variant="secondary" fullWidth={false} class="whitespace-nowrap" href="/dashboard/forms/{form.id}/settings">
-            Edit form
+            {t.editForm}
           </Button>
           <Button variant="secondary" fullWidth={false} class="whitespace-nowrap" onclick={() => (sharingOpen = true)}>
             {sharingLabel}
           </Button>
         {/if}
         <Button fullWidth={false} class="whitespace-nowrap" onclick={copyLink}>
-          {copied ? "Copied" : "Copy link"}
+          {copied ? d.copied : d.copyLink}
         </Button>
       {/snippet}
     </PageHeader>
@@ -453,33 +464,31 @@
 
       {#if readyInvite}
         <Notice>
-          {readyInvite.email} has signed in and is ready. Give them access to share this form.
+          {t.readyInvite(readyInvite.email)}
           {#snippet action()}
-            <Button variant="secondary" fullWidth={false} onclick={() => (sharingOpen = true)}>Give access</Button>
+            <Button variant="secondary" fullWidth={false} onclick={() => (sharingOpen = true)}>{d.giveAccess}</Button>
           {/snippet}
         </Notice>
       {/if}
 
       {#if unreadable > 0}
         <Alert tone="warning">
-          {unreadable}
-          {unreadable === 1 ? "response" : "responses"} could not be opened with this form's key and
-          {unreadable === 1 ? "is" : "are"} not shown.
+          {t.unreadable(unreadable)}
         </Alert>
       {/if}
 
       {#if responses.length === 0}
-        <EmptyState title="No responses yet">
-          <p>Share the form's link. Answers appear here as soon as someone sends them.</p>
+        <EmptyState title={t.emptyTitle}>
+          <p>{t.emptyBody}</p>
         </EmptyState>
       {:else}
         <Tabs
-          label="View"
+          label={t.view}
           value={view}
           onChange={(v) => (v === "summary" ? void showSummary() : (view = v))}
           tabs={[
-            { value: "responses", label: "Responses" },
-            { value: "summary", label: "Summary" },
+            { value: "responses", label: t.tabResponses },
+            { value: "summary", label: t.tabSummary },
           ]}
         />
       {/if}
@@ -488,18 +497,16 @@
         {#if loadingAll}
           <p class="flex items-center gap-2 text-sm text-muted-foreground" role="status">
             <Spinner aria-hidden="true" />
-            Loading every response: {responses.length} so far…
+            {t.loadingAll(responses.length)}
           </p>
         {:else if nextCursor}
           <Alert tone="warning">
-            Older responses are not loaded, so this counts the newest {responses.length} only.
+            {t.newestOnly(responses.length)}
           </Alert>
         {/if}
         {#if unreadAnswers > 0}
           <Alert tone="warning">
-            The answers of {unreadAnswers}
-            {unreadAnswers === 1 ? "response" : "responses"} could not be opened, so
-            {unreadAnswers === 1 ? "it counts" : "they count"} as not answered here. Reload the page to try again.
+            {t.unreadAnswers(unreadAnswers)}
           </Alert>
         {/if}
         <ResponseSummary {summaries} total={responses.length} onPick={pick} onOpen={(id) => (openId = id)} />
@@ -507,12 +514,12 @@
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
           <SearchField
             bind:value={query}
-            label="Search responses"
-            placeholder="Search answers, reference or file name"
+            label={t.search}
+            placeholder={t.searchPlaceholder}
             class="sm:w-80"
           />
           <FilterChips
-            label="Show"
+            label={d.show}
             options={filters.map((f) => ({ value: f.id, label: f.label, count: counts[f.id] }))}
             value={filter}
             onChange={(v) => (filter = v)}
@@ -524,18 +531,18 @@
             onclick={exportCsv}
             disabled={exporting}
           >
-            {exporting ? "Exporting…" : "Export CSV"}
+            {exporting ? t.exporting : t.exportCsv}
           </Button>
         </div>
 
         {#if picked}
           <div class="flex items-center gap-2 text-sm">
-            <span class="shrink-0 text-muted-foreground">Answered</span>
+            <span class="shrink-0 text-muted-foreground">{t.answered}</span>
             <span class="inline-flex min-w-0 items-center gap-1 rounded-full bg-secondary py-1 pl-3 pr-1 text-foreground">
               <span class="truncate">{picked.label}</span>
               <button
                 type="button"
-                aria-label="Show all responses again"
+                aria-label={t.showAll}
                 onclick={() => (picked = null)}
                 class="shrink-0 rounded-full p-1 text-muted-foreground transition-colors duration-150 ease-out hover:cursor-pointer hover:bg-accent hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
@@ -547,14 +554,14 @@
 
         {#if visible.length === 0}
           <div class="rounded-lg bg-card px-4 py-10 text-center text-sm text-muted-foreground">
-            Nothing matches. Search looks at every answer, the reference and file names.
+            {t.noMatch}
           </div>
         {:else}
           {#snippet who(row: (typeof rows)[number])}
             <div class="flex min-w-0 items-center gap-2 font-medium text-foreground {row.lead ? '' : 'font-mono'}">
               <span class="truncate">{row.lead ?? row.response.reference}</span>
               {#if row.isNew}
-                <Badge tone="info" class="font-sans">New</Badge>
+                <Badge tone="info" class="font-sans">{d.newBadge}</Badge>
               {/if}
             </div>
             <div class="truncate text-xs text-muted-foreground">
@@ -562,19 +569,19 @@
               {#if row.lead && row.second}<span aria-hidden="true"> · </span>{/if}
               {row.second ?? ""}
               {#if row.response.answersUnreadable}
-                <span class="text-warning-foreground">Answers could not be opened</span>
+                <span class="text-warning-foreground">{t.answersUnreadable}</span>
               {/if}
             </div>
           {/snippet}
 
           <Table.Root {cols} actions="sm">
             {#snippet header()}
-              <div>Response</div>
-              <div>Received</div>
+              <div>{t.colResponse}</div>
+              <div>{d.colReceived}</div>
               {#if hasFileQuestions}
-                <div>Files</div>
+                <div>{d.colFiles}</div>
               {/if}
-              <div>Deleted</div>
+              <div>{d.colDeleted}</div>
             {/snippet}
 
             {#each visible as row (row.response.id)}
@@ -585,7 +592,7 @@
                   <div class="text-muted-foreground">{shortFmt.format(new Date(response.createdAt))}</div>
                   {#if hasFileQuestions}
                     <div class="text-muted-foreground">
-                      {response.files.length > 0 ? `${response.files.length} · ${formatSize(response.totalBytes)}` : "None"}
+                      {response.files.length > 0 ? `${response.files.length} · ${formatSize(response.totalBytes)}` : t.none}
                     </div>
                   {/if}
                   <div class={row.soon ? "text-destructive-foreground" : "text-muted-foreground"}>
@@ -599,11 +606,10 @@
                     <p class="text-xs text-muted-foreground">
                       {shortFmt.format(new Date(response.createdAt))}
                       {#if response.files.length > 0}
-                        · {response.files.length}
-                        {response.files.length === 1 ? "file" : "files"}
+                        · {d.files(response.files.length)}
                       {/if}
                       ·
-                      <span class={row.soon ? "text-destructive-foreground" : ""}>deleted {daysLeft(response.expiresAt)}</span>
+                      <span class={row.soon ? "text-destructive-foreground" : ""}>{d.deletedWhen(daysLeft(response.expiresAt))}</span>
                     </p>
                   </div>
                 {/snippet}
@@ -611,7 +617,7 @@
                 {#snippet actions()}
                   {#if response.files.length > 0}
                     <IconButton
-                      label="Download the files of {response.reference}"
+                      label={t.downloadFilesOf(response.reference)}
                       onclick={() => downloadAll(response)}
                       disabled={downloadingAll !== null}
                     >
@@ -624,7 +630,7 @@
                       {/if}
                     </IconButton>
                   {/if}
-                  <IconButton label="Delete {response.reference}" tone="destructive" onclick={() => (confirmDeleteId = response.id)}>
+                  <IconButton label={d.deleteRef(response.reference)} tone="destructive" onclick={() => (confirmDeleteId = response.id)}>
                     <IconTrashRegular class="size-4" />
                   </IconButton>
                 {/snippet}
@@ -634,16 +640,13 @@
         {/if}
 
         <p class="text-xs text-muted-foreground" role="status">
-          Showing {visible.length} of {responses.length}
-          {responses.length === 1 ? "response" : "responses"}{nextCursor
-            ? ". Older ones are not loaded yet, so search does not cover them. The export does."
-            : "."}
+          {t.showing(visible.length, responses.length, nextCursor !== null)}
         </p>
 
         {#if nextCursor}
           <div class="flex justify-center">
             <Button variant="secondary" fullWidth={false} onclick={loadMore} disabled={isLoadingMore}>
-              {isLoadingMore ? "Loading…" : "Show older"}
+              {isLoadingMore ? d.loading : d.showOlder}
             </Button>
           </div>
         {/if}
@@ -679,20 +682,20 @@
 
 <Modal
   open={confirmDeleteId !== null}
-  title="Delete this response?"
-  description="Its answers and files are removed for everyone with access to this form. This can't be undone."
+  title={t.deleteTitle}
+  description={t.deleteBody}
   onClose={() => (confirmDeleteId = null)}
 >
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (confirmDeleteId = null)} disabled={isDeleting}>
-      Keep it
+      {l.keep}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmDelete} disabled={isDeleting}>
       {#if isDeleting}
         <Spinner aria-hidden="true" />
-        Deleting…
+        {d.deleting}
       {:else}
-        Delete response
+        {t.deleteResponse}
       {/if}
     </Button>
   {/snippet}

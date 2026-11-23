@@ -24,23 +24,24 @@
     lastVerified,
     ctaPrimaryHref,
     ctaSecondaryHref,
-    alternates = [],
+    canonicalPath,
     altPath,
   }: {
     comparison: Comparison;
     locale: Locale;
     /** Path prefix for sibling comparisons, e.g. "/compare". */
     basePath: string;
-    /** Home for this locale. Dutch still points at the English app until /nl lands. */
+    /** Home for this locale. */
     homePath: string;
     /** The comparison index for this locale. Omitted while a locale has none. */
     indexPath?: string;
     others: { slug: string; heading: string }[];
     lastVerified: string;
-    /** Where "send a file" goes. Still the English app until /nl lands. */
+    /** Where "send a file" goes. */
     ctaPrimaryHref: string;
     ctaSecondaryHref: string;
-    alternates?: { locale: Locale; path: string }[];
+    /** The English address of this comparison; the head tags work out the rest from it. */
+    canonicalPath: string;
     /** The same page in the other language, when it exists. */
     altPath?: string;
   } = $props();
@@ -99,8 +100,7 @@
 <Seo
   title={c.metaTitle}
   description={c.metaDescription}
-  {path}
-  {alternates}
+  path={canonicalPath}
 />
 
 <svelte:head>
@@ -224,7 +224,7 @@
   <!-- CTA -->
   <div class="mt-10 flex flex-wrap items-center gap-3">
     <Button href={ctaPrimaryHref} variant="primary" fullWidth={false}>
-      {t.ctaPrimary}
+      {c.cta?.label ?? t.ctaPrimary}
     </Button>
     <Button href={ctaSecondaryHref} variant="secondary" fullWidth={false}>
       {t.ctaSecondary}

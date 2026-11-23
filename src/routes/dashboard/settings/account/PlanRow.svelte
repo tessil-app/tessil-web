@@ -12,10 +12,16 @@
   import TextLink from "$lib/components/TextLink.svelte";
   import { api, type BillingStatusResponse } from "$lib/api/client";
   import { PORTALS_ANNOUNCED } from "$lib/config/launch";
-  import { PLANS } from "$lib/config/plans";
+  import { plansFor } from "$lib/config/plans";
   import { SUPPORT_EMAIL } from "$lib/config/support";
   import { auth } from "$lib/stores/auth.svelte";
 
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { HTML_LANG } from "$lib/i18n/locale";
+  import { settingsMessages } from "$lib/i18n/messages/settings";
+  import { hrefFor } from "$lib/i18n/paths";
+  const locale = $derived(appLocale());
+  const t = $derived(settingsMessages[locale].planRow);
   const justPaid = page.url.searchParams.get("upgraded") === "1";
   // The payment provider tells the API a moment after sending the buyer back.
   const ATTEMPTS = 15;
@@ -26,16 +32,12 @@
   let opening = $state(false);
   let openError = $state<string | null>(null);
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const dateFmt = $derived(new Intl.DateTimeFormat(HTML_LANG[locale], { day: "numeric", month: "long", year: "numeric" }));
 
   const sub = $derived(status?.subscription ?? null);
   const onPaidPlan = $derived(status !== null && status.tier !== "free");
   const paid = $derived(onPaidPlan && sub !== null && sub.canceledAt === null);
-  const planName = $derived(PLANS.find((p) => p.id === status?.tier)?.name ?? "Free");
+  const planName = $derived(plansFor(locale).find((p) => p.id === (status?.tier ?? "free"))?.name ?? "Free");
   // The other paid plan, when this one is running and can be changed.
   const other = $derived.by<{ name: string; up: boolean } | null>(() => {
     if (!paid || !sub || sub.status === "past_due" || sub.cancelAtPeriodEnd) return null;
@@ -49,18 +51,16 @@
     // Not "Free" in the moment between paying and the plan arriving.
     if (!status || arrival === "waiting") return "";
     // A plan set by hand: nothing to renew or manage.
-    if (onPaidPlan && !paid) return `${planName}. Given to your account. Nothing is billed.`;
-    if (!paid || !sub) {
-      return "Free. A plan adds portals: links where other people send you files.";
-    }
+    if (onPaidPlan && !paid) return t.given(planName);
+    if (!paid || !sub) return t.free;
     const date = dateFmt.format(new Date(sub.currentPeriodEnd));
     if (sub.status === "past_due") {
-      return `${planName}. The last payment did not go through. Update your card to keep it.`;
+      return t.pastDue(planName);
     }
     if (sub.cancelAtPeriodEnd) {
-      return `${planName}. Ends on ${date} and does not renew.`;
+      return t.ends(planName, date);
     }
-    return `${planName}. Renews on ${date}. Changing plan, updating your card and cancelling happen at Polar, our payment provider.`;
+    return t.renews(planName, date);
   });
 
   onMount(() => {
@@ -91,33 +91,33 @@
       const { url } = await api.openBillingPortal();
       window.location.href = url;
     } catch {
-      openError = "Couldn't open your plan settings. Try again in a moment.";
+      openError = t.openFailed;
       opening = false;
     }
   }
 </script>
 
 {#if visible}
-  <DividerRow title="Plan" {body}>
+  <DividerRow title={t.title} {body}>
     {#snippet actions()}
       {#if paid}
         <!-- Both lead to the payment provider's page, where the change is made and priced. -->
         {#if other}
           <Button variant={other.up ? "primary" : "secondary"} fullWidth={false} onclick={manage} disabled={opening}>
-            {other.up ? "Upgrade to" : "Downgrade to"} {other.name}
+            {other.up ? t.upgradeTo(other.name) : t.downgradeTo(other.name)}
           </Button>
         {/if}
         <Button variant="secondary" fullWidth={false} onclick={manage} disabled={opening}>
           {#if opening}
             <Spinner aria-hidden="true" />
           {/if}
-          Manage plan
+          {t.manage}
         </Button>
       {:else if status && onPaidPlan}
         <!-- A plan given by hand: nothing to manage, but the plans can be looked at. -->
-        <Button variant="secondary" fullWidth={false} href="/pricing">See plans</Button>
+        <Button variant="secondary" fullWidth={false} href={hrefFor("/pricing", locale)}>{t.seePlans}</Button>
       {:else if status && PORTALS_ANNOUNCED && arrival === null}
-        <Button fullWidth={false} href="/pricing">Upgrade</Button>
+        <Button fullWidth={false} href={hrefFor("/pricing", locale)}>{t.upgrade}</Button>
       {/if}
     {/snippet}
 
@@ -126,18 +126,17 @@
         <Alert tone="info">
           <span class="inline-flex items-center gap-2">
             <Spinner aria-hidden="true" />
-            Payment received. Switching your plan on.
+            {t.waiting}
           </span>
         </Alert>
       {:else if arrival === "active"}
         <Alert tone="success" onClose={() => (arrival = null)}>
-          You are on {planName}. Thank you.
-          <TextLink href="/dashboard/portals">Create a portal</TextLink>
+          {t.active(planName)}
+          <TextLink href="/dashboard/portals">{t.createPortal}</TextLink>
         </Alert>
       {:else if arrival === "slow"}
         <Alert tone="warning">
-          Your payment went through, but the plan is not switched on here yet. This can take a
-          minute: reload the page. If it stays like this, write to
+          {t.slow}
           <TextLink href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</TextLink>.
         </Alert>
       {/if}

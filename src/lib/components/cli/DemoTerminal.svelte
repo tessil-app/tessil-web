@@ -6,6 +6,10 @@
   import { cn } from "$lib/utils";
   import { onMount, tick } from "svelte";
 
+  // The words around the terminal; what runs inside stays as the tool prints it.
+  let { text = { label: "Type a tessil command", hint: "Type in it, or run" } }: { text?: { label: string; hint: string } } =
+    $props();
+
   type Tone = "plain" | "dim" | "ok" | "link" | "bad";
   interface Line {
     text: string;
@@ -245,7 +249,7 @@
         void run(input);
       }}
     >
-      <label for="demo-terminal" class="select-none pr-[1ch] text-white/40">$<span class="sr-only"> Type a tessil command</span></label>
+      <label for="demo-terminal" class="select-none pr-[1ch] text-white/40">$<span class="sr-only"> {text.label}</span></label>
       <input
         bind:this={field}
         id="demo-terminal"
@@ -263,7 +267,7 @@
 </div>
 
 <div class="mt-4 flex flex-wrap items-center gap-2">
-  <span class="text-sm text-muted-foreground">Type in it, or run</span>
+  <span class="text-sm text-muted-foreground">{text.hint}</span>
   {#each suggestions.slice(1) as suggestion (suggestion)}
     <button
       type="button"
