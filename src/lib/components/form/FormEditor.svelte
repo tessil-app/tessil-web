@@ -66,13 +66,18 @@
   import { autosize, fieldSizing } from "$lib/actions/autosize";
   import Tabs from "$lib/components/Tabs.svelte";
   import { FormDraft, type EditorProps } from "./formDraft.svelte";
-  import { QUESTION_TYPES_SHOWN, TYPE_ICON, typeLabel } from "./questionTypes";
+  import { QUESTION_TYPES_SHOWN, TYPE_ICON } from "./questionTypes";
   import Unfold from "./Unfold.svelte";
+  import { formsAppMessages } from "$lib/i18n/messages/formsApp";
+  import { formsMessages } from "$lib/i18n/messages/forms";
 
   let props: EditorProps = $props();
   const d = new FormDraft(untrack(() => props));
   const t = $derived(formStrings[d.lang]);
   const dep = $derived(depositStrings[d.lang]);
+  // The editor speaks the account's language; the form keeps its own.
+  const ui = $derived(formsAppMessages[props.uiLocale ?? "en"].editor);
+  const types = $derived(formsMessages[props.uiLocale ?? "en"].types);
 
   type Page = "form" | "after";
   let page = $state<Page>("form");
@@ -96,7 +101,7 @@
 
   beforeNavigate(({ cancel }) => {
     if (d.leaving || !d.dirty) return;
-    if (!confirm("Leave without saving your changes?")) cancel();
+    if (!confirm(ui.leave)) cancel();
   });
 
   // The editor is the whole screen: only its panes scroll.
@@ -304,7 +309,7 @@
             void add(type.value, after);
           }}
         >
-          <span class="flex items-center gap-2.5"><Icon class="size-4 text-muted-foreground" />{type.label}</span>
+          <span class="flex items-center gap-2.5"><Icon class="size-4 text-muted-foreground" />{types[type.value]}</span>
         </DropdownMenuItem>
       {/each}
     {/snippet}
@@ -321,18 +326,18 @@
       on ? "bg-secondary text-foreground font-medium" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
     )}
   <div class="flex min-h-0 flex-1 flex-col p-2">
-    <button type="button" data-rail="start" title="Start" class={item(current === "start")} onclick={() => goTo("start")}>
+    <button type="button" data-rail="start" title={ui.start} class={item(current === "start")} onclick={() => goTo("start")}>
       <IconHandWavingRegular class="size-4 shrink-0" />
-      <span class={cn("truncate", wide)}>Start</span>
+      <span class={cn("truncate", wide)}>{ui.start}</span>
     </button>
 
     <div class={cn("mt-3 flex items-center justify-between px-2 pb-1", compact && "justify-center lg:justify-between")}>
-      <span class={cn("text-xs font-medium uppercase tracking-wide text-muted-foreground", wide)}>Questions</span>
+      <span class={cn("text-xs font-medium uppercase tracking-wide text-muted-foreground", wide)}>{ui.questions}</span>
       <span class="text-xs text-muted-foreground tabular-nums">{d.questions.length}/{d.limit}</span>
     </div>
     {#if d.questions.length > 6}
       <div class={cn("px-1 pb-2", compact && "hidden lg:block")}>
-        <SearchField bind:value={query} label="Find a question" placeholder="Find a question" />
+        <SearchField bind:value={query} label={ui.find} placeholder={ui.find} />
       </div>
     {/if}
 
@@ -362,7 +367,7 @@
             type="button"
             data-rail={q.id}
             draggable="true"
-            title={q.label || "Untitled"}
+            title={q.label || ui.untitled}
             ondragstart={() => (dragFrom = i)}
             ondragend={() => {
               dragFrom = null;
@@ -378,9 +383,9 @@
             {:else}
               <Icon class="size-4 shrink-0" />
             {/if}
-            <span class={cn("min-w-0 flex-1 truncate", !q.label && "italic", wide)}>{q.label || "Untitled"}</span>
+            <span class={cn("min-w-0 flex-1 truncate", !q.label && "italic", wide)}>{q.label || ui.untitled}</span>
             {#if q.required && !bad}
-              <span class={cn("shrink-0 text-destructive-foreground", wide)} aria-label="required">*</span>
+              <span class={cn("shrink-0 text-destructive-foreground", wide)} aria-label={ui.required}>*</span>
             {/if}
           </button>
           {#if dragFrom !== null && dropAt === i + 1 && i === d.questions.length - 1}
@@ -389,26 +394,26 @@
         </li>
       {/each}
       {#if matches !== null && matches.size === 0}
-        <li class="px-2 py-2 text-sm text-muted-foreground">No question matches.</li>
+        <li class="px-2 py-2 text-sm text-muted-foreground">{ui.noMatch}</li>
       {/if}
     </ol>
 
     <div class="border-t border-border px-0.5 pt-2">
       {#if d.atLimit}
         <p class={cn("px-1 text-xs text-muted-foreground", compact && "hidden lg:block")}>
-          {d.limit < FORM_QUESTIONS_MAX ? `Your plan allows ${d.limit} questions.` : `${FORM_QUESTIONS_MAX} is the most a form holds.`}
+          {d.limit < FORM_QUESTIONS_MAX ? ui.planAllows(d.limit) : ui.mostAForm(FORM_QUESTIONS_MAX)}
         </p>
       {:else}
-        {@render typePicker(null, "Add question", "block w-full", compact, "top")}
+        {@render typePicker(null, ui.addQuestion, "block w-full", compact, "top")}
       {/if}
     </div>
 
     <div class="mt-2 space-y-px border-t border-border pt-2">
-      <button type="button" data-rail="after" title="After sending" class={item(current === "after")} onclick={() => goTo("after")}>
-        <IconCheckCircleRegular class="size-4 shrink-0" /><span class={wide}>After sending</span>
+      <button type="button" data-rail="after" title={ui.afterSending} class={item(current === "after")} onclick={() => goTo("after")}>
+        <IconCheckCircleRegular class="size-4 shrink-0" /><span class={wide}>{ui.afterSending}</span>
       </button>
-      <button type="button" title="Settings" class={item(false)} onclick={() => ((sheetOpen = false), (settingsOpen = true))}>
-        <IconGearRegular class="size-4 shrink-0" /><span class={wide}>Settings</span>
+      <button type="button" title={ui.settings} class={item(false)} onclick={() => ((sheetOpen = false), (settingsOpen = true))}>
+        <IconGearRegular class="size-4 shrink-0" /><span class={wide}>{ui.settings}</span>
       </button>
     </div>
   </div>
@@ -419,7 +424,7 @@
     <div class="min-w-0 space-y-0.5">
       <p id="{id}-name" class="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
         {name}
-        {#if locked}<Badge tone="info">Max plan</Badge>{/if}
+        {#if locked}<Badge tone="info">{ui.maxPlan}</Badge>{/if}
       </p>
       <p id="{id}-about" class="text-sm text-muted-foreground">{about}</p>
     </div>
@@ -433,60 +438,60 @@
   <header data-keep-active class="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-2 border-b border-border px-2 py-2 sm:flex-nowrap sm:px-3">
     <a
       href={props.cancelHref}
-      aria-label="Back"
-      title="Back"
+      aria-label={ui.back}
+      title={ui.back}
       class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <IconArrowLeftRegular class="size-4" />
     </a>
     <button
       type="button"
-      aria-label="Outline"
+      aria-label={ui.outline}
       class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground md:hidden"
       onclick={() => (sheetOpen = true)}
     >
       <IconListBulletsRegular class="size-4" />
     </button>
     <button type="button" class="min-w-0 flex-1 rounded-md px-1.5 py-0.5 text-left hover:bg-secondary/60 sm:max-w-xs" onclick={() => goTo("start")}>
-      <span class="block truncate text-sm font-medium text-foreground">{d.title.trim() || "Untitled form"}</span>
+      <span class="block truncate text-sm font-medium text-foreground">{d.title.trim() || ui.untitledForm}</span>
       <span class="block truncate text-xs text-muted-foreground">
-        {#if d.isSaving}Saving…{:else if d.saved && !d.dirty}Saved{:else if props.mode === "create"}New form, not created yet{:else if d.dirty}Unsaved changes{:else}All changes saved{/if}
+        {#if d.isSaving}{ui.saving}{:else if d.saved && !d.dirty}{ui.saved}{:else if props.mode === "create"}{ui.notCreated}{:else if d.dirty}{ui.unsaved}{:else}{ui.allSaved}{/if}
       </span>
     </button>
 
     <div class="order-last flex w-full items-center justify-center gap-2 sm:order-none sm:w-auto sm:flex-1">
       <Tabs
-        label="Page"
+        label={ui.page}
         value={page}
         onChange={(v) => (v === "after" ? goTo("after") : ((page = "form"), scroller?.scrollTo({ top: 0 })))}
         tabs={[
-          { value: "form", label: "Questions" },
-          { value: "after", label: "After sending" },
+          { value: "form", label: ui.questions },
+          { value: "after", label: ui.afterSending },
         ]}
       />
       <Tabs
-        label="Mode"
+        label={ui.mode}
         value={mode}
         onChange={(v) => {
           mode = v;
           active = null;
         }}
         tabs={[
-          { value: "edit", label: "Edit", icon: IconPencilSimpleRegular },
-          { value: "preview", label: "Try it", icon: IconEyeRegular },
+          { value: "edit", label: ui.edit, icon: IconPencilSimpleRegular },
+          { value: "preview", label: ui.tryIt, icon: IconEyeRegular },
         ]}
       />
     </div>
 
     <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:ml-0">
-      <IconButton label="Settings" onclick={() => (settingsOpen = true)} class="hidden sm:inline-flex">
+      <IconButton label={ui.settings} onclick={() => (settingsOpen = true)} class="hidden sm:inline-flex">
         <IconGearRegular class="size-4" />
       </IconButton>
       <Button type="button" fullWidth={false} disabled={!d.canSave} class="py-2" onclick={save}>
         {#if d.isSaving}
-          <Spinner aria-hidden="true" />{props.mode === "create" ? "Creating…" : "Saving…"}
+          <Spinner aria-hidden="true" />{props.mode === "create" ? ui.creating : ui.saving}
         {:else}
-          {props.mode === "create" ? "Create form" : "Save"}
+          {props.mode === "create" ? ui.createForm : ui.save}
         {/if}
       </Button>
     </div>
@@ -494,7 +499,7 @@
 
   <div class="flex min-h-0 flex-1">
     <!-- Rail: numbers and icons on mid-size screens, full on wide ones -->
-    <nav aria-label="Form outline" data-keep-active class="hidden w-16 shrink-0 flex-col border-r border-border md:flex lg:w-64">
+    <nav aria-label={ui.formOutline} data-keep-active class="hidden w-16 shrink-0 flex-col border-r border-border md:flex lg:w-64">
       {@render rail(true)}
     </nav>
 
@@ -508,7 +513,7 @@
           <!-- Usable: answers, files and checks work; sending stays here. -->
           <div class="rounded-2xl border border-border bg-background px-5 py-8 shadow-sm sm:px-10 sm:py-10">
             <p class="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
-              <IconEyeRegular class="size-4" />Try it out. Nothing you fill in here is sent or kept.
+              <IconEyeRegular class="size-4" />{ui.tryNote}
             </p>
             {#key page}
               <FormView form={d.previewForm} locale={d.lang} rehearse preview={page === "after" ? "sent" : undefined} />
@@ -526,12 +531,12 @@
                     </div>
                   </div>
                   <h2 class="text-lg font-medium text-foreground">{t.sentTitle}</h2>
-                  <p class="text-sm text-muted-foreground">{t.sentBody(d.title.trim() || "you")}</p>
+                  <p class="text-sm text-muted-foreground">{t.sentBody(d.title.trim() || ui.you)}</p>
                   <textarea
                     use:autosize
                     id="sf-after"
-                    aria-label="Thank-you note"
-                    placeholder="Add a thank-you note: what happens next, or when they hear from you"
+                    aria-label={ui.thanksLabel}
+                    placeholder={ui.thanksPlaceholder}
                     rows="1"
                     maxlength={PORTAL_THANKS_MAX}
                     value={d.thanks}
@@ -550,8 +555,7 @@
               </Frame.Panel>
             </Frame.Root>
             <p class="mt-6 text-center text-xs text-muted-foreground">
-              Everything but your note is the same on every form: it tells people their answers arrived and gives them a
-              reference to keep.
+              {ui.sameEverywhere}
             </p>
           </section>
         {:else}
@@ -565,13 +569,13 @@
               onpointerdown={(e) => onBlockPointer(e, "start")}
             >
               {#if d.logoOn && d.logo}
-                <img src={logoSrc(d.logo)} alt="Your logo" class="mb-4 max-h-14 max-w-[220px] object-contain object-left" />
+                <img src={logoSrc(d.logo)} alt={ui.logoAlt} class="mb-4 max-h-14 max-w-[220px] object-contain object-left" />
               {/if}
               <textarea
                 use:autosize
                 id="sf-start"
-                aria-label="Form name"
-                placeholder="Your form's name"
+                aria-label={ui.formName}
+                placeholder={ui.namePlaceholder}
                 rows="1"
                 maxlength={PORTAL_TITLE_MAX}
                 bind:value={d.title}
@@ -581,8 +585,8 @@
               <Unfold open={active === "start" || d.message.length > 0}>
                 <textarea
                   use:autosize
-                  aria-label="Welcome message"
-                  placeholder="Add a welcome message: what the form is for, and by when"
+                  aria-label={ui.welcome}
+                  placeholder={ui.welcomePlaceholder}
                   rows="1"
                   maxlength={PORTAL_MESSAGE_MAX}
                   value={d.message}
@@ -601,13 +605,13 @@
               <Unfold open={active === "start"}>
                 <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-3 pb-1 text-sm">
                   <button type="button" class="text-muted-foreground hover:text-foreground" onclick={() => (settingsOpen = true)}>
-                    {d.logo ? "Change logo" : "Add logo"}{d.brandLocked ? " (Max)" : ""}
+                    {d.logo ? ui.changeLogo : ui.addLogo}{d.brandLocked ? ui.max : ""}
                   </button>
                   <button type="button" class="text-muted-foreground hover:text-foreground" onclick={() => (settingsOpen = true)}>
-                    Language: {dep.languageName}
+                    {ui.languageIs(dep.languageName)}
                   </button>
                   <button type="button" class="text-muted-foreground hover:text-foreground" onclick={() => (settingsOpen = true)}>
-                    {d.closeOn ? "Change closing date" : "Add closing date"}
+                    {d.closeOn ? ui.changeClose : ui.addClose}
                   </button>
                 </div>
               </Unfold>
@@ -641,8 +645,8 @@
                     <textarea
                       use:autosize
                       id="sf-{q.id}"
-                      aria-label="Question {i + 1}"
-                      placeholder="Write the question"
+                      aria-label={ui.questionN(i + 1)}
+                      placeholder={ui.writeQuestion}
                       rows="1"
                       maxlength={QUESTION_LABEL_MAX}
                       bind:value={q.label}
@@ -654,16 +658,16 @@
                       }}
                       class={cn(bare, fieldSizing ? "w-auto min-w-[3ch] max-w-full" : "", "text-sm font-medium")}
                     ></textarea>
-                    {#if q.required}<span class="pt-0.5 text-sm text-destructive-foreground" aria-label="required">*</span>{/if}
+                    {#if q.required}<span class="pt-0.5 text-sm text-destructive-foreground" aria-label={ui.required}>*</span>{/if}
                     <!-- Present at rest too, only hidden, so nothing moves when editing starts. -->
                     <div
                       class={cn("ml-auto -my-1 shrink-0 transition-opacity duration-150", on ? "opacity-100" : "pointer-events-none opacity-0")}
                       inert={!on}
                     >
-                      <DropdownMenu label="Type of question {i + 1}" align="end">
+                      <DropdownMenu label={ui.typeOf(i + 1)} align="end">
                         {#snippet trigger()}
                           <span class="flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground transition-colors duration-150 hover:bg-secondary">
-                            <Icon class="size-3.5" />{typeLabel(q.type)}<IconCaretDownRegular class="size-3 text-muted-foreground" />
+                            <Icon class="size-3.5" />{types[q.type]}<IconCaretDownRegular class="size-3 text-muted-foreground" />
                           </span>
                         {/snippet}
                         {#snippet children(close)}
@@ -676,7 +680,7 @@
                               }}
                             >
                               <span class="flex items-center gap-2.5">
-                                <TIcon class="size-4 text-muted-foreground" />{type.label}
+                                <TIcon class="size-4 text-muted-foreground" />{types[type.value]}
                                 {#if type.value === q.type}<IconCheckRegular class="ml-auto size-4" />{/if}
                               </span>
                             </DropdownMenuItem>
@@ -692,8 +696,8 @@
                       <textarea
                         use:autosize
                         id="sh-{q.id}"
-                        aria-label="Explanation under question {i + 1}"
-                        placeholder="Add an explanation (optional)"
+                        aria-label={ui.explanationOf(i + 1)}
+                        placeholder={ui.explanation}
                         rows="1"
                         maxlength={QUESTION_HINT_MAX}
                         value={q.hint ?? ""}
@@ -711,8 +715,8 @@
                               <span class={cn("size-4 shrink-0 border border-input", q.type === "choice" ? "rounded-full" : "rounded")}></span>
                               <input
                                 id="so-{q.id}-{j}"
-                                aria-label="Option {j + 1}"
-                                placeholder="Option {j + 1}"
+                                aria-label={ui.optionN(j + 1)}
+                                placeholder={ui.optionN(j + 1)}
                                 maxlength={QUESTION_OPTION_MAX}
                                 value={q.options?.[j] ?? ""}
                                 oninput={(e) => {
@@ -733,7 +737,7 @@
                               />
                               <span class={cn("transition-opacity duration-150", on ? "opacity-100" : "pointer-events-none opacity-0")} inert={!on}>
                                 <IconButton
-                                  label="Remove option {j + 1}"
+                                  label={ui.removeOption(j + 1)}
                                   tabindex={-1}
                                   onclick={() => d.removeOption(i, j)}
                                   disabled={(q.options ?? []).length <= 1}
@@ -751,7 +755,7 @@
                               onclick={() => addOption(i)}
                             >
                               <span class={cn("size-4 border border-dashed border-input", q.type === "choice" ? "rounded-full" : "rounded")}></span>
-                              Add option
+                              {ui.addOptionButton}
                             </button>
                           </Unfold>
                         </div>
@@ -779,17 +783,17 @@
                   <Unfold open={on}>
                     <div class="mt-4 flex flex-wrap items-center gap-1 border-t border-border pt-3 pb-1">
                       <label class="mr-auto flex items-center gap-2.5 text-sm text-foreground">
-                        <Switch checked={q.required ?? false} onChange={(v) => (q.required = v)} label="Required" />
-                        Required
+                        <Switch checked={q.required ?? false} onChange={(v) => (q.required = v)} label={ui.requiredLabel} />
+                        {ui.requiredLabel}
                       </label>
-                      <IconButton label="Move up (Alt+↑)" onclick={() => move(i, -1)} disabled={i === 0}>
+                      <IconButton label={ui.moveUp} onclick={() => move(i, -1)} disabled={i === 0}>
                         <IconArrowUpRegular class="size-4" />
                       </IconButton>
-                      <IconButton label="Move down (Alt+↓)" onclick={() => move(i, 1)} disabled={i === d.questions.length - 1}>
+                      <IconButton label={ui.moveDown} onclick={() => move(i, 1)} disabled={i === d.questions.length - 1}>
                         <IconArrowDownRegular class="size-4" />
                       </IconButton>
                       <IconButton
-                        label="Duplicate"
+                        label={ui.duplicate}
                         onclick={() => {
                           const id = d.duplicate(i);
                           if (id) void goTo(id);
@@ -798,12 +802,12 @@
                       >
                         <IconCopyRegular class="size-4" />
                       </IconButton>
-                      <IconButton label="Delete question" tone="destructive" onclick={() => remove(i)}>
+                      <IconButton label={ui.deleteQuestion} tone="destructive" onclick={() => remove(i)}>
                         <IconTrashRegular class="size-4" />
                       </IconButton>
                       {#if !d.atLimit}
                         <span class="mx-1 h-5 w-px bg-border"></span>
-                        {@render typePicker(q.id, "Question below")}
+                        {@render typePicker(q.id, ui.questionBelow)}
                       {/if}
                     </div>
                   </Unfold>
@@ -815,20 +819,20 @@
               {#if d.atLimit}
                 <p class="text-sm text-muted-foreground">
                   {d.limit < FORM_QUESTIONS_MAX
-                    ? `Your plan allows ${d.limit} questions per form.`
-                    : `A form holds at most ${FORM_QUESTIONS_MAX} questions.`}
+                    ? ui.planAllowsPerForm(d.limit)
+                    : ui.atMost(FORM_QUESTIONS_MAX)}
                 </p>
               {:else if d.questions.length === 0}
-                {@render typePicker(null, "Add your first question")}
+                {@render typePicker(null, ui.addFirst)}
               {:else}
-                <div class="-mx-2">{@render typePicker(d.questions[d.questions.length - 1].id, "Add question")}</div>
+                <div class="-mx-2">{@render typePicker(d.questions[d.questions.length - 1].id, ui.addQuestion)}</div>
               {/if}
             </div>
 
             <div class="mx-4 mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 sm:mx-6">
               <span class="inline-flex rounded-md bg-primary/50 px-5 py-2.5 text-sm font-medium text-primary-foreground" aria-hidden="true">{t.send}</span>
               <button type="button" class="text-sm text-muted-foreground hover:text-foreground" onclick={() => goTo("after")}>
-                Then: after sending →
+                {ui.then}
               </button>
             </div>
           </div>
@@ -841,7 +845,7 @@
 {#if mode === "edit" && page === "form" && !d.atLimit}
   <div class="fixed bottom-20 right-4 z-[46] md:hidden" data-keep-active>
     <Button type="button" fullWidth={false} onclick={() => add("short")} class="rounded-full shadow-lg">
-      <IconPlusRegular class="size-4" /> Question
+      <IconPlusRegular class="size-4" /> {ui.question}
     </Button>
   </div>
 {/if}
@@ -851,14 +855,14 @@
   <div class="fixed inset-0 z-[47] md:hidden" data-keep-active>
     <button
       type="button"
-      aria-label="Close outline"
+      aria-label={ui.closeOutline}
       class="absolute inset-0 bg-black/40"
       onclick={() => (sheetOpen = false)}
       transition:fade={{ duration: 150 }}
     ></button>
     <div
       role="dialog"
-      aria-label="Form outline"
+      aria-label={ui.formOutline}
       class="absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col rounded-t-2xl bg-background shadow-xl"
       transition:fly={{ y: 400, duration: 220, easing: cubicOut }}
     >
@@ -868,9 +872,9 @@
   </div>
 {/if}
 
-<Drawer open={settingsOpen} title="Form settings" onClose={() => (settingsOpen = false)}>
+<Drawer open={settingsOpen} title={ui.formSettings} onClose={() => (settingsOpen = false)}>
   <div class="space-y-3">
-    <DrawerSection title="Language of the page they see">
+    <DrawerSection title={ui.language}>
       <div class="flex flex-wrap gap-x-5 gap-y-2">
         {#each LOCALES as choice (choice)}
           <label class="flex items-center gap-2 text-sm text-foreground cursor-pointer">
@@ -882,7 +886,7 @@
     </DrawerSection>
 
     <DrawerSection>
-      {@render switchRow("s-logo", "Your logo", "Shown above the name. Encrypted like the name.", d.logoOn, (v) => (d.logoOn = v), d.brandLocked)}
+      {@render switchRow("s-logo", ui.logo, ui.logoAbout, d.logoOn, (v) => (d.logoOn = v), d.brandLocked)}
       <Reveal open={d.logoOn}>
         <input
           bind:this={logoInput}
@@ -896,9 +900,9 @@
           }}
         />
         <div class="flex items-center gap-3">
-          {#if d.logo}<img src={logoSrc(d.logo)} alt="Your logo" class="max-h-9 max-w-[140px] object-contain" />{/if}
+          {#if d.logo}<img src={logoSrc(d.logo)} alt={ui.logoAlt} class="max-h-9 max-w-[140px] object-contain" />{/if}
           <Button type="button" variant="secondary" fullWidth={false} onclick={() => logoInput?.click()} disabled={d.logoBusy || !d.canBrand}>
-            {d.logoBusy ? "Preparing…" : d.logo ? "Replace" : "Choose image"}
+            {d.logoBusy ? ui.preparing : d.logo ? ui.replace : ui.chooseImage}
           </Button>
         </div>
         {#if d.logoError}<p role="alert" class="mt-1 text-xs text-destructive-foreground">{d.logoError}</p>{/if}
@@ -908,8 +912,8 @@
     <DrawerSection>
       {@render switchRow(
         "s-password",
-        "Password",
-        "Asked before the questions show. Pass it on separately from the link.",
+        ui.password,
+        ui.passwordAbout,
         d.passwordOn,
         (v) => (d.passwordOn = v),
         d.passwordLocked,
@@ -917,28 +921,28 @@
       <Reveal open={d.passwordOn}>
         <PasswordInput
           id="studio-password"
-          label={d.hadPassword ? "New password (leave empty to keep it)" : "Password"}
+          label={d.hadPassword ? ui.newPassword : ui.password}
           autocomplete="new-password"
           minlength={PORTAL_PASSWORD_MIN}
           maxlength={PORTAL_PASSWORD_MAX}
           bind:value={d.newPassword}
-          error={d.passwordShort ? `Use at least ${PORTAL_PASSWORD_MIN} characters.` : undefined}
+          error={d.passwordShort ? ui.passwordShort(PORTAL_PASSWORD_MIN) : undefined}
         />
       </Reveal>
     </DrawerSection>
 
     <DrawerSection>
-      {@render switchRow("s-close", "Closing date", "Takes answers up to and including this day.", d.closeOn, (v) => d.setClose(v))}
+      {@render switchRow("s-close", ui.close, ui.closeAbout, d.closeOn, (v) => d.setClose(v))}
       <Reveal open={d.closeOn}>
-        <TextInput id="studio-close" type="date" label="Last day" min={d.today} bind:value={d.closeDay} class="max-w-[14rem]" />
+        <TextInput id="studio-close" type="date" label={ui.lastDay} min={d.today} bind:value={d.closeDay} class="max-w-[14rem]" />
       </Reveal>
     </DrawerSection>
 
     <DrawerSection>
       {@render switchRow(
         "s-notify",
-        "Email when a response arrives",
-        "At most one per form per hour. It can't say what was answered.",
+        ui.notify,
+        ui.notifyAbout,
         d.notify,
         (v) => (d.notify = v),
       )}

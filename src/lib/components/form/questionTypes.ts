@@ -1,4 +1,4 @@
-// Names and icons of the question types, for the editor.
+// The question types and their icons, for the editor.
 
 import type { QuestionType } from "$lib/form/questions";
 import IconCalendarBlankRegular from "phosphor-icons-svelte/IconCalendarBlankRegular.svelte";
@@ -9,17 +9,16 @@ import IconTextAaRegular from "phosphor-icons-svelte/IconTextAaRegular.svelte";
 import IconTextAlignLeftRegular from "phosphor-icons-svelte/IconTextAlignLeftRegular.svelte";
 import IconToggleLeftRegular from "phosphor-icons-svelte/IconToggleLeftRegular.svelte";
 
-export const QUESTION_TYPES_SHOWN: { value: QuestionType; label: string }[] = [
-  { value: "short", label: "Short answer" },
-  { value: "long", label: "Long answer" },
-  { value: "choice", label: "One choice" },
-  { value: "choices", label: "Several choices" },
-  { value: "yesno", label: "Yes or no" },
-  { value: "date", label: "Date" },
-  { value: "file", label: "File upload" },
+// In the order the editor offers them; names are in messages/forms.ts.
+export const QUESTION_TYPES_SHOWN: { value: QuestionType }[] = [
+  { value: "short" },
+  { value: "long" },
+  { value: "choice" },
+  { value: "choices" },
+  { value: "yesno" },
+  { value: "date" },
+  { value: "file" },
 ];
-
-export const typeLabel = (t: QuestionType) => QUESTION_TYPES_SHOWN.find((x) => x.value === t)?.label ?? t;
 
 export const TYPE_ICON: Record<QuestionType, typeof IconTextAaRegular> = {
   short: IconTextAaRegular,

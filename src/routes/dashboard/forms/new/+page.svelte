@@ -28,6 +28,16 @@
   import { isUnlocked, subscribeToVaultState } from "$lib/vault/client";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import { onDestroy } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { formsAppMessages } from "$lib/i18n/messages/formsApp";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
+
+  const locale = $derived(appLocale());
+  const f = $derived(formsAppMessages[locale]);
+  const m = $derived(f.create);
+  const l = $derived(portalsAppMessages[locale].list);
+  const d = $derived(portalsAppMessages[locale].detail);
 
   // "choose": the account has templates, so it picks one or starts empty first.
   type Phase = "loading" | "no_plan" | "full" | "locked" | "missing" | "choose" | "ready";
@@ -98,7 +108,7 @@
       // With the last one gone there is nothing left to choose from.
       if (templates.length === 0) phase = "ready";
     } catch {
-      templateError = "Couldn't delete the template. Try again.";
+      templateError = m.errors.deleteTemplate;
       removing = null;
     } finally {
       isRemoving = false;
@@ -123,7 +133,7 @@
     const from = opened.portal;
     initial = {
       ...initial,
-      title: `${from.title} (copy)`.slice(0, PORTAL_TITLE_MAX),
+      title: `${from.title} ${m.copySuffix}`.slice(0, PORTAL_TITLE_MAX),
       lang: from.lang,
       message: from.message,
       thanks: from.thanks,
@@ -175,7 +185,9 @@
     void load();
   });
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" });
+  const dateFmt = $derived(
+    new Intl.DateTimeFormat(locale === "nl" ? "nl-NL" : undefined, { day: "numeric", month: "short", year: "numeric" }),
+  );
 
   const unsubscribe = subscribeToVaultState(() => {
     if (hasLoaded && phase === "locked") void load();
@@ -189,49 +201,45 @@
       result = await createMyPortal(auth.user.id, settings, window.location.origin);
     } catch (err) {
       if (err instanceof PortalBundleTooLargeError) {
-        throw new Error("That is more than a form can hold. Shorten some questions, or remove the logo.");
+        throw new Error(m.errors.tooLarge);
       }
       if (err instanceof ApiError && err.code === "forms_require_paid_plan") {
-        throw new Error("Forms are part of the paid plans.");
+        throw new Error(m.errors.paid);
       }
       if (err instanceof ApiError && err.code === "form_limit_reached") {
-        throw new Error("You have all the forms your plan includes. Delete one first.");
+        throw new Error(m.errors.full);
       }
       if (err instanceof ApiError && err.code === "keypair_required") {
-        throw new Error("Lock and unlock your vault once, then try again.");
+        throw new Error(portalsAppMessages[locale].create.errors.keypair);
       }
       throw err;
     }
     if (!result.ok) {
       unlockPrompt.request();
-      throw new Error("Your vault is locked. Unlock it and try again.");
+      throw new Error(l.errors.locked);
     }
     await goto(`/dashboard/forms/${result.portal.id}`);
   }
 </script>
 
-<Seo title="New form - Tessil" robots="noindex" />
+<Seo title={m.seoTitle} robots="noindex" />
 
 <!-- Once open, the editor is the whole screen. -->
 {#if phase === "ready"}
-  <FormEditor {initial} mode="create" onSave={create} cancelHref="/dashboard/forms" questionLimit={limit} {canBrand} />
+  <FormEditor {initial} mode="create" onSave={create} cancelHref="/dashboard/forms" questionLimit={limit} {canBrand} uiLocale={locale} />
 {:else}
   <PageLayout width="5xl">
     <PageHeader
-      title={copyFrom ? "Duplicate form" : "New form"}
-      tagline={copyFrom
-        ? "A new form with its own link, set up like the one you copied. Responses are not copied."
-        : phase === "choose"
-          ? "Start empty, or from a template you saved. A template fills in the questions and texts; you can change all of it."
-          : "Questions people answer through a link. Their answers are encrypted before they leave the browser."}
-      back={{ href: "/dashboard/forms", label: "All forms" }}
+      title={copyFrom ? m.duplicate : m.title}
+      tagline={copyFrom ? m.taglineCopy : phase === "choose" ? m.taglineChoose : m.tagline}
+      back={{ href: "/dashboard/forms", label: f.responses.allForms }}
       align="left"
     />
 
     {#if phase === "loading"}
       <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
         <Spinner class="size-8" aria-hidden="true" />
-        <p class="text-muted-foreground">Loading…</p>
+        <p class="text-muted-foreground">{l.loading}</p>
       </div>
     {:else if phase === "choose"}
       <div class="space-y-4">
@@ -249,8 +257,8 @@
                 <IconPlusRegular class="size-4" />
               </span>
               <span>
-                <span class="block font-medium text-foreground">Start empty</span>
-                <span class="block text-sm text-muted-foreground">A new form with one question to begin with.</span>
+                <span class="block font-medium text-foreground">{m.startEmpty}</span>
+                <span class="block text-sm text-muted-foreground">{m.startEmptyBody}</span>
               </span>
             </button>
           </li>
@@ -261,17 +269,16 @@
                 onclick={() => startFrom(template)}
                 class="flex h-full min-h-32 w-full flex-col items-start justify-between gap-4 rounded-lg bg-card p-5 pr-12 text-left transition-colors duration-200 ease-out hover:cursor-pointer hover:bg-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                <span class="text-xs text-muted-foreground">Template</span>
+                <span class="text-xs text-muted-foreground">{m.template}</span>
                 <span class="min-w-0 max-w-full">
                   <span class="block truncate font-medium text-foreground">{template.name}</span>
                   <span class="block text-sm text-muted-foreground">
-                    {template.questions.length}
-                    {template.questions.length === 1 ? "question" : "questions"}, saved {dateFmt.format(new Date(template.createdAt))}
+                    {m.templateMeta(template.questions.length, dateFmt.format(new Date(template.createdAt)))}
                   </span>
                 </span>
               </button>
               <div class="absolute right-2 top-2">
-                <IconButton label="Delete the template {template.name}" tone="destructive" onclick={() => (removing = template)}>
+                <IconButton label={m.deleteTemplateOf(template.name)} tone="destructive" onclick={() => (removing = template)}>
                   <IconTrashRegular class="size-4" />
                 </IconButton>
               </div>
@@ -280,49 +287,40 @@
         </ul>
         {#if unreadableTemplates > 0}
           <p class="text-sm text-muted-foreground">
-            {unreadableTemplates}
-            {unreadableTemplates === 1 ? "template" : "templates"} did not open with this vault and
-            {unreadableTemplates === 1 ? "is" : "are"} not shown.
+            {m.unreadableTemplates(unreadableTemplates)}
           </p>
         {/if}
       </div>
     {:else if phase === "missing"}
-      <EmptyState title="That form could not be copied">
-        <p>It may have been deleted, or its keys did not open with your vault.</p>
+      <EmptyState title={m.cantCopy}>
+        <p>{m.cantCopyBody}</p>
         {#snippet actions()}
-          <Button href="/dashboard/forms" fullWidth={false}>Back to your forms</Button>
+          <Button href="/dashboard/forms" fullWidth={false}>{m.backToForms}</Button>
         {/snippet}
       </EmptyState>
     {:else if phase === "no_plan"}
-      <EmptyState title="Forms are part of the paid plans">
-        <p>
-          A form is a link where people answer your questions and can add documents, encrypted in
-          their browser so only you can read the answers.
-        </p>
+      <EmptyState title={f.list.paidTitle}>
+        <p>{f.list.paidBody}</p>
         {#snippet actions()}
-          <Button href="/pricing" fullWidth={false}>See the plans</Button>
+          <Button href={hrefFor("/pricing", locale)} fullWidth={false}>{l.seePlans}</Button>
         {/snippet}
       </EmptyState>
     {:else if phase === "full"}
-      <EmptyState title="You have all the forms your plan includes">
-        <p>
-          Your plan includes {maxForms}
-          {maxForms === 1 ? "form" : "forms"}. Delete one you no longer use, or move to a plan with
-          more.
-        </p>
+      <EmptyState title={m.fullTitle}>
+        <p>{m.fullBody(maxForms)}</p>
         {#snippet actions()}
-          <Button href="/pricing" fullWidth={false}>See the plans</Button>
-          <Button href="/dashboard/forms" variant="secondary" fullWidth={false}>Your forms</Button>
+          <Button href={hrefFor("/pricing", locale)} fullWidth={false}>{l.seePlans}</Button>
+          <Button href="/dashboard/forms" variant="secondary" fullWidth={false}>{m.yourForms}</Button>
         {/snippet}
       </EmptyState>
     {:else if phase === "locked"}
-      <EmptyState title={auth.needsVaultSetup ? "Forms need a vault" : "Your vault is locked"}>
-        <p>A form's keys are kept in your vault, so only you can read what people answer.</p>
+      <EmptyState title={auth.needsVaultSetup ? m.needsVault : d.vaultLocked}>
+        <p>{m.lockedBody}</p>
         {#snippet actions()}
           {#if auth.needsVaultSetup}
-            <Button fullWidth={false} href="/setup/vault">Set up vault</Button>
+            <Button fullWidth={false} href="/setup/vault">{l.setUpVault}</Button>
           {:else}
-            <Button fullWidth={false} onclick={() => unlockPrompt.request()}>Unlock vault</Button>
+            <Button fullWidth={false} onclick={() => unlockPrompt.request()}>{l.unlockVault}</Button>
           {/if}
         {/snippet}
       </EmptyState>
@@ -332,22 +330,22 @@
 
 <Modal
   open={removing !== null}
-  title="Delete this template?"
-  description="Forms you already made from it are not touched. This can't be undone."
+  title={m.deleteTemplateTitle}
+  description={m.deleteTemplateBody}
   onClose={() => {
     if (!isRemoving) removing = null;
   }}
 >
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (removing = null)} disabled={isRemoving}>
-      Keep it
+      {l.keep}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmRemove} disabled={isRemoving}>
       {#if isRemoving}
         <Spinner aria-hidden="true" />
-        Deleting…
+        {l.deleting}
       {:else}
-        Delete template
+        {m.deleteTemplate}
       {/if}
     </Button>
   {/snippet}
