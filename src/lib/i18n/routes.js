@@ -25,6 +25,7 @@ export const LOCALIZED = {
   "/abuse": { nl: "/nl/misbruik" },
   "/cli": { nl: "/nl/cli", needs: "VITE_ACCESS_KEYS_ANNOUNCED" },
   "/compare": { nl: "/nl/vergelijken" },
+  "/compare/eu-encrypted-file-transfer": { nl: "/nl/vergelijken/versleuteld-bestanden-versturen-europa" },
   "/compare/wetransfer-alternative": { nl: "/nl/vergelijken/wetransfer-alternatief" },
   "/compare/boomerang-alternative": { nl: "/nl/vergelijken/boomerang-alternatief" },
   "/compare/proton-drive-alternative": { nl: "/nl/vergelijken/proton-drive-alternatief" },

@@ -12,6 +12,7 @@
   import { compareIndexMessages } from "$lib/i18n/messages/compareIndex";
   import { hrefFor } from "$lib/i18n/paths";
   import { SITE_URL } from "$lib/config/site";
+  import { roundupPath, roundupText } from "$lib/compare/roundup";
   import { HTML_LANG } from "$lib/i18n/locale";
 
   const locale = $derived(localeFromPath(page.url.pathname));
@@ -36,9 +37,10 @@
       isPartOf: { "@id": `${SITE_URL}/#website` },
       mainEntity: {
         "@type": "ItemList",
-        itemListElement: groups
-          .flatMap((g) => g.items)
-          .map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c.heading, url: `${SITE_URL}${base}/${c.slug}` })),
+        itemListElement: [
+          { name: roundupText[locale].heading, url: `${SITE_URL}${roundupPath(locale)}` },
+          ...groups.flatMap((g) => g.items).map((c) => ({ name: c.heading, url: `${SITE_URL}${base}/${c.slug}` })),
+        ].map((item, i) => ({ "@type": "ListItem", position: i + 1, ...item })),
       },
     }).replace(/</g, "\\u003c"),
   );
@@ -54,6 +56,14 @@
   <PageHeader title={t.title} tagline={t.tagline} />
 
   <div class="space-y-12">
+    <a
+      href={roundupPath(locale)}
+      class="block rounded-xl border border-border bg-card/60 p-5 transition-[border-color,background-color] duration-200 ease-out hover:bg-card focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      <span class="text-xs font-medium text-muted-foreground">{roundupText[locale].group}</span>
+      <h2 class="mt-1 text-lg font-semibold text-foreground">{roundupText[locale].heading}</h2>
+      <p class="mt-1.5 text-sm text-muted-foreground leading-relaxed">{roundupText[locale].indexCard}</p>
+    </a>
     {#each groups as group (group.kind)}
       <section class="space-y-4">
         <h2 class="text-xl font-semibold tracking-tight text-foreground">{t.groups[group.kind]}</h2>

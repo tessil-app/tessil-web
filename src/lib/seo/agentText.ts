@@ -12,6 +12,7 @@ import { FORMS_ANNOUNCED, PORTALS_ANNOUNCED } from "$lib/config/launch";
 import { PLANS } from "$lib/config/plans";
 import { SITE_URL } from "$lib/config/site";
 import type { Locale } from "$lib/i18n/locale";
+import { ROUNDUP_SLUG, ROUNDUP_SLUG_NL, roundupMarkdown, roundupText } from "$lib/compare/roundup";
 
 const url = (path: string) => `${SITE_URL}${path}`;
 
@@ -185,6 +186,7 @@ export function llmsTxt(): string {
     "",
     "Each comparison has a Markdown copy with the same content as the page.",
     "",
+    `- [${roundupText.en.heading}](${url(comparisonMarkdownPath(ROUNDUP_SLUG))}): ${roundupText.en.indexCard}`,
     ...docs
       .filter((d) => d.locale === "en")
       .map((d) => `- [${d.comparison.heading}](${url(comparisonMarkdownPath(d.slug))}): ${d.comparison.summary}`),
@@ -192,6 +194,7 @@ export function llmsTxt(): string {
     "## In Dutch",
     "",
     `- [Tessil in het Nederlands](${url("/nl")})`,
+    `- [${roundupText.nl.heading}](${url(comparisonMarkdownPath(ROUNDUP_SLUG_NL))}): ${roundupText.nl.indexCard}`,
     ...docs
       .filter((d) => d.locale === "nl")
       .map((d) => `- [${d.comparison.heading}](${url(comparisonMarkdownPath(d.slug))}): ${d.comparison.summary}`),
@@ -212,6 +215,10 @@ export function llmsFullTxt(): string {
     "## Plans",
     "",
     ...planLines(),
+    "",
+    "---",
+    "",
+    roundupMarkdown("en", SITE_URL, 1),
     "",
     ...allComparisonDocs().flatMap((d) => [
       "---",

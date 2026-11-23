@@ -34,6 +34,7 @@ function pages({ portals, forms }: Shown): { path: string; sources: string[] }[]
     { path: "/abuse", sources: ["src/routes/abuse", msg("abuse")] },
     { path: "/cli", sources: ["src/routes/cli", msg("cli")] },
     { path: "/compare", sources: ["src/routes/compare/+page.svelte", msg("compareIndex"), ...COMPARE_DATA] },
+    { path: "/compare/eu-encrypted-file-transfer", sources: ["src/lib/compare/roundup.ts", "src/routes/compare/eu-encrypted-file-transfer"] },
     ...[
       ...comparisons.filter((c) => !c.kind || c.kind === "send"),
       ...receivingComparisons.filter((c) => (c.kind === "form" ? forms : portals)),
