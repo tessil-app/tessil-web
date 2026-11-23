@@ -30,6 +30,12 @@
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
   import IconDotsThreeRegular from "phosphor-icons-svelte/IconDotsThreeRegular.svelte";
   import { onDestroy } from "svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { hrefFor } from "$lib/i18n/paths";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
+
+  const locale = $derived(appLocale());
+  const t = $derived(portalsAppMessages[locale].list);
 
   let portals = $state<MyPortal[]>([]);
   let maxPortals = $state(0);
@@ -64,7 +70,7 @@
       portals = res.portals.filter((p) => p.kind === "portal");
       maxPortals = res.maxPortals;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't load your portals.";
+      errorMessage = err instanceof Error ? err.message : t.errors.load;
     } finally {
       isLoading = false;
     }
@@ -92,7 +98,7 @@
         if (copiedId === portal.id) copiedId = null;
       }, 2000);
     } catch {
-      errorMessage = "Couldn't copy. Select the link and copy it by hand.";
+      errorMessage = t.errors.copy;
     }
   }
 
@@ -106,7 +112,7 @@
         p.id === portal.id ? { ...p, isDisabled: !portal.isDisabled } : p,
       );
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't update the portal.";
+      errorMessage = err instanceof Error ? err.message : t.errors.update;
     } finally {
       busyId = null;
     }
@@ -147,14 +153,14 @@
       if (!result.ok) {
         acceptError =
           result.reason === "locked"
-            ? "Your vault is locked. Unlock it and try again."
-            : "These keys were not sealed by the person who shared the portal, so they were refused. Ask them to remove you and invite you again.";
+            ? t.errors.locked
+            : t.errors.notSealed;
         return;
       }
       acceptId = null;
       await load();
     } catch (err) {
-      acceptError = err instanceof Error ? err.message : "Couldn't accept. Try again.";
+      acceptError = err instanceof Error ? err.message : t.errors.accept;
     } finally {
       isAccepting = false;
     }
@@ -168,7 +174,7 @@
       await api.removePortalMember(leaveId, auth.user.id);
       portals = portals.filter((p) => p.id !== leaveId);
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't leave the portal.";
+      errorMessage = err instanceof Error ? err.message : t.errors.leave;
     } finally {
       leaveId = null;
       isLeaving = false;
@@ -184,32 +190,30 @@
       portals = portals.filter((p) => p.id !== confirmDeleteId);
       confirmDeleteId = null;
     } catch (err) {
-      errorMessage = err instanceof Error ? err.message : "Couldn't delete the portal.";
+      errorMessage = err instanceof Error ? err.message : t.errors.delete;
       confirmDeleteId = null;
     } finally {
       isDeleting = false;
     }
   }
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const dateFmt = $derived(
+    new Intl.DateTimeFormat(locale === "nl" ? "nl-NL" : undefined, { year: "numeric", month: "short", day: "numeric" }),
+  );
 </script>
 
-<Seo title="Portals - Tessil" robots="noindex" />
+<Seo title={t.seoTitle} robots="noindex" />
 
 <PageLayout width="5xl">
   {#if !auth.loaded || (auth.user && isLoading)}
     <div role="status" aria-live="polite" class="flex flex-col items-center gap-4 py-16 text-info">
       <Spinner class="size-8" aria-hidden="true" />
-      <p class="text-muted-foreground">Loading…</p>
+      <p class="text-muted-foreground">{t.loading}</p>
     </div>
   {:else if auth.user}
     <PageHeader
-      title="Portals"
-      tagline="A link where other people send you files. Only you can read them."
+      title={t.title}
+      tagline={t.tagline}
       align="left"
     >
       {#snippet actions()}
@@ -220,7 +224,7 @@
             class="whitespace-nowrap"
             href="/dashboard/portals/new"
           >
-            New portal
+            {t.newPortal}
           </Button>
         {/if}
       {/snippet}
@@ -233,41 +237,34 @@
 
       {#if auth.needsVaultSetup && maxPortals > 0}
         <Notice>
-          Portals need a vault. It holds the keys that open what people send you, so only you
-          can read it.
+          {t.needsVault}
           {#snippet action()}
-            <Button variant="secondary" fullWidth={false} href="/setup/vault">Set up vault</Button>
+            <Button variant="secondary" fullWidth={false} href="/setup/vault">{t.setUpVault}</Button>
           {/snippet}
         </Notice>
       {:else if !vaultUnlocked && maxPortals > 0}
         <Notice>
-          Your vault is locked. Portal names and links are encrypted, so unlock to see them
-          or to create a portal.
+          {t.vaultLocked}
           {#snippet action()}
             <Button variant="secondary" fullWidth={false} onclick={() => unlockPrompt.request()}>
-              Unlock vault
+              {t.unlockVault}
             </Button>
           {/snippet}
         </Notice>
       {/if}
 
       {#if maxPortals === 0 && portals.length === 0}
-        <EmptyState title="Portals are part of the paid plans">
-          <p>
-            A portal is a link you hand out so clients or colleagues can send you files,
-            encrypted in their browser so only you can open them.
-          </p>
+        <EmptyState title={t.paidTitle}>
+          <p>{t.paidBody}</p>
           {#snippet actions()}
-            <Button href="/pricing" fullWidth={false}>See the plans</Button>
+            <Button href={hrefFor("/pricing", locale)} fullWidth={false}>{t.seePlans}</Button>
           {/snippet}
         </EmptyState>
       {:else if portals.length === 0}
-        <EmptyState title="No portals yet">
-          <p>
-            Create one, share its link, and files people send through it appear here.
-          </p>
+        <EmptyState title={t.emptyTitle}>
+          <p>{t.emptyBody}</p>
           {#snippet actions()}
-            <Button fullWidth={false} href="/dashboard/portals/new">Create your first portal</Button>
+            <Button fullWidth={false} href="/dashboard/portals/new">{t.createFirst}</Button>
           {/snippet}
         </EmptyState>
       {:else}
@@ -277,29 +274,26 @@
               {#if portal.state === "open"}
                 {portal.title}
               {:else if portal.state === "invited"}
-                Portal from {portal.sharedBy?.email ?? "someone"}
+                {t.from(portal.sharedBy?.email ?? t.someone)}
               {:else if portal.state === "locked"}
-                Locked portal
+                {t.locked}
               {:else}
-                Unreadable portal
+                {t.unreadable}
               {/if}
             </div>
             <div class="text-xs text-muted-foreground">
               {#if portal.state === "unreadable"}
-                Its keys did not open with your vault. It can only be {portal.role === "owner"
-                  ? "deleted"
-                  : "left"}.
+                {t.unreadableNote(portal.role === "owner")}
               {:else if portal.state === "invited"}
-                Shared with you. Accept to open it.
+                {t.invitedNote}
               {:else}
-                Created {dateFmt.format(new Date(portal.createdAt))}
+                {t.created(dateFmt.format(new Date(portal.createdAt)))}
                 {#if portal.role === "member"}
-                  · shared by {portal.sharedBy?.email ?? "someone else"}
+                  · {t.sharedBy(portal.sharedBy?.email ?? t.someoneElse)}
                 {/if}
                 <span class="sm:hidden">
-                  · {portal.deliveries}
-                  {portal.deliveries === 1 ? "delivery" : "deliveries"}{portal.unseen > 0
-                    ? `, ${portal.unseen} new`
+                  · {t.deliveries(portal.deliveries)}{portal.unseen > 0
+                    ? `, ${t.newCount(portal.unseen)}`
                     : ""}
                 </span>
               {/if}
@@ -312,12 +306,12 @@
             tone={portal.state === "invited" ? "info" : portal.isDisabled || closed ? "muted" : "success"}
           >
             {portal.state === "invited"
-              ? "Waiting for you"
+              ? t.waiting
               : portal.isDisabled
-                ? "Switched off"
+                ? t.off
                 : closed
-                  ? "Closed"
-                  : "Accepting files"}
+                  ? t.closed
+                  : t.accepting}
           </Badge>
         {/snippet}
 
@@ -326,11 +320,11 @@
           actions="md"
         >
           {#snippet header()}
-            <div>Portal</div>
-            <div>Deliveries</div>
-            <div>Last delivery</div>
-            <div>Stored</div>
-            <div>Status</div>
+            <div>{t.colPortal}</div>
+            <div>{t.colDeliveries}</div>
+            <div>{t.colLast}</div>
+            <div>{t.colStored}</div>
+            <div>{t.colStatus}</div>
           {/snippet}
 
           {#each portals as portal (portal.id)}
@@ -343,11 +337,11 @@
                 <div class="flex items-center gap-2 text-muted-foreground">
                   {portal.deliveries}
                   {#if portal.unseen > 0}
-                    <Badge tone="info">{portal.unseen} new</Badge>
+                    <Badge tone="info">{t.newCount(portal.unseen)}</Badge>
                   {/if}
                 </div>
                 <div class="text-muted-foreground">
-                  {portal.lastDeliveryAt ? dateFmt.format(new Date(portal.lastDeliveryAt)) : "None yet"}
+                  {portal.lastDeliveryAt ? dateFmt.format(new Date(portal.lastDeliveryAt)) : t.noneYet}
                 </div>
                 <div class="text-muted-foreground">
                   {portal.storedBytes > 0 ? formatSize(portal.storedBytes) : "0"}
@@ -368,22 +362,22 @@
                     class="py-2 px-3 text-sm"
                     onclick={() => openAccept(portal)}
                   >
-                    Accept
+                    {t.accept}
                   </Button>
                 {/if}
                 {#if portal.link}
                   <button
                     type="button"
                     onclick={() => copyLink(portal)}
-                    aria-label="Copy link for {portal.title}"
+                    aria-label={t.copyLinkFor(portal.title ?? "")}
                     class="hidden sm:inline-flex text-xs font-medium px-2 py-2 rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:cursor-pointer hover:text-foreground hover:bg-background focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
-                    {copiedId === portal.id ? "Copied" : "Copy link"}
+                    {copiedId === portal.id ? t.copied : t.copyLink}
                   </button>
                 {/if}
                 {#if portal.link || portal.role === "owner" || portal.role === "member"}
                   <DropdownMenu
-                    label="More for {portal.title ?? 'this portal'}"
+                    label={t.moreFor(portal.title)}
                     triggerClass="p-2 text-muted-foreground hover:text-foreground hover:bg-background"
                   >
                     {#snippet trigger()}
@@ -397,7 +391,7 @@
                             void copyLink(portal);
                           }}
                         >
-                          Copy link
+                          {t.copyLink}
                         </DropdownMenuItem>
                       {/if}
                       {#if portal.role === "member"}
@@ -409,7 +403,7 @@
                             leaveId = portal.id;
                           }}
                         >
-                          {portal.state === "invited" ? "Decline" : "Leave"}
+                          {portal.state === "invited" ? t.decline : t.leave}
                         </DropdownMenuItem>
                       {/if}
                       {#if portal.role === "owner"}
@@ -420,7 +414,7 @@
                               void goto(`/dashboard/portals/${portal.id}/settings`);
                             }}
                           >
-                            Settings
+                            {t.settings}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onSelect={() => {
@@ -428,7 +422,7 @@
                               void goto(`/dashboard/portals/new?from=${portal.id}`);
                             }}
                           >
-                            Duplicate
+                            {t.duplicate}
                           </DropdownMenuItem>
                         {/if}
                         <DropdownMenuItem
@@ -438,7 +432,7 @@
                             void toggleDisabled(portal);
                           }}
                         >
-                          {portal.isDisabled ? "Switch on" : "Switch off"}
+                          {portal.isDisabled ? t.switchOn : t.switchOff}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           variant="destructive"
@@ -448,7 +442,7 @@
                             confirmDeleteId = portal.id;
                           }}
                         >
-                          Delete
+                          {t.delete}
                         </DropdownMenuItem>
                       {/if}
                     {/snippet}
@@ -461,13 +455,13 @@
 
         {#if maxPortals > 0}
           <p class="text-xs text-muted-foreground">
-            {ownedCount} of {maxPortals} portals on your plan.
+            {t.onPlan(ownedCount, maxPortals)}
             {#if storage}
-              {formatSize(storage.usedBytes)} of {formatSize(storage.quotaBytes)} storage used.
+              {t.storage(formatSize(storage.usedBytes), formatSize(storage.quotaBytes))}
               <TextLink
                 href="/dashboard/settings/usage"
               >
-                Details
+                {t.details}
               </TextLink>
             {/if}
           </p>
@@ -479,8 +473,8 @@
 
 <Modal
   open={confirmDeletePortal !== null}
-  title="Delete this portal?"
-  description="The link stops working and every file sent through it is deleted. This can't be undone."
+  title={t.deleteTitle}
+  description={t.deleteBody}
   onClose={() => (confirmDeleteId = null)}
 >
   {#snippet footer()}
@@ -491,14 +485,14 @@
       onclick={() => (confirmDeleteId = null)}
       disabled={isDeleting}
     >
-      Keep it
+      {t.keep}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmDelete} disabled={isDeleting}>
       {#if isDeleting}
         <Spinner aria-hidden="true" />
-        Deleting…
+        {t.deleting}
       {:else}
-        Delete portal
+        {t.deletePortal}
       {/if}
     </Button>
   {/snippet}
@@ -506,23 +500,21 @@
 
 <Modal
   open={acceptPortal !== null}
-  title="Accept this portal?"
-  description="{acceptPortal?.sharedBy?.email ?? 'Someone'} shared a portal with you. You will be able to see, download and delete the files people send to it."
+  title={t.acceptTitle}
+  description={t.acceptBody(acceptPortal?.sharedBy?.email ?? null)}
   onClose={() => (acceptId = null)}
 >
   <div class="space-y-3">
     <DetailList>
-      <DetailItem label="Their key">
-        <span class="font-mono text-xs">{acceptPortal?.sharedBy?.fingerprint ?? "unknown"}</span>
+      <DetailItem label={t.theirKey}>
+        <span class="font-mono text-xs">{acceptPortal?.sharedBy?.fingerprint ?? t.unknown}</span>
       </DetailItem>
-      <DetailItem label="Your key">
-        <span class="font-mono text-xs">{ownFingerprint ?? "unknown"}</span>
+      <DetailItem label={t.yourKey}>
+        <span class="font-mono text-xs">{ownFingerprint ?? t.unknown}</span>
       </DetailItem>
     </DetailList>
     <p class="text-xs text-muted-foreground">
-      To be certain nobody sits in between, compare these two codes with them by phone or in
-      person. They see the same two on their side. If you skip this, you trust our server for
-      this one step.
+      {t.compare}
     </p>
     {#if acceptError}
       <Alert tone="destructive">{acceptError}</Alert>
@@ -530,14 +522,14 @@
   </div>
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (acceptId = null)} disabled={isAccepting}>
-      Not now
+      {t.notNow}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmAccept} disabled={isAccepting}>
       {#if isAccepting}
         <Spinner aria-hidden="true" />
-        Accepting…
+        {t.accepting2}
       {:else}
-        Accept
+        {t.accept}
       {/if}
     </Button>
   {/snippet}
@@ -545,16 +537,16 @@
 
 <Modal
   open={leavePortal !== null}
-  title={leavePortal?.state === "invited" ? "Decline this portal?" : "Leave this portal?"}
-  description="You will no longer see it or the files sent to it. Its owner can invite you again."
+  title={leavePortal?.state === "invited" ? t.declineTitle : t.leaveTitle}
+  description={t.leaveBody}
   onClose={() => (leaveId = null)}
 >
   {#snippet footer()}
     <Button type="button" variant="ghost" fullWidth={false} onclick={() => (leaveId = null)} disabled={isLeaving}>
-      Cancel
+      {t.cancel}
     </Button>
     <Button type="button" fullWidth={false} onclick={confirmLeave} disabled={isLeaving}>
-      {isLeaving ? "Leaving…" : leavePortal?.state === "invited" ? "Decline" : "Leave"}
+      {isLeaving ? t.leaving : leavePortal?.state === "invited" ? t.decline : t.leave}
     </Button>
   {/snippet}
 </Modal>

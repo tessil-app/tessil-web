@@ -13,6 +13,8 @@
   import { api } from "$lib/api/client";
   import { giveAccess, type PortalSharing, type SharingInvite } from "$lib/portal/sharing";
   import { unlockPrompt } from "$lib/vault/prompt.svelte";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
 
   interface Props {
     open: boolean;
@@ -29,7 +31,9 @@
 
   let { open, userId, portalId, sharing, onClose, onChanged, noun = "portal" }: Props = $props();
   // What arrives through it: files for a portal, responses for a form.
-  const arrivals = $derived(noun === "form" ? "the responses to this form" : "what is sent to this portal");
+  const t = $derived(portalsAppMessages[appLocale()].sharing);
+  const arrivals = $derived(t.arrivals[noun]);
+  const word = $derived(t.nouns[noun]);
 
   let email = $state("");
   let busy = $state<string | null>(null);
@@ -54,7 +58,7 @@
       await action();
       await onChanged();
     } catch (err) {
-      error = err instanceof Error ? err.message : "That didn't work. Try again.";
+      error = err instanceof Error ? err.message : t.failed;
     } finally {
       busy = null;
     }
@@ -76,14 +80,14 @@
       if (result.ok) return;
       if (result.reason === "locked") {
         unlockPrompt.request();
-        throw new Error("Unlock your vault, then give access again.");
+        throw new Error(t.unlockFirst);
       }
-      throw new Error(`This ${noun}'s keys could not be read from your vault.`);
+      throw new Error(t.unreadable(word));
     });
   }
 </script>
 
-<Drawer {open} title="Sharing" {onClose}>
+<Drawer {open} title={t.title} {onClose}>
   <div class="space-y-3">
     {#if error}
       <Alert tone="destructive">{error}</Alert>
@@ -92,22 +96,22 @@
     {#if !sharing}
       <div class="flex items-center gap-2 text-sm text-muted-foreground">
         <Spinner aria-hidden="true" />
-        Loading…
+        {t.loading}
       </div>
     {:else if guest}
       <DrawerSection
-        title="Shared with {guest.email}"
-        description="They can see, download and delete {arrivals}. They can't change the {noun} or invite anyone."
+        title={t.sharedWith(guest.email)}
+        description={t.sharedBody(arrivals, word)}
       >
         <DetailList>
-          <DetailItem label="Their key"><span class="font-mono text-xs">{guest.fingerprint ?? "unknown"}</span></DetailItem>
-          <DetailItem label="Your key"><span class="font-mono text-xs">{sharing.myFingerprint ?? "unknown"}</span></DetailItem>
+          <DetailItem label={t.theirKey}><span class="font-mono text-xs">{guest.fingerprint ?? t.unknown}</span></DetailItem>
+          <DetailItem label={t.yourKey}><span class="font-mono text-xs">{sharing.myFingerprint ?? t.unknown}</span></DetailItem>
         </DetailList>
       </DrawerSection>
 
       <DrawerSection
-        title="Remove access"
-        description="They can no longer open this {noun}. Files they already downloaded stay with them."
+        title={t.removeTitle}
+        description={t.removeBody(word)}
         tone="danger"
       >
         {#if confirmRemove}
@@ -122,87 +126,83 @@
                   confirmRemove = false;
                 })}
             >
-              {busy === "remove" ? "Removing…" : "Confirm"}
+              {busy === "remove" ? t.removing : t.confirm}
             </Button>
             <Button variant="ghost" fullWidth={false} disabled={busy !== null} onclick={() => (confirmRemove = false)}>
-              Cancel
+              {t.cancel}
             </Button>
           </div>
         {:else}
           <Button variant="destructive" fullWidth={false} onclick={() => (confirmRemove = true)}>
-            Remove {guest.email}
+            {t.remove(guest.email)}
           </Button>
         {/if}
       </DrawerSection>
     {:else if invite}
       {#if invite.ready}
         <DrawerSection
-          title="{invite.email} is ready"
-          description="Giving access hands them this {noun}'s keys, encrypted so only their account can open them."
+          title={t.ready(invite.email)}
+          description={t.readyBody(word)}
         >
           <DetailList>
-            <DetailItem label="Their key"><span class="font-mono text-xs">{invite.ready.fingerprint}</span></DetailItem>
-            <DetailItem label="Your key"><span class="font-mono text-xs">{sharing.myFingerprint ?? "unknown"}</span></DetailItem>
+            <DetailItem label={t.theirKey}><span class="font-mono text-xs">{invite.ready.fingerprint}</span></DetailItem>
+            <DetailItem label={t.yourKey}><span class="font-mono text-xs">{sharing.myFingerprint ?? t.unknown}</span></DetailItem>
           </DetailList>
           <p class="text-xs text-muted-foreground">
-            To be certain nobody sits in between, compare these two codes with them by phone or
-            in person. They see the same two on their side. If you skip this, you trust our
-            server for this one step.
+            {t.compare}
           </p>
           <Button fullWidth={false} disabled={busy !== null} onclick={() => give(invite)}>
             {#if busy === "give"}
               <Spinner aria-hidden="true" />
-              Giving access…
+              {t.giving}
             {:else}
-              Give access
+              {t.give}
             {/if}
           </Button>
         </DrawerSection>
       {:else}
         <DrawerSection
-          title="Waiting for {invite.email}"
-          description="We emailed them an invitation. They need to sign in with this address and set up a vault; a free account is enough. We'll email you when they have, so you can give access here."
+          title={t.waitingFor(invite.email)}
+          description={t.waitingBody}
         />
       {/if}
-      <DrawerSection title="Changed your mind?">
+      <DrawerSection title={t.changedMind}>
         <Button
           variant="secondary"
           fullWidth={false}
           disabled={busy !== null}
           onclick={() => run("cancel", () => api.deletePortalInvite(portalId, invite.id))}
         >
-          {busy === "cancel" ? "Cancelling…" : "Cancel the invite"}
+          {busy === "cancel" ? t.cancelling : t.cancelInvite}
         </Button>
       </DrawerSection>
     {:else}
       <DrawerSection
-        title="Invite one person"
-        description="They will be able to see, download and delete {arrivals}. They need a Tessil account with a vault; a free one is enough."
+        title={t.inviteTitle}
+        description={t.inviteBody(arrivals)}
       >
         <form onsubmit={sendInvite} class="space-y-3" novalidate>
           <TextInput
             id="portal-invite-email"
             type="email"
-            label="Their email address"
-            placeholder="colleague@example.com"
+            label={t.email}
+            placeholder={t.emailPlaceholder}
             autocomplete="off"
             bind:value={email}
             disabled={busy !== null}
           />
           <Button type="submit" fullWidth={false} disabled={busy !== null || email.trim().length === 0}>
-            {busy === "invite" ? "Inviting…" : "Invite"}
+            {busy === "invite" ? t.inviting : t.invite}
           </Button>
         </form>
         <p class="text-xs text-muted-foreground">
-          We email them the invitation. When they have signed in and set up a vault, we email
-          you, and you give access here. That last step needs your browser, because only you
-          hold this {noun}'s keys.
+          {t.howItGoes(word)}
         </p>
       </DrawerSection>
     {/if}
   </div>
 
   {#snippet footer()}
-    <Button type="button" variant="secondary" fullWidth={false} onclick={onClose}>Close</Button>
+    <Button type="button" variant="secondary" fullWidth={false} onclick={onClose}>{t.close}</Button>
   {/snippet}
 </Drawer>

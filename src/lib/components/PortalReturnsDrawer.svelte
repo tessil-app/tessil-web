@@ -23,6 +23,8 @@
   } from "$lib/portal/returns";
   import { holdWhileUploading } from "$lib/upload/keepAwake";
   import { formatSize } from "$lib/utils";
+  import { appLocale } from "$lib/i18n/app.svelte";
+  import { portalsAppMessages } from "$lib/i18n/messages/portalsApp";
 
   interface Props {
     open: boolean;
@@ -48,7 +50,9 @@
   let expiresInHours = $state(24 * 7);
   let maxTotalSize = $state<number | undefined>(undefined);
 
-  const dayFmt = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+  const locale = $derived(appLocale());
+  const t = $derived(portalsAppMessages[locale].returns);
+  const dayFmt = $derived(new Intl.DateTimeFormat(locale === "nl" ? "nl-NL" : undefined, { dateStyle: "medium" }));
 
   async function refresh() {
     loading = true;
@@ -109,7 +113,7 @@
       batches = (await loadReturns(returns)).returns;
     } catch (err) {
       if ((err as DOMException)?.name !== "AbortError") {
-        error = err instanceof Error ? err.message : "Couldn't send these files.";
+        error = err instanceof Error ? err.message : t.errors.send;
       }
     } finally {
       sending = false;
@@ -125,7 +129,7 @@
       onChanged(await removeReturn(portal, id));
       batches = batches.filter((b) => b.id !== id);
     } catch (err) {
-      error = err instanceof Error ? err.message : "Couldn't remove these files.";
+      error = err instanceof Error ? err.message : t.errors.remove;
     } finally {
       removing = null;
     }
@@ -141,7 +145,7 @@
         .map((b) => (b.id === batchId ? { ...b, files: b.files.filter((f) => f.id !== fileId) } : b))
         .filter((b) => b.files.length > 0);
     } catch (err) {
-      error = err instanceof Error ? err.message : "Couldn't remove this file.";
+      error = err instanceof Error ? err.message : t.errors.removeFile;
     } finally {
       removing = null;
     }
@@ -154,15 +158,15 @@
   }
 </script>
 
-<Drawer {open} title="Send files back" onClose={close}>
+<Drawer {open} title={t.title} onClose={close}>
   <div class="space-y-3">
     <Alert tone="warning">
-      Everyone who has this portal's link can download what you put here.
+      {t.warning}
     </Alert>
 
     <DrawerSection
-      title="Add files"
-      description="Encrypted in your browser. They count towards your storage and are deleted automatically."
+      title={t.addTitle}
+      description={t.addBody}
     >
       <DropZone
         onFilesSelect={(files) => {
@@ -189,10 +193,10 @@
           {/each}
         </ul>
         {#if sending}
-          <Button variant="secondary" onclick={() => controller?.abort()}>Cancel</Button>
+          <Button variant="secondary" onclick={() => controller?.abort()}>{t.cancel}</Button>
         {:else}
           <Button onclick={send}>
-            {rows.length > 1 ? `Put ${rows.length} files on the portal` : "Put it on the portal"}
+            {t.put(rows.length)}
           </Button>
         {/if}
       {/if}
@@ -201,14 +205,14 @@
       {/if}
     </DrawerSection>
 
-    <DrawerSection title="On the portal now">
+    <DrawerSection title={t.onPortal}>
       {#if loading && batches.length === 0}
         <div class="flex items-center gap-2 text-sm text-muted-foreground">
           <Spinner aria-hidden="true" />
-          Loading…
+          {t.loading}
         </div>
       {:else if batches.length === 0}
-        <p class="text-sm text-muted-foreground">Nothing yet.</p>
+        <p class="text-sm text-muted-foreground">{t.nothing}</p>
       {:else}
         <ul class="space-y-3">
           {#each batches as batch (batch.id)}
@@ -223,7 +227,7 @@
                       onclick={() => removeFile(batch.id, file.id)}
                       disabled={removing !== null || sending}
                     >
-                      {removing === file.id ? "Removing…" : "Remove"}<span class="sr-only">
+                      {removing === file.id ? t.removing : t.remove}<span class="sr-only">
                         {file.name}</span
                       >
                     </TextLink>
@@ -231,10 +235,10 @@
                 </p>
               {/each}
               <p class="flex items-center justify-between gap-3 pt-1 text-xs text-muted-foreground">
-                <span>Automatically deleted on {dayFmt.format(new Date(batch.expiresAt))}</span>
+                <span>{t.deletedOn(dayFmt.format(new Date(batch.expiresAt)))}</span>
                 {#if batch.files.length > 1}
                   <TextLink onclick={() => remove(batch.id)} disabled={removing !== null || sending}>
-                    {removing === batch.id ? "Removing…" : `Remove all ${batch.files.length}`}
+                    {removing === batch.id ? t.removing : t.removeAll(batch.files.length)}
                   </TextLink>
                 {/if}
               </p>
@@ -246,6 +250,6 @@
   </div>
 
   {#snippet footer()}
-    <Button type="button" variant="ghost" fullWidth={false} onclick={close} disabled={sending}>Close</Button>
+    <Button type="button" variant="ghost" fullWidth={false} onclick={close} disabled={sending}>{t.close}</Button>
   {/snippet}
 </Drawer>
