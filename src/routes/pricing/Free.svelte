@@ -4,14 +4,6 @@
   import PageLayout from "$lib/components/PageLayout.svelte";
   import Seo from "$lib/components/Seo.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
-  import {
-    SUPPORT_EMAIL,
-    SUPPORT_GITHUB_SPONSORS_URL,
-    SUPPORT_KOFI_URL,
-    SUPPORT_POLAR_MONTHLY_URL,
-    SUPPORT_POLAR_ONETIME_URL,
-    SUPPORT_POLAR_PORTAL_URL,
-  } from "$lib/config/support";
   import IconCheckRegular from "phosphor-icons-svelte/IconCheckRegular.svelte";
 
   const anonymousBullets = [
@@ -37,7 +29,7 @@
 
 <Seo
   title="Pricing - Tessil"
-  description="Tessil is free. What the free tier includes, what it costs to run, and how you can support it. No trackers, no paywall on encryption."
+  description="Tessil is free. What the free tier includes and what it costs to run. No trackers, no paywall on encryption."
   path="/pricing"
 />
 
@@ -127,90 +119,6 @@
               <a href="mailto:hello@tessil.app" class={linkClass}
                 >tell me about it</a
               >. Knowing which limit actually bites is more useful than guessing.
-            </p>
-          </section>
-
-          <section class={sectionClass}>
-            <h2 class={headingClass}>If you want to support it</h2>
-            <p class={bodyClass}>
-              Entirely optional, and it unlocks nothing. There is no supporter
-              badge and no hidden feature, because a privacy tool that treats
-              paying users better is one that has started measuring who pays.
-            </p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-              <li>
-                Polar,
-                <a
-                  href={SUPPORT_POLAR_MONTHLY_URL}
-                  rel="noopener noreferrer"
-                  class={linkClass}>monthly</a
-                >
-                or
-                <a
-                  href={SUPPORT_POLAR_ONETIME_URL}
-                  rel="noopener noreferrer"
-                  class={linkClass}>one-time</a
-                >, whatever amount you pick
-              </li>
-              <li>
-                <a
-                  href={SUPPORT_KOFI_URL}
-                  rel="noopener noreferrer"
-                  class={linkClass}>Ko-fi</a
-                >, for a one-time tip
-              </li>
-              <li>
-                <a
-                  href={SUPPORT_GITHUB_SPONSORS_URL}
-                  rel="noopener noreferrer"
-                  class={linkClass}>GitHub Sponsors</a
-                >, monthly or one-off
-              </li>
-            </ul>
-            <p class={bodyClass}>
-              If you have a Tessil account, check out with the same email
-              address. Nothing depends on it today, but it is the only thing
-              that ties a contribution to an account, so it keeps the option
-              open.
-            </p>
-            <p class={bodyClass}>
-              Honestly, telling one person who needs encrypted file transfer
-              that this exists helps more than a few euros does.
-            </p>
-          </section>
-
-          <section class={sectionClass} id="cancel" style="scroll-margin-top: 5rem">
-            <h2 class={headingClass}>Cancelling monthly support</h2>
-            <p class={bodyClass}>
-              Under a minute, on your own, at any time. No notice period, no
-              retention offer, and nobody will ask you why.
-            </p>
-            <ul class="list-disc list-inside text-muted-foreground space-y-1.5 ml-4">
-              <li>
-                <strong class="font-medium text-foreground">Polar:</strong> every
-                receipt email links to the customer portal. Open
-                <a
-                  href={SUPPORT_POLAR_PORTAL_URL}
-                  rel="noopener noreferrer"
-                  class={linkClass}>the portal</a
-                >, cancel there, and it stops at the end of the period you have
-                already paid for.
-              </li>
-              <li>
-                <strong class="font-medium text-foreground">GitHub Sponsors:</strong>
-                cancel from your GitHub sponsorship settings, same as any other
-                sponsorship.
-              </li>
-              <li>
-                <strong class="font-medium text-foreground">Ko-fi:</strong> a
-                one-time tip is not recurring, so there is nothing to cancel.
-              </li>
-            </ul>
-            <p class={bodyClass}>
-              If the portal link has gone missing or a charge looks wrong, email
-              <a href="mailto:{SUPPORT_EMAIL}" class={linkClass}>{SUPPORT_EMAIL}</a>.
-              I will cancel it for you, and refund the last payment if it renewed
-              after you meant to stop.
             </p>
           </section>
 

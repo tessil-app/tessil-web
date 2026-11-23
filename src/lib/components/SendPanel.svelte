@@ -29,7 +29,6 @@
   import { auth } from "$lib/stores/auth.svelte";
   import { uploadStore } from "$lib/stores/upload.svelte";
   import type { FileUploadState } from "$lib/stores/upload.types";
-  import { markTransferSent } from "$lib/support/prompt";
   import { cn, formatEta, formatSize, formatSpeed } from "$lib/utils";
   import {
     isUnlocked,
@@ -490,7 +489,6 @@
       const baseUrl = window.location.origin;
       const shareUrl = `${baseUrl}${completeResponse.shareUrl}#${keyString}`;
       uploadStore.setShareUrl(shareUrl);
-      markTransferSent();
     } catch (error) {
       if ((error as DOMException)?.name === "AbortError") {
         // User cancelled - clean up the partial transfer and return to the
